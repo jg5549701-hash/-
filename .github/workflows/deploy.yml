@@ -7,18 +7,16 @@ on:
       - claude/my-comic-log-app-fx2cvv
   workflow_dispatch:
 
+# gh-pages 브랜치에 푸시해야 하므로 쓰기 권한이 필요하다.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# 배포는 한 번에 하나만. 진행 중인 배포를 취소하지는 않는다.
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,21 +31,20 @@ jobs:
       # tsc -b 로 타입 체크까지 함께 돈다.
       - run: npm run build
 
-      # Pages 는 Settings → Pages 에서 한 번만 켜두면 된다.
-      # 워크플로 토큰에는 Pages 사이트를 "만들" 권한이 없어서
-      # enablement: true 는 공개 저장소에서도 403 이 난다.
-      - uses: actions/configure-pages@v5
+      # Jekyll 처리를 건너뛴다.
+      - run: touch dist/.nojekyll
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # 빌드 결과만 담은 단일 커밋으로 gh-pages 브랜치를 덮어쓴다.
+      # (Pages 의 "GitHub Actions" 소스는 워크플로 토큰으로 켤 수 없어서
+      #  브랜치 배포 방식을 쓴다)
+      - name: Publish to gh-pages
+        working-directory: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
