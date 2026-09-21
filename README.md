@@ -7,9 +7,29 @@
 npm install
 npm run dev        # 개발 서버
 npm run typecheck  # 타입 체크
-npm run build      # 프로덕션 빌드
+npm run build      # 프로덕션 빌드 (+ 서비스 워커 생성)
 npm run preview    # 빌드 결과 확인
 ```
+
+## 설치형 앱(PWA)
+
+`main` 또는 `claude/my-comic-log-app-fx2cvv` 에 푸시하면 GitHub Actions 가
+GitHub Pages 로 배포한다(`.github/workflows/deploy.yml`). 배포 주소는
+`https://<사용자>.github.io/<저장소>/` 이고, `vite.config.ts` 의 `base: './'`
+덕분에 하위 경로에서도 그대로 동작한다.
+
+- **데스크톱** — 크롬/엣지에서 주소창 오른쪽의 설치 아이콘, 또는 메뉴 →
+  캐스트·저장 및 공유 → 페이지를 앱으로 설치
+- **안드로이드** — 크롬 메뉴 → 앱 설치
+- **아이폰** — 사파리 공유 → 홈 화면에 추가
+
+`public/manifest.webmanifest` 가 앱 이름·아이콘·독립 창(standalone)을 정의하고,
+`scripts/build-sw.mjs` 가 빌드 결과를 훑어 서비스 워커(`dist/sw.js`)를 만든다.
+앱 파일은 캐시 우선, 구글 폰트는 stale-while-revalidate 로 캐시하므로 비행기
+모드에서도 열리고 기록도 남길 수 있다. 표지 검색 API 만 네트워크가 필요하다.
+
+기록은 주소(origin)마다 따로 저장된다. 배포 주소가 바뀌면 이전 주소의 기록은
+따라오지 않는다.
 
 ## 저장 구조
 
