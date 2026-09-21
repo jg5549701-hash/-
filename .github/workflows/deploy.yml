@@ -33,11 +33,10 @@ jobs:
       # tsc -b 로 타입 체크까지 함께 돈다.
       - run: npm run build
 
-      # 공개 저장소에서는 워크플로 토큰이 Pages 사이트를 만들 수 있다.
-      # (이미 켜져 있으면 기존 설정을 읽기만 한다)
+      # Pages 는 Settings → Pages 에서 한 번만 켜두면 된다.
+      # 워크플로 토큰에는 Pages 사이트를 "만들" 권한이 없어서
+      # enablement: true 는 공개 저장소에서도 403 이 난다.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
