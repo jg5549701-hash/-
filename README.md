@@ -13,10 +13,17 @@ npm run preview    # 빌드 결과 확인
 
 ## 설치형 앱(PWA)
 
+배포 주소: **https://jg5549701-hash.github.io/-/**
+
 `main` 또는 `claude/my-comic-log-app-fx2cvv` 에 푸시하면 GitHub Actions 가
-GitHub Pages 로 배포한다(`.github/workflows/deploy.yml`). 배포 주소는
-`https://<사용자>.github.io/<저장소>/` 이고, `vite.config.ts` 의 `base: './'`
-덕분에 하위 경로에서도 그대로 동작한다.
+빌드 결과(`dist`)만 담은 단일 커밋으로 `gh-pages` 브랜치를 덮어쓴다
+(`.github/workflows/deploy.yml`). `vite.config.ts` 의 `base: './'` 덕분에
+하위 경로(`/-/`)에서도 그대로 동작한다.
+
+Pages 의 "GitHub Actions" 소스는 쓰지 않는다 — 워크플로 토큰에는 Pages
+사이트를 만들 권한이 없어 공개 저장소에서도 403 이 나고, 저장소 이름이
+`-` 라 Settings 의 Pages 화면도 열리지 않기 때문이다. `gh-pages` 브랜치를
+푸시하면 Pages 가 자동으로 켜진다.
 
 - **데스크톱** — 크롬/엣지에서 주소창 오른쪽의 설치 아이콘, 또는 메뉴 →
   캐스트·저장 및 공유 → 페이지를 앱으로 설치
