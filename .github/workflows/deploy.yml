@@ -33,9 +33,11 @@ jobs:
       # tsc -b 로 타입 체크까지 함께 돈다.
       - run: npm run build
 
-      # Pages 는 저장소 Settings → Pages 에서 Source 를 "GitHub Actions" 로
-      # 한 번만 켜두면 된다. (워크플로 토큰으로는 켤 수 없다)
+      # 공개 저장소에서는 워크플로 토큰이 Pages 사이트를 만들 수 있다.
+      # (이미 켜져 있으면 기존 설정을 읽기만 한다)
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
