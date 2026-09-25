@@ -87,6 +87,36 @@ export function Bar({
   )
 }
 
+/** 읽은 화수 진행 막대. */
+export function ProgressBar({
+  ratio,
+  heightClass = 'h-2',
+  done = false,
+}: {
+  ratio: number
+  heightClass?: string
+  done?: boolean
+}) {
+  const width = Math.min(1, Math.max(0, ratio)) * 100
+  return (
+    <span className={`relative block w-full border-2 border-ink bg-paper-2 ${heightClass}`}>
+      <span
+        className={`absolute inset-y-0 left-0 ${done ? 'bg-ink' : 'bg-accent'}`}
+        style={{ width: `${width}%` }}
+      />
+    </span>
+  )
+}
+
+/** 다 읽은 작품 표시. */
+export function DoneBadge() {
+  return (
+    <span className="border border-ink bg-ink px-1.5 py-px text-[10px] leading-tight font-bold whitespace-nowrap text-paper">
+      완독
+    </span>
+  )
+}
+
 /** 표지. 이미지가 없거나 로딩에 실패하면 자리 표시를 보여준다. */
 export function Cover({
   src,

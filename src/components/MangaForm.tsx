@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GENRES, SCORE_KEYS, SCORE_LABELS, type Manga, type MangaDraft, type ScoreKey, type Scores } from '../types'
 import { autoAverage, formatScore } from '../lib/rating'
+import { toEpisodeCount } from '../lib/episodes'
 import { searchCovers } from '../lib/coverSearch'
-import { Chip, Cover, HScroll } from './ui'
+import { Chip, Cover, HScroll, ProgressBar } from './ui'
+import { EpisodeInput } from './NumberField'
 import { ScoreField } from './ScoreField'
 import { Dialog } from './Dialog'
 
@@ -26,6 +28,8 @@ export function MangaForm({
   const [ratingAuto, setRatingAuto] = useState(initial?.ratingAuto ?? true)
   const [scores, setScores] = useState<Scores>(initial?.scores ?? {})
   const [review, setReview] = useState(initial?.review ?? '')
+  const [totalEpisodes, setTotalEpisodes] = useState<number | undefined>(initial?.totalEpisodes)
+  const [readEpisodes, setReadEpisodes] = useState<number | undefined>(initial?.readEpisodes ?? 0)
   const [error, setError] = useState('')
 
   const [candidates, setCandidates] = useState<string[]>([])
@@ -106,6 +110,8 @@ export function MangaForm({
       ratingAuto,
       scores,
       review,
+      totalEpisodes: totalEpisodes || undefined,
+      readEpisodes: readEpisodes ?? 0,
     })
   }
 
@@ -295,6 +301,68 @@ export function MangaForm({
               onChange={(next) => setScore(key, next)}
             />
           ))}
+        </div>
+
+        <div className="ink-border bg-paper-2 p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="font-display text-base">화수</span>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setReadEpisodes((prev) => toEpisodeCount((prev ?? 0) + 1) ?? 0)}
+                className="border-2 border-ink px-2 py-1 text-[11px] font-bold"
+              >
+                +1화
+              </button>
+              <button
+                type="button"
+                disabled={!totalEpisodes}
+                onClick={() => setReadEpisodes(totalEpisodes)}
+                className="border-2 border-ink px-2 py-1 text-[11px] font-bold disabled:opacity-30"
+              >
+                완독
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <span className="mb-1 block text-[11px] font-bold text-ink-soft">읽은 화수</span>
+              <EpisodeInput
+                label="읽은 화수"
+                value={readEpisodes}
+                onChange={setReadEpisodes}
+                placeholder="0"
+                allowEmpty={false}
+              />
+            </div>
+            <span className="mt-5 shrink-0 text-sm font-bold">/</span>
+            <div className="min-w-0 flex-1">
+              <span className="mb-1 block text-[11px] font-bold text-ink-soft">전체 화수</span>
+              <EpisodeInput
+                label="전체 화수"
+                value={totalEpisodes}
+                onChange={setTotalEpisodes}
+                placeholder="모름"
+              />
+            </div>
+          </div>
+          {totalEpisodes ? (
+            <div className="mt-2.5">
+              <ProgressBar
+                ratio={(readEpisodes ?? 0) / totalEpisodes}
+                done={(readEpisodes ?? 0) >= totalEpisodes}
+              />
+              <p className="mt-1 text-[11px] text-ink-soft">
+                {(readEpisodes ?? 0) >= totalEpisodes
+                  ? `완독! ${totalEpisodes}화 전부 읽었어요.`
+                  : `${totalEpisodes - (readEpisodes ?? 0)}화 남았어요.`}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-ink-soft">
+              연재 중이거나 전체 화수를 모르면 비워 두세요.
+            </p>
+          )}
         </div>
 
         <div>

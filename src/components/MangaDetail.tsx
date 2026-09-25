@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { SCORE_KEYS, SCORE_LABELS, type Manga } from '../types'
 import { autoAverage, formatScore, hasRating, overallRating } from '../lib/rating'
-import { Bar, Cover, GenreTag } from './ui'
+import { formatProgress, hasTotal, isFinished, progressRatio, toEpisodeCount } from '../lib/episodes'
+import { Bar, Cover, DoneBadge, GenreTag, ProgressBar } from './ui'
 import { StarDisplay } from './Stars'
 import { Dialog } from './Dialog'
 
@@ -13,6 +14,7 @@ export function MangaDetail({
   onClose: () => void
   onEdit: (manga: Manga) => void
   onDelete: (id: string) => void
+  onReadEpisodesChange: (id: string, readEpisodes: number) => void
 }) {
   if (!manga) return null
   // key 를 걸어 다른 작품을 열면 삭제 확인 상태가 알아서 초기화된다.
@@ -24,11 +26,13 @@ function DetailBody({
   onClose,
   onEdit,
   onDelete,
+  onReadEpisodesChange,
 }: {
   manga: Manga
   onClose: () => void
   onEdit: (manga: Manga) => void
   onDelete: (id: string) => void
+  onReadEpisodesChange: (id: string, readEpisodes: number) => void
 }) {
   const [confirming, setConfirming] = useState(false)
 
@@ -36,6 +40,9 @@ function DetailBody({
   const rated = hasRating(manga)
   const auto = autoAverage(manga.scores)
   const created = new Date(manga.createdAt)
+  const ratio = progressRatio(manga)
+  const progress = formatProgress(manga)
+  const done = isFinished(manga)
 
   return (
     <Dialog
@@ -104,6 +111,39 @@ function DetailBody({
           </p>
         </div>
       </div>
+
+      <section className="mt-5">
+        <h4 className="font-display mb-2 text-base">읽은 화수</h4>
+        <div className="ink-border bg-paper-2 p-3">
+          {ratio !== null && <ProgressBar ratio={ratio} heightClass="h-3" done={done} />}
+          <div className="mt-2 flex items-center gap-2">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+              {done && <DoneBadge />}
+              <span className="truncate text-sm font-bold tabular-nums">
+                {progress || '아직 읽기 전이에요.'}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                onReadEpisodesChange(manga.id, toEpisodeCount(manga.readEpisodes + 1) ?? 0)
+              }
+              className="ink-border press ink-shadow-sm shrink-0 bg-paper px-2.5 py-1.5 text-xs font-bold"
+            >
+              +1화
+            </button>
+            {hasTotal(manga) && !done && (
+              <button
+                type="button"
+                onClick={() => onReadEpisodesChange(manga.id, manga.totalEpisodes as number)}
+                className="ink-border press ink-shadow-sm shrink-0 bg-ink px-2.5 py-1.5 text-xs font-bold text-paper"
+              >
+                완독
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="mt-5">
         <h4 className="font-display mb-2 text-base">항목별 점수</h4>

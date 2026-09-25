@@ -23,6 +23,10 @@ export interface Manga {
   ratingAuto: boolean
   scores: Scores
   review: string
+  /** 전체 화수. 모르거나 연재 중이면 undefined */
+  totalEpisodes?: number
+  /** 내가 읽은 화수 (0이면 아직 시작 전) */
+  readEpisodes: number
   /** epoch ms */
   createdAt: number
 }

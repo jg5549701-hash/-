@@ -1,5 +1,6 @@
 import { SCORE_KEYS, type Manga, type ScoreKey, type Scores } from '../types'
 import { clampScore } from './rating'
+import { toEpisodeCount } from './episodes'
 
 export const STORAGE_KEY = 'my-manga-list-v1'
 
@@ -81,6 +82,9 @@ export function migrateItem(raw: unknown): Manga | null {
   const ratingAuto =
     typeof raw.ratingAuto === 'boolean' ? raw.ratingAuto : !('rating' in raw && rating > 0)
 
+  // 전체 화수 0 은 "모름"과 같게 본다.
+  const totalEpisodes = toEpisodeCount(raw.totalEpisodes) || undefined
+
   return {
     id,
     title: toText(raw.title).trim(),
@@ -91,6 +95,8 @@ export function migrateItem(raw: unknown): Manga | null {
     ratingAuto,
     scores,
     review: toText(raw.review),
+    totalEpisodes,
+    readEpisodes: toEpisodeCount(raw.readEpisodes) ?? 0,
     createdAt: toTimestamp(raw.createdAt),
   }
 }

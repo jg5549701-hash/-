@@ -185,6 +185,7 @@ function Shell() {
           remove(id)
           setSelectedId(null)
         }}
+        onReadEpisodesChange={(id, readEpisodes) => update(id, { readEpisodes })}
       />
 
       {formOpen && (

@@ -53,14 +53,25 @@ interface Manga {
   ratingAuto: boolean    // true면 항목별 평균을 전체 평점으로 사용 (기본값)
   scores: { art?: number; story?: number; character?: number; direction?: number }
   review: string
+  totalEpisodes?: number // 전체 화수. 모르거나 연재 중이면 없음
+  readEpisodes: number   // 내가 읽은 화수 (0이면 아직 시작 전)
   createdAt: number      // epoch ms
 }
 ```
 
 `src/lib/storage.ts` 의 `migrateItem()` 이 읽을 때마다 스키마를 보정한다. 필드가
 없거나 타입이 다르면 기본값을 채우고(문자열 장르 → 배열, 문자열 평점 → 숫자,
-ISO 날짜 문자열 → epoch ms), 살릴 수 없는 항목만 버린다. 그래서 나중에 필드를
-추가해도 예전에 저장된 기록이 깨지지 않는다.
+문자열 화수 → 0 이상의 정수, ISO 날짜 문자열 → epoch ms), 살릴 수 없는 항목만
+버린다. 그래서 나중에 필드를 추가해도 예전에 저장된 기록이 깨지지 않는다 —
+화수 필드는 나중에 추가됐지만 그 전에 저장된 기록도 그대로 열린다.
+
+## 읽은 화수
+
+전체 화수는 선택이다(연재 중이면 비워 둔다). 전체 화수를 알면 카드·상세에
+진행 막대가 그려지고 `45 / 120화` 로, 모르면 `45화까지 읽음` 으로 보여준다.
+다 읽으면 막대가 검게 차고 **완독** 배지가 붙는다. 상세 다이얼로그의 `+1화` ·
+`완독` 버튼으로 목록을 열지 않고 바로 진행을 올릴 수 있다.
+관련 계산은 `src/lib/episodes.ts` 에 모여 있다.
 
 ## 구조
 
