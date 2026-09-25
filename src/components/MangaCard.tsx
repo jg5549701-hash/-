@@ -1,7 +1,7 @@
 import { SCORE_KEYS, SCORE_LABELS, type Manga } from '../types'
 import { formatScore, hasRating, overallRating } from '../lib/rating'
 import { formatProgress, isFinished, progressRatio } from '../lib/episodes'
-import { Cover, DoneBadge, GenreTag, ProgressBar } from './ui'
+import { Cover, GenreTag, ProgressBar, StatusBadge } from './ui'
 import { StarDisplay } from './Stars'
 
 /** "작화 4.5 · 스토리 5.0" — 입력된 항목만 보여준다. */
@@ -46,11 +46,12 @@ export function MangaCard({ manga, onClick }: { manga: Manga; onClick: () => voi
       <p className="mt-1 truncate text-[10px] font-bold text-ink-soft">
         {summary || '항목 점수 없음'}
       </p>
-      {progress && (
+      {(progress || done || manga.seriesCompleted) && (
         <div className="mt-1.5">
           {ratio !== null && <ProgressBar ratio={ratio} heightClass="h-1.5" done={done} />}
           <p className="mt-1 flex items-center gap-1 truncate text-[10px] font-bold">
-            {done && <DoneBadge />}
+            {manga.seriesCompleted && <StatusBadge tone="accent">완결</StatusBadge>}
+            {done && <StatusBadge tone="ink">완독</StatusBadge>}
             <span className="truncate tabular-nums">{progress}</span>
           </p>
         </div>

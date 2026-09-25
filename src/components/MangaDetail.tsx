@@ -1,8 +1,15 @@
 import { useState } from 'react'
-import { SCORE_KEYS, SCORE_LABELS, type Manga } from '../types'
+import { SCORE_KEYS, SCORE_LABELS, type Manga, type MangaDraft } from '../types'
 import { autoAverage, formatScore, hasRating, overallRating } from '../lib/rating'
-import { formatProgress, hasTotal, isFinished, progressRatio, toEpisodeCount } from '../lib/episodes'
-import { Bar, Cover, DoneBadge, GenreTag, ProgressBar } from './ui'
+import {
+  formatProgress,
+  hasTotal,
+  isFinished,
+  progressRatio,
+  readAllButUnmarked,
+  toEpisodeCount,
+} from '../lib/episodes'
+import { Bar, Checkbox, Cover, GenreTag, ProgressBar, StatusBadge } from './ui'
 import { StarDisplay } from './Stars'
 import { Dialog } from './Dialog'
 
@@ -14,7 +21,7 @@ export function MangaDetail({
   onClose: () => void
   onEdit: (manga: Manga) => void
   onDelete: (id: string) => void
-  onReadEpisodesChange: (id: string, readEpisodes: number) => void
+  onPatch: (id: string, patch: Partial<MangaDraft>) => void
 }) {
   if (!manga) return null
   // key 를 걸어 다른 작품을 열면 삭제 확인 상태가 알아서 초기화된다.
@@ -26,13 +33,13 @@ function DetailBody({
   onClose,
   onEdit,
   onDelete,
-  onReadEpisodesChange,
+  onPatch,
 }: {
   manga: Manga
   onClose: () => void
   onEdit: (manga: Manga) => void
   onDelete: (id: string) => void
-  onReadEpisodesChange: (id: string, readEpisodes: number) => void
+  onPatch: (id: string, patch: Partial<MangaDraft>) => void
 }) {
   const [confirming, setConfirming] = useState(false)
 
@@ -93,8 +100,10 @@ function DetailBody({
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-xl leading-tight break-keep">{manga.title || '제목 없음'}</h3>
           <p className="mt-1 text-sm text-ink-soft">{manga.author || '작가 미상'}</p>
-          {manga.genres.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
+          {(manga.seriesCompleted || done || manga.genres.length > 0) && (
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              {manga.seriesCompleted && <StatusBadge tone="accent">완결</StatusBadge>}
+              {done && <StatusBadge tone="ink">완독</StatusBadge>}
               {manga.genres.map((genre) => (
                 <GenreTag key={genre}>{genre}</GenreTag>
               ))}
@@ -113,34 +122,56 @@ function DetailBody({
       </div>
 
       <section className="mt-5">
-        <h4 className="font-display mb-2 text-base">읽은 화수</h4>
+        <h4 className="font-display mb-2 text-base">진행 상태</h4>
         <div className="ink-border bg-paper-2 p-3">
           {ratio !== null && <ProgressBar ratio={ratio} heightClass="h-3" done={done} />}
           <div className="mt-2 flex items-center gap-2">
-            <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              {done && <DoneBadge />}
-              <span className="truncate text-sm font-bold tabular-nums">
-                {progress || '아직 읽기 전이에요.'}
-              </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-bold tabular-nums">
+              {progress || '아직 읽기 전이에요.'}
             </span>
             <button
               type="button"
               onClick={() =>
-                onReadEpisodesChange(manga.id, toEpisodeCount(manga.readEpisodes + 1) ?? 0)
+                onPatch(manga.id, { readEpisodes: toEpisodeCount(manga.readEpisodes + 1) ?? 0 })
               }
               className="ink-border press ink-shadow-sm shrink-0 bg-paper px-2.5 py-1.5 text-xs font-bold"
             >
               +1화
             </button>
-            {hasTotal(manga) && !done && (
+            {hasTotal(manga) && manga.readEpisodes < (manga.totalEpisodes as number) && (
               <button
                 type="button"
-                onClick={() => onReadEpisodesChange(manga.id, manga.totalEpisodes as number)}
-                className="ink-border press ink-shadow-sm shrink-0 bg-ink px-2.5 py-1.5 text-xs font-bold text-paper"
+                onClick={() => onPatch(manga.id, { readEpisodes: manga.totalEpisodes })}
+                className="ink-border press ink-shadow-sm shrink-0 bg-paper px-2.5 py-1.5 text-xs font-bold"
               >
-                완독
+                마지막 화까지
               </button>
             )}
+          </div>
+
+          {readAllButUnmarked(manga) && (
+            <button
+              type="button"
+              onClick={() => onPatch(manga.id, { finishedReading: true })}
+              className="ink-border press ink-shadow-sm mt-2 w-full bg-ink py-2 text-xs font-bold text-paper"
+            >
+              완독으로 표시
+            </button>
+          )}
+
+          <div className="mt-3 space-y-2">
+            <Checkbox
+              checked={manga.seriesCompleted}
+              onChange={(next) => onPatch(manga.id, { seriesCompleted: next })}
+              label="완결"
+              hint="작품 연재가 끝났어요"
+            />
+            <Checkbox
+              checked={manga.finishedReading}
+              onChange={(next) => onPatch(manga.id, { finishedReading: next })}
+              label="완독"
+              hint="내가 끝까지 다 읽었어요"
+            />
           </div>
         </div>
       </section>

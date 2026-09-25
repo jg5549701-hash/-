@@ -24,9 +24,24 @@ export function progressRatio(manga: Manga): number | null {
   return Math.min(1, Math.max(0, manga.readEpisodes / total))
 }
 
-/** 전체 화수를 알고, 거기까지 다 읽었는가 */
+/**
+ * 완독 여부. 화수에서 추측하지 않고 사용자가 체크한 값만 본다.
+ * (전체 화수를 몰라도 완독으로 표시할 수 있어야 하기 때문이다)
+ */
 export function isFinished(manga: Manga): boolean {
-  return hasTotal(manga) && manga.readEpisodes >= (manga.totalEpisodes as number)
+  return manga.finishedReading
+}
+
+/**
+ * 마지막 화까지 읽었는데 아직 완독 체크를 안 한 상태.
+ * 자동으로 체크해 버리지 않고, "완독으로 표시" 버튼을 띄우는 데 쓴다.
+ */
+export function readAllButUnmarked(manga: Manga): boolean {
+  return (
+    !manga.finishedReading &&
+    hasTotal(manga) &&
+    manga.readEpisodes >= (manga.totalEpisodes as number)
+  )
 }
 
 /** "45 / 120화" · "45화까지 읽음" · "" (아직 안 읽음) */

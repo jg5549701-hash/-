@@ -3,7 +3,7 @@ import { GENRES, SCORE_KEYS, SCORE_LABELS, type Manga, type MangaDraft, type Sco
 import { autoAverage, formatScore } from '../lib/rating'
 import { toEpisodeCount } from '../lib/episodes'
 import { searchCovers } from '../lib/coverSearch'
-import { Chip, Cover, HScroll, ProgressBar } from './ui'
+import { Checkbox, Chip, Cover, HScroll, ProgressBar } from './ui'
 import { EpisodeInput } from './NumberField'
 import { ScoreField } from './ScoreField'
 import { Dialog } from './Dialog'
@@ -30,6 +30,8 @@ export function MangaForm({
   const [review, setReview] = useState(initial?.review ?? '')
   const [totalEpisodes, setTotalEpisodes] = useState<number | undefined>(initial?.totalEpisodes)
   const [readEpisodes, setReadEpisodes] = useState<number | undefined>(initial?.readEpisodes ?? 0)
+  const [seriesCompleted, setSeriesCompleted] = useState(initial?.seriesCompleted ?? false)
+  const [finishedReading, setFinishedReading] = useState(initial?.finishedReading ?? false)
   const [error, setError] = useState('')
 
   const [candidates, setCandidates] = useState<string[]>([])
@@ -112,6 +114,8 @@ export function MangaForm({
       review,
       totalEpisodes: totalEpisodes || undefined,
       readEpisodes: readEpisodes ?? 0,
+      seriesCompleted,
+      finishedReading,
     })
   }
 
@@ -317,10 +321,13 @@ export function MangaForm({
               <button
                 type="button"
                 disabled={!totalEpisodes}
-                onClick={() => setReadEpisodes(totalEpisodes)}
+                onClick={() => {
+                  setReadEpisodes(totalEpisodes)
+                  setFinishedReading(true)
+                }}
                 className="border-2 border-ink px-2 py-1 text-[11px] font-bold disabled:opacity-30"
               >
-                완독
+                마지막 화까지
               </button>
             </div>
           </div>
@@ -363,6 +370,21 @@ export function MangaForm({
               연재 중이거나 전체 화수를 모르면 비워 두세요.
             </p>
           )}
+
+          <div className="mt-3 space-y-2">
+            <Checkbox
+              checked={seriesCompleted}
+              onChange={setSeriesCompleted}
+              label="완결"
+              hint="작품 연재가 끝났어요"
+            />
+            <Checkbox
+              checked={finishedReading}
+              onChange={setFinishedReading}
+              label="완독"
+              hint="내가 끝까지 다 읽었어요"
+            />
+          </div>
         </div>
 
         <div>

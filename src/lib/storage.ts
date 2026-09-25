@@ -84,6 +84,14 @@ export function migrateItem(raw: unknown): Manga | null {
 
   // 전체 화수 0 은 "모름"과 같게 본다.
   const totalEpisodes = toEpisodeCount(raw.totalEpisodes) || undefined
+  const readEpisodes = toEpisodeCount(raw.readEpisodes) ?? 0
+
+  // 완독 체크가 없던 시절의 기록: 마지막 화까지 읽었으면 완독으로 본다.
+  // (그때는 화수만으로 완독을 판단했으므로 보이던 상태를 그대로 유지한다)
+  const finishedReading =
+    typeof raw.finishedReading === 'boolean'
+      ? raw.finishedReading
+      : totalEpisodes !== undefined && readEpisodes >= totalEpisodes
 
   return {
     id,
@@ -96,7 +104,9 @@ export function migrateItem(raw: unknown): Manga | null {
     scores,
     review: toText(raw.review),
     totalEpisodes,
-    readEpisodes: toEpisodeCount(raw.readEpisodes) ?? 0,
+    readEpisodes,
+    seriesCompleted: raw.seriesCompleted === true,
+    finishedReading,
     createdAt: toTimestamp(raw.createdAt),
   }
 }

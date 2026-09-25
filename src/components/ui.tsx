@@ -108,12 +108,52 @@ export function ProgressBar({
   )
 }
 
-/** 다 읽은 작품 표시. */
-export function DoneBadge() {
+/** 상태 배지. 완독은 검정, 완결은 포인트 색. */
+export function StatusBadge({ tone, children }: { tone: 'ink' | 'accent'; children: ReactNode }) {
   return (
-    <span className="border border-ink bg-ink px-1.5 py-px text-[10px] leading-tight font-bold whitespace-nowrap text-paper">
-      완독
+    <span
+      className={`border border-ink px-1.5 py-px text-[10px] leading-tight font-bold whitespace-nowrap text-paper ${
+        tone === 'ink' ? 'bg-ink' : 'bg-accent'
+      }`}
+    >
+      {children}
     </span>
+  )
+}
+
+/** 만화책 톤의 체크박스. 라벨 전체가 터치 영역이다. */
+export function Checkbox({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: string
+  hint?: string
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="ink-border press flex w-full items-center gap-2.5 bg-paper px-3 py-2.5 text-left"
+    >
+      <span
+        aria-hidden="true"
+        className={`flex h-5 w-5 shrink-0 items-center justify-center border-2 border-ink text-sm leading-none font-bold ${
+          checked ? 'bg-accent text-white' : 'bg-paper text-transparent'
+        }`}
+      >
+        ✓
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{label}</span>
+        {hint && <span className="mt-0.5 block text-[11px] text-ink-soft">{hint}</span>}
+      </span>
+    </button>
   )
 }
 

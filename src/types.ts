@@ -27,6 +27,10 @@ export interface Manga {
   totalEpisodes?: number
   /** 내가 읽은 화수 (0이면 아직 시작 전) */
   readEpisodes: number
+  /** 작품 연재가 끝났는가 (완결) */
+  seriesCompleted: boolean
+  /** 내가 끝까지 다 읽었는가 (완독) */
+  finishedReading: boolean
   /** epoch ms */
   createdAt: number
 }
