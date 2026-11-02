@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>휴식 통장</title>
+<meta name="description" content="공부한 만큼 휴식이 쌓이는 타이머">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="휴식 통장">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--card:#0d0d0d;--ink:#949494;--dim:#626262;--hi:#d4d4d4;--red:#e5484d;--green:#4cc38a;
+  --w:min(42vw,62vh);--gap:min(3vw,28px)}
+@media (max-aspect-ratio:1/1){:root{--w:min(76vw,33vh);--gap:16px}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit}
+.app{position:fixed;inset:0;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 18px) calc(env(safe-area-inset-bottom) + 12px) calc(env(safe-area-inset-left) + 18px)}
+header,footer{display:flex;align-items:center;justify-content:space-between;min-height:56px}
+.iconbtn{background:none;border:0;color:var(--ink);width:44px;height:44px;display:grid;place-items:center;cursor:pointer;border-radius:12px}
+.iconbtn:active{background:#111}
+.tabs{display:flex;gap:26px;align-items:center}
+.tab{position:relative;background:none;border:0;color:var(--dim);font-size:17px;font-weight:500;cursor:pointer;padding:6px 2px;transition:color .2s,font-size .2s}
+.tab.on{color:var(--hi);font-size:21px}
+.tab.on::after{content:'';position:absolute;left:50%;bottom:-5px;width:9px;height:3px;border-radius:2px;background:var(--hi);transform:translateX(-50%)}
+.tab .dot{position:absolute;top:3px;right:-9px;width:7px;height:7px;border-radius:50%;background:var(--red);display:none;animation:pulse 1.6s infinite}
+.tab.run .dot{display:block}
+@keyframes pulse{50%{opacity:.35}}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.label{font-size:15px;letter-spacing:.06em;color:var(--dim);transition:color .3s}
+.label.debt{color:var(--red)}
+.cards{display:flex;gap:var(--gap)}
+@media (max-aspect-ratio:1/1){.cards{flex-direction:column}}
+.card{position:relative;width:var(--w);height:var(--w);perspective:calc(var(--w)*4)}
+.half{position:absolute;left:0;right:0;height:50%;overflow:hidden;background:var(--card)}
+.half.top{top:0;border-radius:calc(var(--w)*.09) calc(var(--w)*.09) 0 0}
+.half.bottom{bottom:0;border-radius:0 0 calc(var(--w)*.09) calc(var(--w)*.09)}
+.num{position:absolute;left:0;right:0;height:200%;display:flex;align-items:center;justify-content:center;
+  font-family:'Anton',Impact,'Arial Narrow',sans-serif;font-size:calc(var(--w)*.74);line-height:1;color:var(--ink);transition:color .4s}
+.half.top .num{top:0}
+.half.bottom .num{top:-100%}
+.card::after{content:'';position:absolute;left:0;right:0;top:50%;height:max(4px,calc(var(--w)*.013));background:#000;transform:translateY(-50%);z-index:5}
+.flap{z-index:3;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.flap.top{transform-origin:50% 100%;animation:ft .28s ease-in forwards}
+.flap.bottom{transform-origin:50% 0;transform:rotateX(90deg);animation:fb .28s ease-out .28s forwards}
+@keyframes ft{to{transform:rotateX(-90deg)}}
+@keyframes fb{to{transform:rotateX(0)}}
+.small{position:absolute;right:calc(var(--w)*.06);bottom:calc(var(--w)*.035);font-family:'Anton',Impact,sans-serif;font-size:calc(var(--w)*.055);color:var(--ink);z-index:6;transition:color .4s}
+.cards.debt .num,.cards.debt .small{color:var(--red)}
+.mini{display:none;align-items:baseline;gap:10px;font-size:15px;color:var(--dim)}
+.mini.show{display:flex}
+.mini b{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:30px;color:var(--ink);letter-spacing:.02em}
+.mini.debt b{color:var(--red)}
+button,.tab,.card{touch-action:manipulation}
+.play{display:flex;align-items:center;gap:8px;padding:12px 26px;border-radius:999px;border:1px solid #2a2a2a;background:#111;color:var(--hi);font-size:16px;font-weight:500;cursor:pointer}
+.play:active{transform:scale(.97)}
+.play.running{background:#000;color:var(--ink)}
+.hint{font-size:14px;color:var(--dim);text-align:center;min-height:20px}
+.pig{display:flex;align-items:center;gap:8px;background:none;border:0;color:var(--ink);font-size:15px;font-weight:500;cursor:pointer;padding:8px 10px;border-radius:12px}
+.pig:active{background:#111}
+.pig.bump svg{animation:bump .5s}
+@keyframes bump{40%{transform:scale(1.25) rotate(-8deg)}}
+.today{font-size:14px;color:var(--dim);text-align:right;line-height:1.5}
+.today b{color:var(--ink);font-weight:500}
+/* sheet */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.veil.open{display:flex}
+.sheet{width:min(520px,100%);background:#141414;border-radius:22px 22px 0 0;padding:22px 22px calc(env(safe-area-inset-bottom) + 22px);color:var(--hi);animation:up .25s ease-out}
+@media (min-width:700px){.veil{align-items:center}.sheet{border-radius:22px}}
+@keyframes up{from{transform:translateY(30px);opacity:0}}
+.sheet h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.sheet p{font-size:14px;color:#8a8a8a;line-height:1.55}
+.big{font-family:'Anton',Impact,sans-serif;font-size:56px;color:var(--hi);margin:14px 0 6px;letter-spacing:.01em}
+.row{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;padding:14px 12px;border-radius:14px;border:0;background:#222;color:var(--hi);font-size:15px;font-weight:500;cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--hi);color:#000}
+.btn.warn{background:#2a1416;color:var(--red)}
+.setting{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #222}
+.stepper{display:flex;align-items:center;gap:14px}
+.stepper button{width:36px;height:36px;border-radius:50%;border:0;background:#222;color:var(--hi);font-size:20px;cursor:pointer}
+.stepper span{min-width:58px;text-align:center;font-weight:500}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.stat{background:#1c1c1c;border-radius:14px;padding:12px 14px}
+.stat small{display:block;font-size:12px;color:#7a7a7a;margin-bottom:4px}
+.stat span{font-size:18px;font-weight:500}
+.right{display:flex;gap:4px}
+.calview{position:fixed;inset:0;background:#000;z-index:15;display:none;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 18px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 18px)}
+.calview.open{display:flex;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.calhead{display:flex;align-items:center;justify-content:space-between;min-height:56px}
+.mnav{display:flex;align-items:center;gap:10px}
+.mnav span{font-size:20px;font-weight:500;color:var(--hi);min-width:130px;text-align:center}
+.calbody{flex:1;display:flex;flex-direction:column;gap:16px;min-height:0;width:100%;max-width:1100px;margin:0 auto}
+@media (min-aspect-ratio:1/1){.calbody{flex-direction:row}}
+.calwrap{flex:1;display:flex;flex-direction:column;min-height:0}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:13px;color:var(--dim);padding:6px 0 8px}
+.dow span:first-child{color:#a0484b}
+.grid{flex:1;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(54px,1fr);gap:6px;min-height:0}
+.day{position:relative;border:0;border-radius:12px;background:#0d0d0d;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:7px 8px;text-align:left;overflow:hidden}
+.day .d{font-size:14px;font-weight:500}
+.day .v{font-family:'Anton',Impact,sans-serif;font-size:clamp(13px,2.2vw,22px);color:var(--hi);letter-spacing:.02em}
+.day.empty{background:none;cursor:default}
+.day.today{box-shadow:inset 0 0 0 1.5px #555}
+.day.sel{box-shadow:inset 0 0 0 2px var(--hi)}
+.day.future{opacity:.35}
+.detail{background:#0d0d0d;border-radius:18px;padding:20px 22px;flex:none}
+@media (min-aspect-ratio:1/1){.detail{width:300px;align-self:stretch}}
+.detail h3{font-size:17px;font-weight:500;color:var(--hi);margin-bottom:16px}
+.drow{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-top:1px solid #1d1d1d}
+.drow small{font-size:14px;color:var(--dim)}
+.drow b{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:30px;color:var(--hi);letter-spacing:.02em}
+.drow b.neg{color:var(--red)}
+.detail p{font-size:14px;color:var(--dim);line-height:1.6}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 74px);transform:translate(-50%,-10px);background:#1d1d1d;color:var(--hi);
+  padding:11px 18px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:.3s;z-index:30;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="iconbtn" id="fsBtn" aria-label="전체 화면">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <nav class="tabs">
+      <button class="tab" data-t="study">공부<i class="dot"></i></button>
+      <button class="tab" data-t="bank">잔고</button>
+      <button class="tab" data-t="rest">휴식<i class="dot"></i></button>
+    </nav>
+    <div class="right">
+    <button class="iconbtn" id="calBtn" aria-label="달력">
+      <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+    </button>
+    <button class="iconbtn" id="setBtn" aria-label="설정">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="label" id="label">휴식 잔고</div>
+    <div class="cards" id="cards">
+      <div class="card" id="cA"></div>
+      <div class="card" id="cB"></div>
+    </div>
+    <div class="mini" id="mini"></div>
+    <button class="play" id="playBtn"></button>
+    <div class="hint" id="hint"></div>
+  </main>
+
+  <footer>
+    <button class="pig" id="pigBtn" aria-label="저금통">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M6 15c0-5 4.5-8 10-8 3 0 5.5.8 7.3 2.2L27 8l-.6 4.3c1 1 1.6 2 1.6 3.2h1.5v4H28c-.6 1.4-1.7 2.6-3 3.4V27h-3.5v-2.3c-1.3.3-3 .3-5.5.3-1.4 0-2.7-.1-3.8-.4V27H8.7v-3.6C7 22 6 19.7 6 17"/>
+        <path d="M6 15c-1.6 0-2.5-1-2.5-2.3M13 7.6V5.5h5"/><circle cx="22.5" cy="13.5" r=".8" fill="currentColor"/>
+      </svg>
+      <span id="pigAmt">0분</span>
+    </button>
+    <div class="today" id="today"></div>
+  </footer>
+</div>
+
+<div class="veil" id="pigVeil">
+  <div class="sheet">
+    <h2>저금통</h2>
+    <p>하루가 끝날 때 남은 휴식 잔고가 여기에 모여요. 주말에 길게 쉬고 싶을 때 꺼내 쓰세요.</p>
+    <div class="big" id="pigBig">0분</div>
+    <div class="row">
+      <button class="btn" id="depositBtn">지금 잔고 저금하기</button>
+      <button class="btn primary" id="withdrawBtn">잔고로 꺼내 쓰기</button>
+    </div>
+    <div class="row"><button class="btn" data-close>닫기</button></div>
+  </div>
+</div>
+
+<div class="veil" id="setVeil">
+  <div class="sheet">
+    <h2>설정</h2>
+    <div class="setting">
+      <span>공부 몇 분에 휴식 1분?</span>
+      <div class="stepper"><button id="rMinus">−</button><span id="rVal">4분</span><button id="rPlus">+</button></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><small>오늘 공부</small><span id="stStudy">0분</span></div>
+      <div class="stat"><small>오늘 휴식</small><span id="stRest">0분</span></div>
+    </div>
+    <div class="row"><button class="btn warn" id="resetBtn">모두 초기화</button><button class="btn" data-close>닫기</button></div>
+  </div>
+</div>
+
+<div class="calview" id="calView">
+  <div class="calhead">
+    <button class="iconbtn" id="calClose" aria-label="돌아가기"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="mnav">
+      <button class="iconbtn" id="mPrev" aria-label="이전 달"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 6l-6 6 6 6"/></svg></button>
+      <span id="mTitle"></span>
+      <button class="iconbtn" id="mNext" aria-label="다음 달"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M10 6l6 6-6 6"/></svg></button>
+    </div>
+    <div style="width:44px"></div>
+  </div>
+  <div class="calbody">
+    <div class="calwrap">
+      <div class="dow"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="detail" id="detail"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+const KEY='rest-bank-v1';
+const dayKey=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
+let S={bal:0,mode:'idle',view:'bank',last:Date.now(),study:0,rest:0,piggy:0,day:dayKey(),ratio:4,hist:{}};
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&typeof s==='object')S=Object.assign(S,s)}catch(e){}
+if(S.mode!=='idle')S.view=S.mode;
+if(!S.hist||typeof S.hist!=='object')S.hist={};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+
+/* flip card */
+function makeCard(el){
+  el.innerHTML='<div class="half top"><div class="num"></div></div><div class="half bottom"><div class="num"></div></div><div class="small"></div>';
+  const nums=el.querySelectorAll('.num'),t=nums[0],b=nums[1];let cur=null;
+  return{small:el.querySelector('.small'),set(v,anim){
+    if(v===cur)return;const old=cur;cur=v;
+    el.querySelectorAll('.flap').forEach(f=>f.remove());
+    t.textContent=v;
+    if(!anim||old===null){b.textContent=v;return}
+    b.textContent=old;
+    const ft=document.createElement('div');ft.className='half top flap';ft.innerHTML='<div class="num"></div>';ft.firstChild.textContent=old;
+    const fb=document.createElement('div');fb.className='half bottom flap';fb.innerHTML='<div class="num"></div>';fb.firstChild.textContent=v;
+    el.append(ft,fb);
+    fb.addEventListener('animationend',()=>{if(cur===v)b.textContent=v;ft.remove();fb.remove()});
+  }};
+}
+const A=makeCard($('cA')),B=makeCard($('cB'));
+
+const fmtMin=sec=>{const m=Math.floor(sec/60);return m>=60?Math.floor(m/60)+'시간 '+(m%60)+'분':m+'분'};
+const fmtClock=sec=>{sec=Math.floor(sec);const h=Math.floor(sec/3600),m=Math.floor(sec/60)%60,s=sec%60;return (h?h+':'+pad(m):m)+':'+pad(s)};
+
+let toastT;
+let calOpen=false,calTick=0,calY=0,calM=0,selKey=dayKey();
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3200)}
+
+function tick(){
+  const now=Date.now();let dt=(now-S.last)/1000;S.last=now;if(!(dt>0))dt=0;
+  if(S.day!==dayKey()){
+    const had=S.bal>0;if(had){S.piggy+=S.bal;S.bal=0}
+    S.study=0;S.rest=0;S.day=dayKey();
+    if(had){toast('하루가 지나 남은 잔고를 저금통에 넣었어요');bumpPig()}
+  }
+  const before=S.bal;
+  if(S.mode==='study'){S.bal+=dt/S.ratio;S.study+=dt}
+  else if(S.mode==='rest'){S.bal-=dt;S.rest+=dt}
+  S.hist[S.day]={study:S.study,rest:S.rest,left:S.bal};
+  if(calOpen&&dt>0&&(++calTick%4===0))renderCal();
+  if(S.mode==='rest'&&before>=1&&S.bal<1)toast('휴식 잔고를 다 썼어요. 지금부터는 빌려 쓰는 시간이에요');
+  if(S.mode==='study'&&before<=-1&&S.bal>-1)toast('빌린 휴식을 다 갚았어요 👏');
+  render(true);save();
+}
+
+function render(anim){
+  const studyView=S.view==='study';
+  const bs=Math.floor(Math.abs(S.bal)),bneg=S.bal<0&&bs>0;
+  const val=studyView?S.study:S.bal;
+  const s=Math.floor(Math.abs(val)),neg=!studyView&&bneg,hrs=s>=3600;
+  const mini=$('mini');mini.classList.toggle('show',studyView);mini.classList.toggle('debt',bneg);
+  mini.innerHTML=(bneg?'빌려 쓴 휴식':'휴식 잔고')+' <b>'+(bneg?'−':'')+fmtClock(bs)+'</b>';
+  let a,b;
+  if(hrs){a=Math.floor(s/3600);b=Math.floor(s/60)%60}else{a=Math.floor(s/60);b=s%60}
+  A.set(pad(a),anim);B.set(pad(b),anim);
+  B.small.textContent=hrs?pad(s%60):'';
+  $('cards').classList.toggle('debt',neg);
+  const lab=$('label');lab.classList.toggle('debt',neg);
+  lab.textContent=(studyView?'오늘 공부':neg?'빌려 쓴 휴식':'휴식 잔고')+(hrs?' · 시간 : 분':' · 분 : 초');
+  const on=S.view;
+  document.querySelectorAll('.tab').forEach(t=>{t.classList.toggle('on',t.dataset.t===on);t.classList.toggle('run',t.dataset.t===S.mode)});
+  const running=S.mode!=='idle';
+  const pb=$('playBtn');pb.style.visibility=S.view==='bank'?'hidden':'visible';
+  pb.classList.toggle('running',running);
+  pb.innerHTML=running?'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>멈춤'
+    :'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>'+(S.view==='study'?'공부 시작':'휴식 시작');
+  $('hint').textContent=S.view==='bank'?'공부나 휴식 탭에서 시작하세요'
+    :S.mode==='study'?S.ratio+'분 공부할 때마다 휴식 1분이 쌓여요'
+    :S.mode==='rest'?(neg?'잔고가 없어 휴식을 빌려 쓰는 중이에요':'잔고에서 휴식을 꺼내 쓰는 중')
+    :'일시정지됨';
+  $('pigAmt').textContent=fmtMin(S.piggy);
+  $('today').innerHTML='오늘 공부 <b>'+fmtClock(S.study)+'</b>';
+  $('pigBig').textContent=fmtMin(S.piggy);
+  $('depositBtn').disabled=S.bal<60;$('withdrawBtn').disabled=S.piggy<60;
+  $('rVal').textContent=S.ratio+'분';
+  $('stStudy').textContent=fmtMin(S.study);$('stRest').textContent=fmtMin(S.rest);
+}
+
+function bumpPig(){const p=$('pigBtn');p.classList.remove('bump');void p.offsetWidth;p.classList.add('bump')}
+
+let wake=null;
+async function keepAwake(){try{if(navigator.wakeLock&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>wake=null)}}catch(e){}}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  goView(t.dataset.t);
+}));
+function goView(k){
+  tick();
+  if(k===S.view)return;
+  S.view=k;S.mode='idle';
+  render(true);save();
+}
+const ORDER=['study','bank','rest'];
+let sx=null,sy=null;
+const mainEl=document.querySelector('main');
+mainEl.addEventListener('touchstart',e=>{const p=e.touches[0];sx=p.clientX;sy=p.clientY},{passive:true});
+mainEl.addEventListener('touchend',e=>{
+  if(sx===null)return;const p=e.changedTouches[0],dx=p.clientX-sx,dy=p.clientY-sy;sx=null;
+  if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;
+  const i=ORDER.indexOf(S.view)+(dx<0?1:-1);
+  if(i>=0&&i<ORDER.length)goView(ORDER[i]);
+});
+$('playBtn').addEventListener('click',()=>{
+  tick();if(S.view==='bank')return;
+  S.mode=S.mode==='idle'?S.view:'idle';
+  if(S.mode!=='idle')keepAwake();
+  render(true);save();
+});
+
+const open=id=>{render(false);$(id).classList.add('open')};
+document.querySelectorAll('.veil').forEach(v=>v.addEventListener('click',e=>{if(e.target===v||e.target.hasAttribute('data-close'))v.classList.remove('open')}));
+$('pigBtn').onclick=()=>open('pigVeil');
+$('setBtn').onclick=()=>{resetArm=false;$('resetBtn').textContent='모두 초기화';open('setVeil')};
+$('depositBtn').onclick=()=>{tick();if(S.bal>0){S.piggy+=S.bal;S.bal=0;bumpPig();toast('잔고를 저금통에 넣었어요')}render(true);save()};
+$('withdrawBtn').onclick=()=>{tick();S.bal+=S.piggy;S.piggy=0;toast('저금통에서 꺼내 잔고에 더했어요');render(true);save();$('pigVeil').classList.remove('open')};
+$('rMinus').onclick=()=>{S.ratio=Math.max(1,S.ratio-1);render(true);save()};
+$('rPlus').onclick=()=>{S.ratio=Math.min(15,S.ratio+1);render(true);save()};
+let resetArm=false;
+$('resetBtn').onclick=()=>{
+  if(!resetArm){resetArm=true;$('resetBtn').textContent='한 번 더 누르면 초기화';return}
+  S={bal:0,mode:'idle',view:S.view,last:Date.now(),study:0,rest:0,piggy:0,day:dayKey(),ratio:S.ratio,hist:{}};
+  resetArm=false;$('resetBtn').textContent='모두 초기화';render(false);save();$('setVeil').classList.remove('open');toast('초기화했어요');
+};
+$('fsBtn').onclick=()=>{try{const d=document;if(d.fullscreenElement)d.exitFullscreen();else d.documentElement.requestFullscreen().catch(()=>{})}catch(e){}};
+
+function renderCal(){
+  const y=calY,m=calM,first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+  $('mTitle').textContent=y+'년 '+(m+1)+'월';
+  const now=new Date(),tk=dayKey();
+  let h='';
+  for(let i=0;i<first;i++)h+='<div class="day empty"></div>';
+  for(let d=1;d<=days;d++){
+    const k=y+'-'+(m+1)+'-'+d,r=S.hist[k],st=r?r.study:0;
+    const a=Math.min(st/(6*3600),1);
+    const fut=new Date(y,m,d)>now;
+    const cls='day'+(k===tk?' today':'')+(k===selKey?' sel':'')+(fut?' future':'');
+    const bg=st>=60?'background:rgba(148,148,148,'+(0.08+a*0.42).toFixed(3)+')':'';
+    h+='<button class="'+cls+'" data-k="'+k+'" style="'+bg+'"><span class="d">'+d+'</span>'+(st>=60?'<span class="v">'+hm(st)+'</span>':'')+'</button>';
+  }
+  $('grid').innerHTML=h;
+  const [sy,sm,sd]=selKey.split('-').map(Number),dt=new Date(sy,sm-1,sd);
+  const title=sm+'월 '+sd+'일 '+'일월화수목금토'[dt.getDay()]+'요일'+(selKey===tk?' · 오늘':'');
+  const r=S.hist[selKey];
+  if(!r){$('detail').innerHTML='<h3>'+title+'</h3><p>이날은 기록이 없어요.</p>';return}
+  const neg=r.left<0&&Math.abs(r.left)>=1;
+  $('detail').innerHTML='<h3>'+title+'</h3>'
+    +'<div class="drow"><small>공부 시간</small><b>'+fmtClock(r.study)+'</b></div>'
+    +'<div class="drow"><small>쓴 휴식</small><b>'+fmtClock(r.rest)+'</b></div>'
+    +'<div class="drow"><small>'+(neg?'빌려 쓴 휴식':'남은 휴식')+'</small><b class="'+(neg?'neg':'')+'">'+(neg?'−':'')+fmtClock(Math.abs(r.left))+'</b></div>'
+    +(selKey===tk?'<p style="margin-top:10px">오늘 기록은 실시간으로 바뀌어요. 남은 휴식은 자정에 저금통으로 들어가요.</p>':'');
+}
+const hm=sec=>{const m=Math.floor(sec/60),h=Math.floor(m/60),r=m%60;return h?(r?h+'h '+r+'m':h+'h'):r+'m'};
+$('calBtn').onclick=()=>{tick();const n=new Date();calY=n.getFullYear();calM=n.getMonth();selKey=dayKey();calOpen=true;renderCal();$('calView').classList.add('open')};
+$('calClose').onclick=()=>{calOpen=false;$('calView').classList.remove('open')};
+$('mPrev').onclick=()=>{calM--;if(calM<0){calM=11;calY--}renderCal()};
+$('mNext').onclick=()=>{calM++;if(calM>11){calM=0;calY++}renderCal()};
+$('grid').addEventListener('click',e=>{const b=e.target.closest('.day[data-k]');if(!b)return;selKey=b.dataset.k;renderCal()});
+
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){tick();if(S.mode!=='idle')keepAwake()}});
+tick();render(false);
+setInterval(tick,250);
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+}
+</script>
+</body>
+</html>
