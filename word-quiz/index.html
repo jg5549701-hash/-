@@ -114,6 +114,34 @@ textarea{width:100%;min-height:220px;margin-top:10px;border:1px solid var(--line
 .qnav{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:14px}
 .kbd{font-size:12px;color:var(--muted)}
 
+/* handwriting pad */
+.pad{position:relative;margin-top:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+.pad::before{content:"";position:absolute;left:16px;right:16px;bottom:30%;border-bottom:1.5px dashed var(--line);pointer-events:none}
+.pad canvas{position:relative;display:block;width:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:crosshair}
+.padtools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.padtools .grow{flex:1}
+.selfox{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+
+/* review (manual grading) */
+.revlist{list-style:none;margin:14px 0;padding:0;display:grid;gap:10px}
+.rev{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto;gap:12px;align-items:center;
+  border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.rev .info{min-width:0}
+.rev .num{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rev .q{font-weight:700;overflow-wrap:anywhere}
+.rev .q.en{font-family:var(--font-word);font-size:18px}
+.rev .ans{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.rev .ans b{color:var(--ink)}
+.rev .ink{min-width:0}
+.rev .ink canvas,td canvas.mini{display:block;max-width:100%;background:var(--bg);border-radius:6px}
+.rev .ink .none{color:var(--muted);font-size:14px}
+.ox{display:flex;gap:6px}
+.ox button{width:50px;height:50px;border-radius:50%;border:1px solid var(--line);background:var(--paper);font-size:22px;font-weight:700;color:var(--muted)}
+.ox button.o[aria-pressed="true"]{border-color:var(--pen);color:var(--pen);background:var(--pen-soft)}
+.ox button.x[aria-pressed="true"]{border-color:var(--ink);color:var(--paper);background:var(--ink)}
+@media (max-width:560px){.rev{grid-template-columns:minmax(0,1fr) auto}.rev .ink{grid-column:1/-1;grid-row:2}}
+.sticky-done{position:sticky;bottom:0;background:var(--paper);padding:10px 0 calc(4px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--line)}
+
 /* results */
 .score{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .score .big{font-family:var(--font-word);font-size:52px;font-weight:700;line-height:1;color:var(--pen);font-variant-numeric:tabular-nums}
@@ -193,8 +221,19 @@ td .fix{border:0;background:none;color:var(--accent);font-size:12.5px;padding:0;
         <button class="chip" type="button" data-mode="spell">뜻 보고 영어 쓰기</button>
         <button class="chip" type="button" data-mode="mix">섞어서</button>
         <button class="chip" type="button" data-mode="self">암기 카드 (스스로 채점)</button>
+        <button class="chip" type="button" data-mode="hand">✍️ 펜으로 쓰기 (직접 채점)</button>
       </div>
       <span class="small muted" id="modeHint"></span>
+    </div>
+    <div class="field" id="handOpts" hidden>
+      <span class="lab">펜으로 쓰기 설정</span>
+      <div class="chips" id="dirs">
+        <button class="chip" type="button" data-dir="en2ko">영어 보고 뜻 쓰기</button>
+        <button class="chip" type="button" data-dir="ko2en">뜻 보고 영어 쓰기</button>
+        <button class="chip" type="button" data-dir="mix">섞어서</button>
+      </div>
+      <label class="check"><input type="checkbox" id="handInstant"> 문제마다 바로 정답 확인 (끄면 다 쓴 뒤 한꺼번에 채점)</label>
+      <span class="small muted">패드에서는 펜으로 쓰면 손바닥이 닿아도 선이 그어지지 않아요. 펜이 없으면 손가락이나 마우스로 써도 돼요.</span>
     </div>
     <div class="row">
       <button class="btn primary" id="start" type="button">시험 시작</button>
@@ -217,11 +256,25 @@ td .fix{border:0;background:none;color:var(--accent);font-size:12.5px;padding:0;
     <div class="qnav">
       <button class="btn ghost" id="quit" type="button">그만하고 채점</button>
       <div class="row">
+        <button class="btn" id="prev" type="button" hidden>← 이전</button>
         <button class="btn" id="skip" type="button">모르겠음</button>
         <button class="btn primary" id="next" type="button" hidden>다음 →</button>
       </div>
     </div>
-    <p class="kbd">Enter: 확인/다음 · 객관식은 숫자키 1–4</p>
+    <p class="kbd" id="kbd">Enter: 확인/다음 · 객관식은 숫자키 1–4</p>
+  </section>
+
+  <!-- 3-1. 직접 채점 -->
+  <section class="sheet" id="review" hidden>
+    <h2>직접 채점</h2>
+    <p class="small muted" style="margin:0">내가 쓴 답과 정답을 비교해서 맞으면 ○, 틀리면 ✕를 누르세요.</p>
+    <ol class="revlist" id="revList"></ol>
+    <div class="sticky-done">
+      <span class="small muted" id="revCount"></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="allO" type="button">남은 것 모두 ○</button>
+      <button class="btn primary" id="revDone" type="button">채점 끝 → 결과</button>
+    </div>
   </section>
 
   <!-- 4. 결과 -->
@@ -283,9 +336,10 @@ reduce - 줄이다`;
 let words = [];          // [{en, ko}]
 let source = '';         // 표시용 출처
 let mode = 'mc';
+let handDir = 'en2ko';
 let quiz = null;         // {items, i, answered}
 
-function save(){ try{ localStorage.setItem(STORE, JSON.stringify({words, source, mode, count:+$('countNum').value})); }catch(e){} }
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify({words, source, mode, handDir, handInstant: $('handInstant').checked, count:+$('countNum').value})); }catch(e){} }
 function load(){ try{ return JSON.parse(localStorage.getItem(STORE) || 'null'); }catch(e){ return null; } }
 
 // ---------- 텍스트 → 단어 목록 ----------
@@ -463,6 +517,8 @@ function refreshSetup(resetCount){
   if ($(`modes`).querySelector(`[data-mode="${mode}"]`).disabled) mode = 'self';
   document.querySelectorAll('#modes .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === mode));
   $('modeHint').textContent = ko ? '' : '뜻이 없는 단어장이라 암기 카드만 쓸 수 있어요.';
+  $('handOpts').hidden = mode !== 'hand';
+  document.querySelectorAll('#dirs .chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.dir === handDir));
   $('start').disabled = $('print').disabled = !n;
 }
 function setCount(v){
@@ -479,6 +535,7 @@ function pickType(w){
     case 'mc': return Math.random() < .5 ? 'en2ko-mc' : 'ko2en-mc';
     case 'meaning': return 'en2ko-write';
     case 'spell': return 'ko2en-write';
+    case 'hand': return 'hand';
     case 'mix': { const t = ok4 ? ['en2ko-mc','ko2en-mc','en2ko-write','ko2en-write'] : ['en2ko-write','ko2en-write']; return t[Math.floor(Math.random()*t.length)]; }
     default: return 'self';
   }
@@ -486,6 +543,7 @@ function pickType(w){
 function makeItem(w){
   const type = pickType(w);
   const it = {w, type, user:'', correct:null};
+  if (type === 'hand'){ it.dir = handDir === 'mix' ? (Math.random() < .5 ? 'en2ko' : 'ko2en') : handDir; it.strokes = []; }
   if (type.endsWith('mc')){
     const field = type === 'en2ko-mc' ? 'ko' : 'en';
     const pool = shuffle(words.filter(x => x.ko && x !== w && x[field].toLowerCase() !== w[field].toLowerCase()));
@@ -496,7 +554,7 @@ function makeItem(w){
   return it;
 }
 function startQuiz(list){
-  quiz = {items: list.map(makeItem), i: 0};
+  quiz = {items: list.map(makeItem), i: 0, instant: $('handInstant').checked};
   show('quiz'); renderQ();
 }
 function pickWords(){ return shuffle(words).slice(0, +$('countNum').value); }
@@ -527,17 +585,32 @@ function renderQ(){
   $('qnum').textContent = `${i+1} / ${items.length}`;
   $('qbar').style.width = (i / items.length * 100) + '%';
   updScore();
-  const showEn = it.type === 'en2ko-mc' || it.type === 'en2ko-write' || it.type === 'self';
-  $('ask').textContent = {'en2ko-mc':'알맞은 뜻을 고르세요','ko2en-mc':'알맞은 영어를 고르세요','en2ko-write':'뜻을 쓰세요','ko2en-write':'영어로 쓰세요','self':'뜻을 떠올려 보세요'}[it.type];
+  const showEn = !isKo2En(it);
+  $('ask').textContent = it.type === 'hand' ? (showEn ? '뜻을 펜으로 쓰세요' : '영어를 펜으로 쓰세요') : {'en2ko-mc':'알맞은 뜻을 고르세요','ko2en-mc':'알맞은 영어를 고르세요','en2ko-write':'뜻을 쓰세요','ko2en-write':'영어로 쓰세요','self':'뜻을 떠올려 보세요'}[it.type];
   $('prompt').textContent = showEn ? w.en : w.ko;
   $('prompt').className = 'prompt' + (showEn ? '' : ' ko');
   $('speak').hidden = !showEn || !('speechSynthesis' in window);
   $('mark').setAttribute('hidden',''); $('mark').innerHTML = '';
   $('feedback').innerHTML = '';
-  $('next').hidden = true; $('skip').hidden = false;
+  $('next').hidden = true; $('skip').hidden = false; $('prev').hidden = true; $('kbd').hidden = false;
   $('next').textContent = i === items.length - 1 ? '결과 보기 →' : '다음 →';
+  $('quit').textContent = '그만하고 채점';
   const body = $('body');
-  if (it.type.endsWith('mc')){
+  if (it.type === 'hand'){
+    const sheet = handSheet();
+    body.innerHTML = `<div class="pad"><canvas id="pad" aria-label="손글씨 답 쓰는 곳"></canvas></div>
+      <div class="padtools"><button class="btn" id="undo" type="button">↶ 되돌리기</button><button class="btn" id="clear" type="button">지우기</button>
+      <span class="grow"></span>${sheet ? '' : '<button class="btn primary" id="handReveal" type="button">정답 보기</button>'}</div>`;
+    setupPad(it);
+    $('undo').onclick = () => { it.strokes.pop(); setupPad(it); };
+    $('clear').onclick = () => { it.strokes.length = 0; setupPad(it); };
+    $('skip').hidden = true; $('kbd').hidden = true;
+    if (sheet){
+      $('prev').hidden = i === 0; $('next').hidden = false;
+      $('next').textContent = i === items.length - 1 ? '다 썼어요 → 채점하기' : '다음 →';
+      $('quit').textContent = '여기까지 채점';
+    } else $('handReveal').onclick = revealHand;
+  } else if (it.type.endsWith('mc')){
     body.innerHTML = '<div class="choices">' + it.choices.map((c,k) =>
       `<button class="choice" type="button" data-k="${k}"><b>${k+1}</b><span>${esc(c)}</span></button>`).join('') + '</div>';
     body.querySelectorAll('.choice').forEach(b => b.onclick = () => answerMC(+b.dataset.k));
@@ -558,7 +631,10 @@ function updScore(){
   const a = quiz.items.filter(x => x.correct !== null);
   $('qscore').textContent = `맞음 ${a.filter(x => x.correct).length} · 틀림 ${a.filter(x => !x.correct).length}`;
 }
+function isKo2En(it){ return it.type.startsWith('ko2en') || (it.type === 'hand' && it.dir === 'ko2en'); }
+function handSheet(){ return !!quiz && !quiz.instant && quiz.items.some(x => x.type === 'hand'); }
 function solution(it){
+  if (it.type === 'hand') return it.dir === 'ko2en' ? it.w.en : (it.w.ko || '(뜻 없음)');
   if (it.type === 'en2ko-mc' || it.type === 'en2ko-write') return it.w.ko;
   if (it.type === 'self') return it.w.ko || '(뜻 없음)';
   return it.w.en;
@@ -616,7 +692,104 @@ function skip(){
 }
 function next(){
   clearTimeout(advanceTimer);
-  if (quiz.i < quiz.items.length - 1){ quiz.i++; renderQ(); } else showResult();
+  if (quiz.i < quiz.items.length - 1){ quiz.i++; renderQ(); } else if (handSheet()) showReview(); else showResult();
+}
+
+// ---------- 손글씨 패드 ----------
+let penSeen = false;
+function inkColor(){ return getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#1d2430'; }
+function seg(ctx, a, b){ ctx.beginPath(); ctx.lineWidth = 1.4 + 2.6 * b[2]; ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+function dot(ctx, a){ ctx.beginPath(); ctx.arc(a[0], a[1], (1.4 + 2.6 * a[2]) / 2, 0, Math.PI * 2); ctx.fill(); }
+function paint(ctx, strokes){
+  ctx.lineCap = ctx.lineJoin = 'round'; ctx.strokeStyle = ctx.fillStyle = inkColor();
+  for (const st of strokes){ dot(ctx, st[0]); for (let j = 1; j < st.length; j++) seg(ctx, st[j-1], st[j]); }
+}
+function setupPad(it){
+  const cv = $('pad'); if (!cv) return;
+  const w = cv.parentElement.clientWidth || 600, dpr = window.devicePixelRatio || 1;
+  if (!it.cw){ it.cw = w; it.ch = Math.round(Math.max(200, Math.min(360, w * .5))); }
+  const k = w / it.cw, h = Math.round(it.ch * k);
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
+  paint(ctx, it.strokes);
+  let cur = null, pid = null;
+  const pt = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / k, (e.clientY - r.top) / k, e.pointerType === 'pen' ? (e.pressure || .5) : .5]; };
+  cv.onpointerdown = e => {
+    if (e.pointerType === 'pen') penSeen = true;
+    else if (e.pointerType === 'touch' && penSeen) return;   // 펜을 쓰면 손바닥 터치는 무시
+    if (cur) return;
+    e.preventDefault(); pid = e.pointerId;
+    try{ cv.setPointerCapture(pid); }catch(_){}
+    cur = [pt(e)]; it.strokes.push(cur); dot(ctx, cur[0]);
+  };
+  cv.onpointermove = e => {
+    if (!cur || e.pointerId !== pid) return;
+    e.preventDefault();
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents()) || [];
+    for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(ctx, cur[cur.length-1], p); cur.push(p); }
+  };
+  cv.onpointerup = cv.onpointercancel = e => { if (e.pointerId === pid){ cur = null; pid = null; } };
+}
+// 쓴 부분만 잘라서 작은 캔버스에 그리기
+function inkThumb(it, maxW, maxH){
+  const pts = it.strokes.flat(); if (!pts.length) return null;
+  const pad = 10;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x,y] of pts){ x0 = Math.min(x0,x); y0 = Math.min(y0,y); x1 = Math.max(x1,x); y1 = Math.max(y1,y); }
+  x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+  const k = Math.min(maxW / (x1 - x0), maxH / (y1 - y0), 1.2);
+  const w = Math.round((x1 - x0) * k), h = Math.round((y1 - y0) * k), dpr = window.devicePixelRatio || 1;
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr * k, 0, 0, dpr * k, -x0 * k * dpr, -y0 * k * dpr);
+  paint(ctx, it.strokes);
+  return cv;
+}
+function revealHand(){
+  const it = quiz.items[quiz.i];
+  $('handReveal').disabled = true;
+  $('feedback').innerHTML = `정답: <span class="sol" style="font-size:20px">${esc(solution(it))}</span>
+    <div class="selfox"><button class="btn" id="handO" type="button" style="color:var(--pen)">○ 맞았어요</button>
+    <button class="btn" id="handX" type="button">✕ 틀렸어요</button></div>`;
+  const done = ok => { $('handO').disabled = $('handX').disabled = true; grade(it, ok); advanceTimer = setTimeout(next, 700); };
+  $('handO').onclick = () => done(true);
+  $('handX').onclick = () => done(false);
+}
+
+// ---------- 직접 채점 ----------
+function showReview(){
+  clearTimeout(advanceTimer);
+  show('review');
+  const list = $('revList');
+  list.innerHTML = quiz.items.map((it, idx) => {
+    const ko2en = isKo2En(it);
+    return `<li class="rev" data-i="${idx}">
+      <div class="info"><div class="num">${idx+1}번</div>
+        <div class="q ${ko2en ? '' : 'en'}">${esc(ko2en ? it.w.ko : it.w.en)}</div>
+        <div class="ans">정답: <b>${esc(solution(it))}</b></div></div>
+      <div class="ink"></div>
+      <div class="ox"><button class="o" type="button" aria-label="${idx+1}번 맞음">○</button><button class="x" type="button" aria-label="${idx+1}번 틀림">✕</button></div>
+    </li>`;
+  }).join('');
+  list.querySelectorAll('.rev').forEach(li => {
+    const it = quiz.items[+li.dataset.i], box = li.querySelector('.ink');
+    const th = it.strokes && inkThumb(it, Math.max(120, box.clientWidth || 260), 110);
+    if (th) box.appendChild(th); else box.innerHTML = '<span class="none">(안 씀)</span>';
+    li.querySelector('.o').onclick = () => { it.correct = it.correct === true ? null : true; updReview(); };
+    li.querySelector('.x').onclick = () => { it.correct = it.correct === false ? null : false; updReview(); };
+  });
+  updReview();
+}
+function updReview(){
+  let n = 0;
+  $('revList').querySelectorAll('.rev').forEach(li => {
+    const c = quiz.items[+li.dataset.i].correct;
+    li.querySelector('.o').setAttribute('aria-pressed', c === true);
+    li.querySelector('.x').setAttribute('aria-pressed', c === false);
+    if (c !== null) n++;
+  });
+  $('revCount').textContent = `채점 ${n} / ${quiz.items.length}`;
 }
 
 // ---------- 결과 ----------
@@ -637,13 +810,18 @@ function renderRows(){
   $('rRows').innerHTML = quiz.items.map((it, idx) => {
     if (only && it.correct) return '';
     const ok = it.correct === true;
-    const q = it.type.startsWith('ko2en') ? esc(it.w.ko) : `<span class="en">${esc(it.w.en)}</span>`;
-    const sol = it.type.startsWith('ko2en') ? `<span class="en">${esc(it.w.en)}</span>` : esc(it.w.ko || '—');
-    const yours = it.type === 'self' ? (it.correct === null ? '—' : ok ? '알았음' : '몰랐음')
+    const q = isKo2En(it) ? esc(it.w.ko) : `<span class="en">${esc(it.w.en)}</span>`;
+    const sol = isKo2En(it) ? `<span class="en">${esc(it.w.en)}</span>` : esc(it.w.ko || '—');
+    const yours = it.type === 'hand' ? `<span class="inkcell" data-i="${idx}"></span>${ok || !it.strokes.length ? '' : `<button class="fix" type="button" data-i="${idx}">맞게 처리</button>`}`
+      : it.type === 'self' ? (it.correct === null ? '—' : ok ? '알았음' : '몰랐음')
       : it.correct === null ? '<span class="muted">안 풂</span>'
       : ok ? esc(it.user || '') : `<span class="yours">${esc(it.user || '모름')}</span>${it.user && it.type.endsWith('write') ? `<button class="fix" type="button" data-i="${idx}">맞게 처리</button>` : ''}`;
     return `<tr><td class="m ${ok?'o':'x'}">${ok?'○':'✕'}</td><td>${q}</td><td>${sol}</td><td>${yours}</td></tr>`;
   }).join('') || '<tr><td colspan="4" class="muted">틀린 문제가 없어요.</td></tr>';
+  $('rRows').querySelectorAll('.inkcell').forEach(c => {
+    const th = inkThumb(quiz.items[+c.dataset.i], 160, 48);
+    if (th){ th.className = 'mini'; c.appendChild(th); } else c.innerHTML = '<span class="muted">안 씀</span>';
+  });
   $('rRows').querySelectorAll('.fix').forEach(b => b.onclick = () => { quiz.items[+b.dataset.i].correct = true; showResult(); });
 }
 
@@ -652,7 +830,8 @@ function printSheet(){
   const list = pickWords();
   const ko = hasKo();
   const qs = list.map(w => {
-    const toEn = ko && w.ko && (mode === 'spell' || (mode === 'mix' || mode === 'mc') && Math.random() < .5);
+    const dir = mode === 'hand' ? handDir : mode === 'spell' ? 'ko2en' : (mode === 'mix' || mode === 'mc') ? 'mix' : 'en2ko';
+    const toEn = ko && w.ko && (dir === 'ko2en' || dir === 'mix' && Math.random() < .5);
     return {w, toEn};
   });
   const d = new Date().toLocaleDateString('ko-KR');
@@ -669,6 +848,7 @@ function show(view){
   $('srcSheet').hidden = $('setup').hidden = view !== 'setup';
   $('quiz').hidden = view !== 'quiz';
   $('result').hidden = view !== 'result';
+  $('review').hidden = view !== 'review';
   window.scrollTo({top: 0});
 }
 
@@ -695,7 +875,16 @@ $('start').onclick = () => words.length && startQuiz(pickWords());
 $('print').onclick = printSheet;
 $('next').onclick = next;
 $('skip').onclick = skip;
-$('quit').onclick = showResult;
+$('prev').onclick = () => { if (quiz.i > 0){ quiz.i--; renderQ(); } };
+$('quit').onclick = () => handSheet() ? showReview() : showResult();
+document.querySelectorAll('#dirs .chip').forEach(b => b.onclick = () => { handDir = b.dataset.dir; refreshSetup(); save(); });
+$('handInstant').onchange = save;
+$('allO').onclick = () => { quiz.items.forEach(x => { if (x.correct === null) x.correct = true; }); updReview(); };
+$('revDone').onclick = () => { quiz.items.forEach(x => { if (x.correct === null) x.correct = false; }); showResult(); };
+let resizeT = null;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => {
+  if (quiz && !$('quiz').hidden && quiz.items[quiz.i].type === 'hand') setupPad(quiz.items[quiz.i]);
+}, 150); });
 $('speak').onclick = () => { try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(quiz.items[quiz.i].w.en); u.lang = 'en-US'; u.rate = .9; speechSynthesis.speak(u); }catch(e){} };
 $('retryWrong').onclick = () => startQuiz(shuffle(quiz.items.filter(x => !x.correct).map(x => x.w)));
 $('again').onclick = () => startQuiz(pickWords());
@@ -715,6 +904,8 @@ try{ if (window.self !== window.top) $('print').hidden = true; }catch(e){ $('pri
 // ---------- 시작 ----------
 const saved = load();
 if (saved && saved.mode) mode = saved.mode;
+if (saved && saved.handDir) handDir = saved.handDir;
+if (saved && saved.handInstant) $('handInstant').checked = true;
 if (saved && Array.isArray(saved.words) && saved.words.length){
   setWords(saved.words, saved.source || '저장된 단어장');
   if (saved.count) setCount(saved.count);
