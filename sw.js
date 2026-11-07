@@ -1,5 +1,5 @@
 // 휴식 통장 service worker — 앱을 수정하면 VERSION을 올려주세요.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP_CACHE = 'rest-bank-app-' + VERSION;
 const FONT_CACHE = 'rest-bank-fonts';
 const APP_SHELL = [
@@ -44,6 +44,9 @@ self.addEventListener('fetch', e => {
 
   // 페이지 이동: 네트워크 우선(최신 버전), 오프라인이면 캐시
   if (req.mode === 'navigate') {
+    // 휴식 통장 페이지만 처리 (word-quiz/ 같은 다른 페이지를 index.html로 캐시하지 않도록)
+    const scope = new URL(self.registration.scope).pathname;
+    if (url.pathname !== scope && url.pathname !== scope + 'index.html') return;
     e.respondWith(
       fetch(req).then(r => { const copy = r.clone(); caches.open(APP_CACHE).then(c => c.put('./index.html', copy)); return r; })
         .catch(() => caches.match('./index.html'))
