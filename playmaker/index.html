@@ -4,86 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>플레이메이커</title>
-<meta name="description" content="드래그로 패스·슛하고 스크린·픽앤롤·랍 패스를 지시하는 농구 게임">
+<meta name="description" content="드래그로 패스·슛하고 전술을 지시하는 농구 경기">
 <meta name="theme-color" content="#0b0c10">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0c10;--panel:#15171d;--panel2:#1d2029;--line:#2a2e39;--ink:#eceef2;--dim:#8d93a3;--org:#ff7a1a;--org2:#ffb347;
+:root{--bg:#07080b;--panel:#15171d;--panel2:#1d2029;--line:#2a2e39;--ink:#eceef2;--dim:#8d93a3;--org:#ff7a1a;--org2:#ffb347;
   --green:#3ecf8e;--red:#ff5a5f;--blue:#5aa9ff;--gold:#ffd166}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
-body{min-height:100vh}
+html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden;height:100%}
 button{font-family:inherit;cursor:pointer;color:inherit}
-.wrap{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 30px)}
-.disp{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-weight:400}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
-.card h3{font-size:14px;color:var(--dim);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;font-weight:700;width:100%}
 .btn:active{transform:scale(.98)}
 .btn.pri{background:linear-gradient(135deg,var(--org),#ff9d3d);border-color:transparent;color:#1a0d00}
-.btn.gold{background:linear-gradient(135deg,#ffd166,#ffb347);color:#2a1a00;border-color:transparent}
-.btn.ghost{background:none}
-.muted{color:var(--dim)}.small{font-size:12px}
-.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.top .brand{font-family:'Black Han Sans';font-size:22px;color:var(--org)}
-.top .sea{font-size:13px;color:var(--dim)}
-.nm{font-size:22px;font-weight:900}
-.sub{font-size:13px;color:var(--dim);margin-top:2px}
-.ovr{text-align:center;background:var(--panel2);border-radius:14px;padding:8px 14px;min-width:78px}
-.ovr b{display:block;font-size:11px;color:var(--dim);letter-spacing:.1em}
-.ovr span{font-family:'Black Han Sans';font-size:34px;line-height:1.05;color:var(--org2)}
-.attrs{display:grid;gap:8px;margin-top:14px}
-.at{display:grid;grid-template-columns:92px 1fr 30px 38px;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
-.at i{display:block;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
-.at i u{display:block;height:100%;background:var(--org);border-radius:99px}
-.at em{font-style:normal;color:var(--ink);font-weight:700;text-align:right}
-.at button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 0;font-weight:900;color:var(--green)}
-.at button:disabled{opacity:.25}
-.sp{font-size:12px;color:var(--gold);margin-top:10px}
-.ladder{display:grid;gap:6px}
-.lad{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:13px;border:1px solid transparent}
-.lad.cur{border-color:var(--org)}
-.lad.done{opacity:.55}
-.lad b{text-align:center}
-.glist{display:grid;gap:6px}
-.g{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:13px}
-.wl{font-weight:900;text-align:center;border-radius:6px;padding:2px 0;font-size:12px}
-.wl.W{background:rgba(62,207,142,.18);color:var(--green)}.wl.L{background:rgba(255,90,95,.15);color:var(--red)}
-.rt{font-family:'Black Han Sans';font-size:17px}
-.how{font-size:13px;line-height:1.75;color:var(--dim)}
-.how b{color:var(--ink)}
-/* start */
-.hero{text-align:center;padding:34px 0 20px}
-.hero .ball{font-size:60px;display:inline-block;animation:bounce 1.2s infinite cubic-bezier(.5,0,.5,1)}
-@keyframes bounce{50%{transform:translateY(-14px)}}
-.hero h1{font-family:'Black Han Sans';font-weight:400;font-size:46px;line-height:1.1;margin:10px 0;color:var(--org)}
-.hero p{color:var(--dim);font-size:14px;line-height:1.6}
-label.lb{display:block;font-size:13px;color:var(--dim);margin:4px 0 8px}
-input.txt{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;color:var(--ink);font-family:inherit;margin-bottom:14px}
-.posgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:8px}
-.posgrid button{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 0;font-weight:900;font-size:15px}
-.posgrid button small{display:block;font-size:10px;color:var(--dim);font-weight:400;margin-top:2px}
-.posgrid button.on{border-color:var(--org);color:var(--org)}
-.posdesc{font-size:12px;color:var(--dim);min-height:36px;margin-bottom:14px;line-height:1.5}
-/* modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
-.modal.on{display:flex}
-.mbox{background:var(--panel);border:1px solid var(--line);border-radius:20px;width:100%;max-width:460px;max-height:88vh;overflow:auto;padding:20px;animation:up .22s ease-out}
-@keyframes up{from{transform:translateY(24px);opacity:0}}
-.mbox h2{font-family:'Black Han Sans';font-weight:400;font-size:24px;margin-bottom:12px;text-align:center}
-.mbody{font-size:14px;line-height:1.6}
-.mbtns{display:grid;gap:8px;margin-top:16px}
-.score{display:flex;justify-content:center;align-items:center;gap:14px;margin:6px 0 10px}
-.score b{font-family:'Black Han Sans';font-size:42px;font-weight:400}
-.score span{font-size:12px;color:var(--dim);text-align:center;max-width:90px;line-height:1.3}
-.statbox{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin:8px 0}
+.statbox{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;margin:10px 0 4px}
 .statbox div{background:var(--panel2);border-radius:10px;padding:8px 2px}
-.statbox b{display:block;font-size:22px;font-weight:900}
+.statbox b{display:block;font-size:20px;font-weight:900;color:var(--ink)}
 .statbox span{font-size:11px;color:var(--dim)}
-.note{background:var(--panel2);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:8px}
 /* court */
-.court{position:fixed;inset:0;background:#07080b;z-index:20;display:none;flex-direction:column;align-items:center;
+.court{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;
   padding:calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px);touch-action:none;-webkit-user-select:none;user-select:none}
 .court.on{display:flex}
 .chud{width:100%;max-width:560px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 4px 8px}
@@ -118,15 +56,13 @@ input.txt{width:100%;background:var(--panel2);border:1px solid var(--line);borde
 </style>
 </head>
 <body>
-<div class="wrap" id="app"></div>
 <div class="court" id="court">
-  <div class="chud"><div class="ct" id="cTitle"></div><div class="clk" id="cClock">12</div><button class="sk" id="cSkip">⏩ 자동</button></div>
+  <div class="chud"><div class="ct" id="cTitle"></div><div class="clk" id="cClock">12</div></div>
   <div class="sboard" id="cScore"></div>
   <div class="cstage" id="cStage"><canvas id="cv"></canvas><div class="cover" id="cCover"><div class="box" id="cBox"></div></div></div>
   <div class="calls" id="cCalls"></div>
   <div class="chint" id="cHint"></div>
 </div>
-<div class="modal" id="modal"><div class="mbox"><h2 id="mTitle"></h2><div class="mbody" id="mBody"></div><div class="mbtns" id="mBtns"></div></div></div>
 
 <script>
 'use strict';
@@ -139,81 +75,18 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function binom(n,p){let k=0;for(let i=0;i<n;i++)if(Math.random()<p)k++;return k}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* ---------- data ---------- */
-const ATTR={sht:'🎯 미드레인지',tpt:'🏹 3점슛',drv:'⚡ 돌파·스피드',pas:'🤝 패스'};
-const POS={
- PG:{n:'포인트가드',d:'패스와 스피드로 공격을 조립한다. 픽앤롤의 주인공.',b:{sht:56,tpt:58,drv:64,pas:68}},
- SG:{n:'슈팅가드',d:'3점과 점퍼로 득점을 책임진다.',b:{sht:62,tpt:66,drv:60,pas:54}},
- SF:{n:'스몰포워드',d:'모든 능력이 고른 올라운더.',b:{sht:60,tpt:58,drv:62,pas:58}},
- PF:{n:'파워포워드',d:'미드레인지와 골밑 마무리가 강점.',b:{sht:63,tpt:50,drv:60,pas:55}},
- C:{n:'센터',d:'림 근처의 지배자. 3점은 약하다.',b:{sht:58,tpt:40,drv:62,pas:52}},
-};
+/* ---------- setup ---------- */
 const OPPS=['하버타운 바이퍼스','노스필드 울프팩','썬밸리 코메츠','스톤브릿지 바이슨즈','레드캐니언 피닉스','아이언베이 타이탄즈','골든포트 스톰','크라운시티 나이츠'];
-const RT_COL=r=>r>=9?'var(--gold)':r>=7.5?'var(--green)':r>=6?'var(--blue)':'var(--dim)';
-
-/* ---------- state ---------- */
-const KEY='playmaker-save-v1';
-let S=null,M=null,selPos='PG';
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
-function wipe(){try{localStorage.removeItem(KEY)}catch(e){}}
-const OVR=()=>Math.round((S.a.sht+S.a.tpt+S.a.drv+S.a.pas)/4);
-const mateStr=()=>Math.min(88,74+S.season*2+S.stage*.6);
-const oppStr=i=>Math.min(95,69+i*2.6+(S.season-1)*4);
+const S={pos:'PG',a:{sht:62,tpt:62,drv:64,pas:66}};
+let M=null;
 const short=n=>n.split(' ').slice(-1)[0];
-
-/* ---------- screens ---------- */
-function render(){
-  const app=$('#app');
-  if(!S){app.innerHTML=startHTML();bindStart();return}
-  const sp=S.sp;
-  app.innerHTML=`<div class="top"><div class="brand">🏀 플레이메이커</div><div class="sea">시즌 ${S.season} · ${S.w}승 ${S.l}패${S.titles?` · 🏆${S.titles}`:''}</div></div>
-  <div class="card"><div class="row"><div><div class="nm">${esc(S.name)}</div><div class="sub">${POS[S.pos].n}</div></div><div class="ovr"><b>OVR</b><span>${OVR()}</span></div></div>
-    <div class="attrs">${Object.keys(ATTR).map(k=>`<div class="at"><span>${ATTR[k]}</span><i><u style="width:${S.a[k]}%"></u></i><em>${Math.round(S.a[k])}</em>
-      <button data-up="${k}" ${sp<1||S.a[k]>=99?'disabled':''}>+2</button></div>`).join('')}</div>
-    <div class="sp">${sp?`⭐ 능력치 포인트 ${sp}개 — + 버튼으로 올리세요`:'경기에서 이기면 능력치 포인트를 얻어요 (승리 3 · 패배 1 · 평점 8.0↑ 보너스 1)'}</div></div>
-  <div class="card"><h3><span>시즌 ${S.season} 토너먼트</span><span>${S.stage}/${OPPS.length} 격파</span></h3>
-    <div class="ladder">${OPPS.map((n,i)=>`<div class="lad ${i<S.stage?'done':i===S.stage?'cur':''}"><b>${i<S.stage?'✅':i===S.stage?'▶':i+1}</b><span>${esc(n)}</span><span class="muted small">전력 ${Math.round(oppStr(i))}</span></div>`).join('')}</div>
-    <button class="btn pri" id="play" style="margin-top:12px">경기 시작 ▶ vs ${esc(short(OPPS[S.stage]))}</button>
-    <p class="small muted" style="margin-top:8px">우리 팀 전력 ${Math.round(mateStr())}. 쿼터마다 당신에게 공이 3번 온다 — 접전이면 마지막 공격도!</p></div>
-  <div class="card"><h3><span>조작법</span></h3><div class="how">
-    • ‘나’를 기준으로 드래그 → 동료에게 놓으면 <b>패스</b>, 림에 놓으면 <b>슛</b>, 빈 곳이면 <b>드리블</b>. 드래그 중엔 슬로모션 + 예상 성공률 표시.<br>
-    • 패스할 땐 전술 선택: <b>📨 일반</b>(빠름·차단 위험) / <b>🪂 랍</b>(수비 머리 위, 롤·컷 동료면 앨리웁) / <b>↩️ 기브앤고</b>(패스 후 컷 → 리턴).<br>
-    • 공을 쥐면 지시: <b>🧱 스크린 요청 · 🔁 픽앤롤 · 🎯 픽앤팝 · ✂️ 백도어 컷 · 🧹 아이솔</b>.<br>
-    • 동료가 공을 잡으면: <b>🙋 패스 달라 · 🧱 스크린 걸기</b>.<br>
-    • 수비가 붙어 있으면 잘 안 들어간다. 스크린·컷으로 틈을 만들고, 도움 수비가 오면 빈 동료에게 빼주자.</div></div>
-  <div class="card"><h3><span>최근 경기</span></h3><div class="glist">${S.log.length?S.log.slice(-6).reverse().map(g=>`<div class="g"><div class="wl ${g.win?'W':'L'}">${g.win?'W':'L'}</div>
-    <div><div>S${g.season} vs ${esc(short(g.opp))} <span class="muted">${g.us}-${g.them}</span></div><div class="muted small">${g.pts}점 ${g.ast}어시 ${g.tov}턴오버 · FG ${g.fgm}/${g.fga}</div></div>
-    <div class="rt" style="color:${RT_COL(g.rt)}">${g.rt.toFixed(1)}</div></div>`).join(''):'<p class="muted small">아직 경기가 없습니다.</p>'}</div></div>
-  <div class="card"><button class="btn ghost" id="reset">처음부터 다시 시작</button></div>`;
-  document.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{const k=b.dataset.up;if(S.sp<1)return;S.sp--;S.a[k]=Math.min(99,S.a[k]+2);save();render()});
-  $('#play').onclick=startMatch;
-  $('#reset').onclick=()=>modal('새로 시작','<p>현재 선수와 기록이 삭제됩니다. 처음부터 시작할까요?</p>',[{t:'시작하기',cls:'pri',fn:()=>{wipe();S=null;render()}},{t:'취소'}]);
-}
-function startHTML(){
-  return`<div class="hero"><div class="ball">🏀</div><h1>플레이메이커</h1><p>드래그로 패스하고, 슛하고, 작전을 지시하라.<br>스크린 · 픽앤롤 · 랍 패스로 8개 팀을 꺾고 우승까지.</p></div>
-  <div class="card"><label class="lb">선수 이름</label><input class="txt" id="nm" maxlength="12" placeholder="이름을 입력하세요">
-  <label class="lb">포지션</label><div class="posgrid">${Object.keys(POS).map(k=>`<button data-pos="${k}" class="${k===selPos?'on':''}">${k}<small>${POS[k].n}</small></button>`).join('')}</div>
-  <div class="posdesc" id="pd">${POS[selPos].d}</div><button class="btn pri" id="go">시작하기</button></div>`;
-}
-function bindStart(){
-  document.querySelectorAll('[data-pos]').forEach(b=>b.onclick=()=>{selPos=b.dataset.pos;document.querySelectorAll('[data-pos]').forEach(x=>x.classList.toggle('on',x===b));$('#pd').textContent=POS[selPos].d});
-  $('#go').onclick=()=>{const nm=$('#nm').value.trim()||pick(['김','이','박','최','정'])+pick(['준호','민재','태윤','도현','시우']);
-    S={v:1,name:nm,pos:selPos,a:{...POS[selPos].b},sp:0,season:1,stage:0,w:0,l:0,titles:0,log:[]};save();render()};
-}
-function modal(title,html,buttons){
-  $('#mTitle').textContent=title;$('#mBody').innerHTML=html;const f=$('#mBtns');f.innerHTML='';
-  buttons.forEach(b=>{const el=document.createElement('button');el.className='btn '+(b.cls||'');el.innerHTML=b.t;
-    el.onclick=()=>{$('#modal').classList.remove('on');b.fn&&b.fn()};f.appendChild(el)});
-  $('#modal').classList.add('on');
-}
 
 /* ---------- match flow ---------- */
 function simPts(off,def){const p=clamp(.47+(off-def)*.011,.3,.66),r=Math.random();
   if(r<p)return Math.random()<.34?3:2;if(r<p+.07)return binom(2,.74);return 0}
 function sim(n){for(let i=0;i<n;i++){M.us+=simPts(M.ms,M.os);M.them+=simPts(M.os,M.ms)}M.them+=Math.random()<.5?simPts(M.os,M.ms):0}
 function startMatch(){
-  M={opp:OPPS[S.stage],os:oppStr(S.stage),ms:mateStr(),us:0,them:0,q:1,auto:false,steps:[],outs:[],
+  M={opp:pick(OPPS),os:rnd(74,81),ms:78,us:0,them:0,q:1,steps:[],outs:[],
      L:{pts:0,ast:0,tov:0,fga:0,fgm:0,tpa:0,tpm:0,fta:0,ftm:0},clutch:null};
   for(let q=1;q<=4;q++){
     for(let k=0;k<3;k++){M.steps.push(d=>{M.q=q;sim(ri(5,6));d()});M.steps.push(d=>possStep(q,k,d))}
@@ -222,7 +95,6 @@ function startMatch(){
   }
   M.steps.push(clutchStep);
   M.steps.push(()=>finishMatch());
-  $('#court').classList.add('on');document.body.style.overflow='hidden';
   sizeCourt();if(!raf){lastT=performance.now();raf=requestAnimationFrame(frame)}
   nextStep();
 }
@@ -231,11 +103,10 @@ function scoreHTML(){return`우리 <b>${M.us}</b> : <b>${M.them}</b> ${esc(short
 function applyOut(o){M.outs.push(o);for(const k in M.L)M.L[k]+=k==='pts'?o.myPts:(o[k]||0);M.us+=o.pts}
 function possStep(q,k,done){
   const opt={clock:12,title:`${q}쿼터 · 공격 ${k+1}/3`,sub:`${ri(0,11-k*4)}:${String(ri(0,59)).padStart(2,'0')} 남음`,
-    intro:q===1&&k===0?`<b>${esc(M.opp)}</b>와의 경기 시작!<br>쿼터마다 공이 3번 당신에게 온다. 공격 시간 <b>12초</b>.`:null};
+    intro:q===1&&k===0?`vs <b>${esc(M.opp)}</b><br>쿼터마다 공격 3번, 공격 시간 <b>12초</b>.<br>‘나’를 드래그해 동료에게 놓으면 <b>패스</b>, 림에 놓으면 <b>슛</b>, 빈 곳이면 <b>드리블</b>.`:null};
   playPoss(opt,o=>{applyOut(o);done()});
 }
 function quarterEnd(q,done){
-  if(M.auto)return done();
   $('#cScore').innerHTML=scoreHTML();
   cover(`<h4>${q}쿼터 종료</h4><p style="font-size:22px"><b>${M.us} : ${M.them}</b></p><p>${M.us>M.them?'리드를 지키자!':M.us<M.them?'추격이 필요하다.':'팽팽한 승부!'}</p>
     <button class="btn pri" id="cQ">${q+1}쿼터 시작 ▶</button>`);
@@ -250,27 +121,17 @@ function clutchStep(done){
     o=>{applyOut(o);M.clutch=o;done()});
 }
 function finishMatch(){
-  closeCourt();
+  G=null;CB=null;
   let ot=false;
-  if(M.us===M.them){ot=true;while(M.us===M.them){M.us+=ri(6,14);M.them+=ri(6,14)+Math.round((M.os-M.ms)*.15)}}
+  if(M.us===M.them){ot=true;while(M.us===M.them){M.us+=ri(6,14);M.them+=ri(6,14)}}
   const win=M.us>M.them,L=M.L;
-  let rt=6+L.pts*.17+L.ast*.3-L.tov*.35+(L.fga?(L.fgm/L.fga-.45)*1.5:0)+(win?.5:-.2)+(M.clutch&&M.clutch.pts&&win?.6:0);
-  rt=clamp(Math.round(rt*10)/10,3,10);
-  const gain=(win?3:1)+(rt>=8?1:0);
-  S.sp+=gain;win?S.w++:S.l++;
-  S.log.push({season:S.season,opp:M.opp,us:M.us,them:M.them,win,rt,pts:L.pts,ast:L.ast,tov:L.tov,fgm:L.fgm,fga:L.fga});if(S.log.length>40)S.log.shift();
-  let champ=false;
-  if(win){S.stage++;if(S.stage>=OPPS.length){champ=true;S.titles++;S.season++;S.stage=0}}
-  save();render();
-  const h=`<div class="score"><span>우리 팀</span><b style="color:${win?'var(--green)':'var(--ink)'}">${M.us}</b><b class="muted">:</b><b>${M.them}</b><span>${esc(short(M.opp))}</span></div>
-   <p style="text-align:center;color:${win?'var(--green)':'var(--red)'};font-weight:900">${win?'승리':'패배'}${ot?' (연장)':''}</p>
-   <div class="statbox"><div><b>${L.pts}</b><span>득점</span></div><div><b>${L.ast}</b><span>어시스트</span></div><div><b>${L.tov}</b><span>턴오버</span></div>
-   <div><b style="color:${RT_COL(rt)}">${rt.toFixed(1)}</b><span>평점</span></div></div>
-   <p class="small muted" style="text-align:center">FG ${L.fgm}/${L.fga} · 3P ${L.tpm}/${L.tpa} · FT ${L.ftm}/${L.fta}</p>
-   ${M.clutch?`<div class="note">⏱ 마지막 공격: ${esc(M.clutch.desc)}</div>`:''}
-   <div class="note">⭐ 능력치 포인트 +${gain}${win?'':' · 같은 상대에게 다시 도전!'}</div>`;
-  M=null;
-  modal(champ?'🏆 시즌 우승!!!':'경기 종료',h+(champ?`<div class="note" style="color:var(--gold)">8개 팀을 모두 꺾었다! 시즌 ${S.season}은 상대가 더 강해진다.</div>`:''),[{t:'확인',cls:champ?'gold':'pri'}]);
+  $('#cTitle').innerHTML='경기 종료<small>'+esc(M.opp)+'</small>';$('#cScore').innerHTML=scoreHTML();renderCalls();
+  cover(`<h4 style="color:${win?'var(--green)':'var(--red)'}">${win?'승리!':'패배'}${ot?' (연장)':''}</h4>
+    <p style="font-size:24px"><b>${M.us} : ${M.them}</b></p>
+    <div class="statbox"><div><b>${L.pts}</b><span>득점</span></div><div><b>${L.ast}</b><span>어시스트</span></div><div><b>${L.tov}</b><span>턴오버</span></div><div><b>${L.fgm}/${L.fga}</b><span>야투</span></div></div>
+    ${M.clutch?`<p class="small">⏱ 마지막 공격: ${esc(M.clutch.desc)}</p>`:''}
+    <button class="btn pri" id="cAgain">다시 하기 ▶</button>`);
+  $('#cAgain').onclick=()=>{cover(null);startMatch()};
 }
 
 /* ---------- court engine ---------- */
@@ -281,25 +142,11 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const unit=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;return{x:dx/l,y:dy/l}};
 function segDist(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy||1,t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l2,0,1);return{d:Math.hypot(a.x+dx*t-p.x,a.y+dy*t-p.y),t}}
 const isThree=p=>Math.abs(p.x-HOOP.x)>=6.6||dist(p,HOOP)>6.75;
-const TIPS=[
- '🔁 픽앤롤: 빅맨이 스크린을 건 뒤 림으로 굴러간다. 롤하는 동료에게 🪂 랍 패스면 앨리웁!',
- '🧱 스크린 요청 후 스크리너 옆을 스치듯 드리블하면 내 수비가 스크린에 걸린다.',
- '↩️ 패스할 때 기브앤고를 고르면 패스 후 림으로 컷 → 리턴 패스를 받아 마무리.',
- '✂️ 백도어 컷 지시: 윙이 림으로 파고든다. 수비가 늦으면 랍 패스 타이밍!',
- '🎯 픽앤팝: 스크린 후 빅맨이 3점 라인으로 빠진다. 수비가 헷지하면 오픈 슛 찬스.',
- '🧹 아이솔: 동료들이 코너로 빠져 도움 수비가 사라진다. 1대1로 승부!',
- '수비가 붙어 있으면 슛 성공률이 크게 떨어진다. 드래그하면 예상 성공률이 보여요.',
- '림 중앙(초록 원)에 정확히 놓을수록 슛 정확도가 올라간다.',
- '동료가 공을 잡으면 🧱 스크린 걸기로 동료를 풀어주거나 🙋 패스 달라를 외치자.'];
 let G=null,CB=null,raf=0,lastT=0;
 const CV={k:30,dpr:1,ctx:null};
 
-function playPoss(opt,cb){
-  if(M.auto){cb(autoPoss());return}
-  CB=cb;startPoss(opt);
-}
+function playPoss(opt,cb){CB=cb;startPoss(opt)}
 function possDone(out){const f=CB;CB=null;G=null;f&&f(out)}
-function closeCourt(){G=null;CB=null;cover(null);$('#court').classList.remove('on');document.body.style.overflow='';cancelAnimationFrame(raf);raf=0}
 function cover(html){const c=$('#cCover');if(html==null){c.classList.remove('on');return}$('#cBox').innerHTML=html;c.classList.add('on')}
 
 function startPoss(opt){
@@ -313,8 +160,7 @@ function startPoss(opt){
   $('#cTitle').innerHTML=`${esc(opt.title)}<small>${esc(opt.sub)}</small>`;
   $('#cScore').innerHTML=scoreHTML();
   if(opt.intro){
-    cover(`<h4>${esc(opt.title)}</h4><p>${opt.intro}</p><p class="small">💡 ${pick(TIPS)}</p>
-      <button class="btn pri" id="cGo">${opt.clutch?'마지막 공격 시작':'공격 시작'} ▶</button>`);
+    cover(`<h4>${esc(opt.title)}</h4><p>${opt.intro}</p><button class="btn pri" id="cGo">${opt.clutch?'마지막 공격 시작':'경기 시작'} ▶</button>`);
     $('#cGo').onclick=()=>{cover(null);G.paused=false};
   }else{
     const g=G;fx('READY',CW/2,7,'#ffd166',1.6);
@@ -491,18 +337,6 @@ function endPoss(txt,col){
       <button class="btn pri" id="cNext">${g.opt.clutch?'경기 결과 보기':'계속 ▶'}</button>`);
     $('#cNext').onclick=()=>{cover(null);possDone(g.out)}},1000);
 }
-function autoPoss(){
-  const a=S.a,o={pts:0,myPts:0,fga:0,fgm:0,tpa:0,tpm:0,fta:0,ftm:0,ast:0,tov:0,auto:true,desc:''};
-  const r=Math.random();
-  if(r<.1){o.tov=1;o.desc='(자동) 턴오버';return o}
-  if(r<.4){if(Math.random()<.5){o.pts=2;o.ast=1;o.desc='(자동) 어시스트 → 동료 득점'}else o.desc='(자동) 패스 → 동료 슛 실패';return o}
-  const P={three:.12+a.tpt*.0036,mid:.2+a.sht*.0042,drive:.18+a.drv*.0042},N={three:'3점슛',mid:'점퍼',drive:'돌파'};
-  const k=[['three',3],['mid',2],['drive',2]].sort((x,y)=>y[1]*P[y[0]]-x[1]*P[x[0]])[0];
-  o.fga=1;if(k[0]==='three')o.tpa=1;
-  if(Math.random()<P[k[0]]*.9){o.fgm=1;if(k[0]==='three')o.tpm=1;o.pts=o.myPts=k[1];o.desc=`(자동) ${N[k[0]]} 성공`}else o.desc=`(자동) ${N[k[0]]} 실패`;
-  return o;
-}
-
 /* --- input --- */
 function ptC(e){const r=$('#cv').getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*CW,y:(e.clientY-r.top)/r.height*CH}}
 function dragTarget(d){
@@ -571,12 +405,6 @@ function renderCalls(){
     me.tx=t.x;me.ty=t.y;if(g.play&&g.play.who===g.meI)g.play=null;
   });
   cv.addEventListener('pointercancel',()=>{if(G)G.drag=null});
-  $('#cSkip').onclick=()=>{if(!M)return;
-    cover(`<h4>⏩ 자동 진행</h4><p>남은 공격을 모두 자동으로 처리하고 경기 결과로 갈까요?</p>
-      <button class="btn pri" id="cSkY">자동 진행</button><button class="btn" id="cSkN">계속 플레이</button>`);
-    const g=G,wasP=g&&g.paused;if(g)g.paused=true;
-    $('#cSkN').onclick=()=>{cover(null);if(g&&G===g)g.paused=wasP};
-    $('#cSkY').onclick=()=>{cover(null);M.auto=true;const cb=CB;G=null;CB=null;if(g&&cb)cb(g.ended?g.out:autoPoss());else nextStep()}};
   window.addEventListener('resize',()=>{if(M)sizeCourt()});
 })();
 
@@ -636,8 +464,7 @@ function draw(){
 }
 
 /* ---------- boot ---------- */
-S=load();if(S&&S.v!==1)S=null;
-render();
+startMatch();
 </script>
 </body>
 </html>
