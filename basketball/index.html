@@ -361,8 +361,17 @@ const POSL=['PG','SG','SF','PF','C'];
 const POSN={PG:'포인트가드',SG:'슈팅가드',SF:'스몰포워드',PF:'파워포워드',C:'센터'};
 const ATT={sht:'슈팅',pla:'플레이메이킹',ins:'골밑',def:'수비',reb:'리바운드'};
 const PW={PG:{sht:.3,pla:.4,ins:.1,def:.2,reb:0},SG:{sht:.45,pla:.2,ins:.15,def:.2,reb:0},SF:{sht:.3,pla:.15,ins:.2,def:.25,reb:.1},PF:{sht:.15,pla:.05,ins:.3,def:.25,reb:.25},C:{sht:.05,pla:.05,ins:.35,def:.25,reb:.3}};
-const STRATS={balance:{n:'밸런스',ic:'⚖️',d:'무난한 기본 운영'},three:{n:'3점 폭격',ic:'🏹',d:'슈터가 좋을수록 강함 · 기복 큼'},paint:{n:'골밑 공략',ic:'💪',d:'빅맨이 강할수록 유리'},
- press:{n:'전면 압박',ic:'🔥',d:'수비 강화 · 체력 소모 큼'},zone:{n:'지역 방어',ic:'🧱',d:'골밑 위주 팀에 강함 · 3점에 약함'},rest:{n:'주전 휴식',ic:'🛌',d:'벤치 출전↑ · 주전 체력 회복'}};
+const OFFS={pnr:{n:'픽앤롤',ic:'🤝',d:'볼핸들러와 빅맨의 2대2. 스크린 후 빅맨이 골밑으로 롤.'},pnp:{n:'픽앤팝',ic:'🎯',d:'스크린을 건 빅맨이 외곽으로 빠져 3점. 슈팅 되는 빅맨이 핵심.'},
+ iso:{n:'아이솔레이션',ic:'⭐',d:'에이스에게 공을 주고 1대1. 기복이 있다.'},post:{n:'포스트업',ic:'💪',d:'골밑에서 등지고 1대1. 빅맨 득점력이 핵심.'},
+ motion:{n:'모션 오펜스',ic:'🔄',d:'끊임없는 패스와 컷. 팀워크(케미)가 좋을수록 강하다.'},three:{n:'3점 폭격',ic:'🏹',d:'외곽 위주. 터지면 크고, 안 터지면 무너진다.'},fast:{n:'속공',ic:'⚡',d:'빠른 템포로 몰아친다. 체력 소모가 크다.'}};
+const DEFS={man:{n:'대인 방어',ic:'🛡️',d:'기본. 약점이 적다.'},switch:{n:'스위치',ic:'🔀',d:'스크린마다 수비 교대. 픽앤롤에 강하지만 미스매치에 약하다.'},
+ drop:{n:'드롭 커버리지',ic:'⬇️',d:'빅맨이 림을 지킨다. 롤은 막지만 팝아웃 3점에 약하다.'},zone:{n:'2-3 지역 방어',ic:'🧱',d:'골밑 밀집. 1대1·포스트에 강하고 3점·패스에 약하다.'},
+ press:{n:'전면 압박',ic:'🔥',d:'턴오버를 노린다. 속공에 약하고 체력 소모가 크다.'},box:{n:'박스앤원',ic:'🎯',d:'상대 에이스를 집중 마크. 팀 플레이에 약하다.'}};
+const CM={pnr:{man:0,switch:-1.5,drop:-1,zone:1,press:.5,box:1},pnp:{man:0,switch:-.5,drop:2.5,zone:1,press:.5,box:1},iso:{man:0,switch:1.5,drop:.5,zone:-1.5,press:0,box:-2.5},
+ post:{man:0,switch:2,drop:-.5,zone:-2,press:0,box:.5},motion:{man:.5,switch:-.5,drop:.5,zone:2,press:-.5,box:2},three:{man:0,switch:-.5,drop:1,zone:2.5,press:-1,box:1},fast:{man:.5,switch:.5,drop:.5,zone:1,press:2,box:.5}};
+const STRATS=OFFS;
+const EAST=new Set(['ATL','BOS','BKN','CHA','CHI','CLE','DET','IND','MIA','MIL','NYK','ORL','PHI','TOR','WAS']);
+const CN={E:'동부',W:'서부'};
 const STYLES={three:'3점 위주',paint:'골밑 위주',defense:'수비형',pace:'빠른 템포'};
 const COUNTER={three:{press:2.5,zone:-2.5},paint:{zone:2.5,press:-1},defense:{three:2,paint:-1.5},pace:{zone:2,press:-1.5}};
 const TRAINS={sht:'🏹 슈팅',pla:'🤝 플레이메이킹',ins:'💪 골밑',def:'🛡️ 수비',reb:'🙌 리바운드',chem:'🧩 팀워크',rest:'🛌 회복'};
@@ -370,7 +379,7 @@ const HANDLES=['@hoops_daily','@코트위의시인','@농구중독자','@스카�
 const AWARDS={ring:{n:'NBA 우승',ic:'💍'},fmvp:{n:'파이널 MVP 배출',ic:'🏆'},mvp:{n:'정규시즌 MVP 배출',ic:'👑'},coy:{n:'올해의 감독',ic:'🧠'},roy:{n:'신인왕 배출',ic:'🌱'},po:{n:'플레이오프 진출',ic:'🎟'},best:{n:'정규시즌 1위',ic:'🥇'}};
 
 /* ================= state ================= */
-const KEY='ring-gm-v6';
+const KEY='ring-gm-v7';
 let S=null,tab='home',busy=false,ui={tTeam:null,give:[],get:[]};
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
@@ -421,7 +430,7 @@ function genRoster(tid,base){
 }
 function newGame(){
   S={v:1,year:2026,week:1,my:null,stage:'pick',flow:null,nid:1,P:{},R:{},teams:TEAM_NAMES.map((n,i)=>({id:i,name:n,w:0,l:0})),
-    starters:[],strat:'balance',train:'sht',dev:[],chem:60,owner:60,exp:41,games:[],hist:[],tro:{},feed:[],next:null,po:null,offers:0};
+    starters:[],strat:'pnr',dstrat:'man',rest:false,train:'sht',dev:[],chem:60,owner:60,exp:41,games:[],hist:[],tro:{},feed:[],next:null,po:null,offers:0};
   S.teams.forEach(t=>realRoster(t.id));
   save();
 }
@@ -433,6 +442,7 @@ function lineup(tid){
     while(st.length<5&&rest.length)st.push(rest.shift());return{st,bn:rest.slice(0,4)}}
   const s=[...ids].sort(byOvr);return{st:s.slice(0,5),bn:s.slice(5,9)};
 }
+const confOf=tid=>EAST.has(TC[tid][0])?'E':'W';
 function rate(tid,strat){
   const {st,bn}=lineup(tid),mS=strat==='rest'?25:34,mB=bn.length?Math.min(32,(240-mS*st.length)/bn.length):0,mins={};
   st.forEach(id=>mins[id]=mS);bn.forEach(id=>mins[id]=mB);
@@ -445,27 +455,90 @@ function rate(tid,strat){
 }
 function teamOvr(tid){const {st,bn}=lineup(tid);const a=[...st,...bn];return a.length?a.reduce((s,id)=>s+ovr(P(id)),0)/a.length:0}
 
-/* ================= game ================= */
-function stratEffect(me,op,strat){
-  let adj=0,sd=12.5,notes=[];
-  if(strat==='three'){adj+=(me.sht-72)*.18;sd=15}
-  if(strat==='paint'){adj+=(me.ins-72)*.18-(op.def-72)*.08}
-  if(strat==='press')adj+=.8;
-  if(strat==='zone')adj+=.3;
-  const c=(COUNTER[op.style]||{})[strat]||0;adj+=c;
-  if(c>0)notes.push(`✅ 상대의 ${STYLES[op.style]} 운영에 ${STRATS[strat].n}${josa(STRATS[strat].n,'이','가')} 잘 먹혔다 (+${c})`);
-  if(c<0)notes.push(`⚠️ ${STRATS[strat].n}${josa(STRATS[strat].n,'은','는')} ${STYLES[op.style]} 팀 상대로 불리했다 (${c})`);
-  return{adj,sd,notes};
+/* ================= game (quarter-by-quarter tactics) ================= */
+function pers(ids){const ps=ids.map(P).filter(Boolean);const by=f=>[...ps].sort((a,b)=>f(b)-f(a));
+  const h=by(p=>p.pla)[0],big=by(p=>p.ins+p.reb*.3).find(p=>p!==h)||h,pop=by(p=>(p.pos==='PF'||p.pos==='C'?8:0)+p.sht).find(p=>p!==h)||h,star=by(offS)[0],post=by(p=>p.ins)[0];
+  return{h,big,pop,star,post,ids,avg:f=>ps.reduce((s,p)=>s+f(p),0)/(ps.length||1),min:f=>Math.min(...ps.map(f))}}
+function offVal(k,pp,chem){switch(k){case'pnr':return(pp.h.pla+pp.big.ins)/2;case'pnp':return(pp.h.pla+pp.pop.sht)/2;case'iso':return offS(pp.star)+2;case'post':return pp.post.ins-1;
+  case'motion':return pp.avg(p=>p.pla)*.6+pp.avg(p=>p.sht)*.4+(chem-60)*.1;case'three':return pp.avg(p=>p.sht)+1;case'fast':return pp.avg(p=>(p.pla+p.def)/2)+2}return 70}
+function defVal(k,pp){const a=pp.avg(p=>p.def);switch(k){case'man':return a;case'switch':return a+(pp.min(p=>p.def)>66?1.5:-1.5);case'drop':return a*.5+pp.big.def*.5+.5;case'zone':return pp.avg(p=>p.reb)*.4+a*.6;case'press':return a+1;case'box':return a-.5}return a}
+function offScore(k,pp,chem,vsD){return(offVal(k,pp,chem)-72)*.08+(vsD?CM[k][vsD]*.55:0)}
+function defScore(k,pp,vsO){return(defVal(k,pp)-72)*.04-(vsO?CM[vsO][k]*.55:0)}
+function aiPick(pp,vsDef,vsOff,noise){noise=noise==null?.5:noise;
+  const o=Object.keys(OFFS).map(k=>[k,offScore(k,pp,65,vsDef)+gauss(0,noise)]).sort((a,b)=>b[1]-a[1])[0][0];
+  const d=Object.keys(DEFS).map(k=>[k,defScore(k,pp,vsOff)+gauss(0,noise)]).sort((a,b)=>b[1]-a[1])[0][0];return{o,d}}
+function recFor(pp,vsDef,vsOff){return aiPick(pp,vsDef,vsOff,0)}
+function newCtx(oppId,home,interactive,opt){
+  opt=opt||{};const me=rate(S.my,S.rest?'rest':''),op=rate(oppId,'');
+  const ctx={opp:oppId,home,interactive,opt,me,op,mp:pers(me.st),opp_p:pers(op.st),base:me.R+(S.chem-60)*.06+(home?1.5:-1.5)+(opt.adj||0)-op.R-.8,
+    sdm:1+(opt.sd||0)/12.5,mo:S.strat,md:S.dstrat,qa:[],qb:[],qs:[],qbox:[],notes:(opt.notes||[]).slice()};
+  const ai=aiPick(ctx.opp_p);ctx.oo=ai.o;ctx.od=ai.d;
+  if(opt.counter){ctx.od=aiPick(ctx.opp_p,null,S.strat,.2).d}
+  return ctx;
 }
-function simGame(oppId,home,strat,interactive,cb,opt){
-  opt=opt||{};
-  const me=rate(S.my,strat),opS=opt.opS||pick(['balance','balance','press','three','paint']),op=rate(oppId,opS);
-  const ef=stratEffect(me,op,strat);
-  const Rme=me.R+ef.adj+(S.chem-60)*.06+(home?1.5:-1.5)+(opt.adj||0);
-  let margin=(Rme-op.R-.8)*1.0+gauss(0,ef.sd+(opt.sd||0));
-  const r={opp:oppId,home,strat,me,op,notes:ef.notes.concat(opt.notes||[]),margin,opt};
-  if(interactive&&Math.abs(margin)<=(opt.cth||3.5)&&Math.random()<(opt.cp||.4)){r.margin=-1;r.clutchAt=true}
-  finishGame(r);cb(r);
+function boostOf(k,id,pp){const p=P(id);switch(k){case'pnr':return id===pp.h.id?1.25:id===pp.big.id?1.45:1;case'pnp':return id===pp.h.id?1.2:id===pp.pop.id?1.5:1;
+  case'iso':return id===pp.star.id?1.4:1;case'post':return id===pp.post.id?1.4:1;case'three':return Math.pow(p.sht/70,3);case'motion':return 65/Math.max(50,offS(p));case'fast':return Math.pow((p.pla+p.def)/140,2)*1.3}return 1}
+function allocQ(ctx,pts,k){
+  const ids=Object.keys(ctx.me.mins).map(Number),o=ctx.opt,hc=id=>o.hot==id?1.7:o.cold==id?.55:1;
+  const w=ids.map(id=>ctx.me.mins[id]*Math.pow(offS(P(id))/65,2)*rnd(.6,1.4)*hc(id)*boostOf(k,id,ctx.mp)),t=w.reduce((a,b)=>a+b,0)||1;
+  const raw=w.map(x=>pts*x/t),fl=raw.map(Math.floor);let left=pts-fl.reduce((a,b)=>a+b,0);
+  raw.map((x,i)=>[x-fl[i],i]).sort((a,b)=>b[0]-a[0]).forEach(([_,i])=>{if(left>0){fl[i]++;left--}});
+  const out={};ids.forEach((id,i)=>out[id]=fl[i]);return out}
+function playQ(ctx){
+  const q=ctx.qa.length,o=ctx.opt;
+  if(q>0&&Math.random()<(o.fin?.7:o.po?.5:.3)){const a=aiPick(ctx.opp_p,ctx.md,ctx.mo,.3);ctx.oo=a.o;ctx.od=a.d}
+  const cA=CM[ctx.mo][ctx.od],cB=CM[ctx.oo][ctx.md];
+  const edge=ctx.base/4+offScore(ctx.mo,ctx.mp,S.chem,ctx.od)-offScore(ctx.oo,ctx.opp_p,65,ctx.md)+(defVal(ctx.md,ctx.mp)-defVal(ctx.od,ctx.opp_p))*.04;
+  const sdq=6.25*ctx.sdm*(ctx.mo==='three'||ctx.oo==='three'?1.2:1)*(ctx.mo==='iso'?1.1:1)*(ctx.mo==='fast'?1.1:1);
+  let m=Math.round(edge+gauss(0,sdq));
+  const pace=(ctx.mo==='fast'||ctx.oo==='fast'?2.5:0)+(ctx.md==='press'||ctx.od==='press'?1.5:0)-(ctx.md==='zone'||ctx.od==='zone'?1:0);
+  let pa=Math.max(14,Math.round(rnd(25,30)+pace+m/2)),pb=Math.max(14,pa-m);
+  if(q===3){const sum=a=>a.reduce((x,y)=>x+y,0);let tot=sum(ctx.qa)+pa-sum(ctx.qb)-pb;
+    if(ctx.interactive&&Math.abs(tot)<=(o.cth||3.5)&&Math.random()<(o.cp||.4)){const d=-1-tot;if(pa+d>=12)pa+=d;else pb-=d;ctx.clutchAt=true}
+    else if(tot===0){if(Math.random()<.5)pa++;else pb++}}
+  ctx.qa.push(pa);ctx.qb.push(pb);ctx.qs.push({mo:ctx.mo,md:ctx.md,oo:ctx.oo,od:ctx.od,cA,cB});ctx.qbox.push(allocQ(ctx,pa,ctx.mo));
+}
+function finalizeCtx(ctx){
+  const sum=a=>a.reduce((x,y)=>x+y,0),sc=sum(ctx.qa),os=sum(ctx.qb);
+  const r={opp:ctx.opp,home:ctx.home,strat:ctx.mo,dstrat:ctx.md,me:ctx.me,op:ctx.op,opt:ctx.opt,notes:ctx.notes,qa:ctx.qa,qb:ctx.qb,qs:ctx.qs,sc,os,margin:sc-os,win:sc>os,clutchAt:!!ctx.clutchAt};
+  const mins=ctx.me.mins,ids=Object.keys(mins).map(Number),box={};let wr=0,wa=0;const W={};
+  ids.forEach(id=>{const p=P(id),m=mins[id];W[id]={r:m*Math.pow(p.reb/60,2)*rnd(.7,1.3),a:m*Math.pow(p.pla/60,3)*rnd(.6,1.4)*(ctx.qs.some(x=>x.mo==='motion')?1:1)};wr+=W[id].r;wa+=W[id].a});
+  const treb=Math.round(43+(ctx.me.reb-ctx.op.reb)*.3+gauss(0,4)),tast=Math.round(25+gauss(0,4)+ctx.qs.filter(x=>x.mo==='motion').length*1.5);
+  ids.forEach(id=>{const p=P(id),m=Math.round(mins[id]+gauss(0,2));box[id]={min:Math.max(1,m),pts:ctx.qbox.reduce((s,b)=>s+(b[id]||0),0),reb:Math.round(treb*W[id].r/(wr||1)),ast:Math.round(tast*W[id].a/(wa||1)),stl:poisson(m/36*(p.def-40)/40),blk:poisson(m/36*Math.max(0,p.ins+p.def-110)/45)}});
+  r.box=box;
+  const seen=new Set();
+  ctx.qs.forEach(x=>{if(x.cA&&!seen.has('a'+x.mo+x.od)){seen.add('a'+x.mo+x.od);r.notes.push(x.cA>0?`✅ 우리 ${OFFS[x.mo].n}${josa(OFFS[x.mo].n,'이','가')} 상대 ${DEFS[x.od].n}을 뚫었다 (+${x.cA})`:`⚠️ 우리 ${OFFS[x.mo].n}${josa(OFFS[x.mo].n,'이','가')} 상대 ${DEFS[x.od].n}에 막혔다 (${x.cA})`)}
+    if(x.cB&&!seen.has('b'+x.oo+x.md)){seen.add('b'+x.oo+x.md);r.notes.push(x.cB<0?`✅ 우리 ${DEFS[x.md].n}${josa(DEFS[x.md].n,'이','가')} 상대 ${OFFS[x.oo].n}을 봉쇄했다`:`⚠️ 상대 ${OFFS[x.oo].n}에 우리 ${DEFS[x.md].n}${josa(DEFS[x.md].n,'이','가')} 흔들렸다`)}});
+  return r;
+}
+function simGame(oppId,home,_s,interactive,cb,opt){
+  const ctx=newCtx(oppId,home,interactive,opt);
+  if(!interactive){for(let i=0;i<4;i++)playQ(ctx);cb(finalizeCtx(ctx));return}
+  runLive(ctx,(opt&&opt.label)||'',cb);
+}
+function cmTxt(v){return v>0?`<b style="color:var(--green)">유리 +${v}</b>`:v<0?`<b style="color:var(--red)">불리 ${v}</b>`:'<span class="muted">보통</span>'}
+function qBreak(ctx,cont){
+  if(ctx.noBreak){cont();return}
+  const q=ctx.qa.length,sum=a=>a.reduce((x,y)=>x+y,0),sa=sum(ctx.qa),sb=sum(ctx.qb),x=ctx.qs[q-1];
+  const rec=recFor(ctx.mp,ctx.od,ctx.oo),qb=ctx.qbox[q-1],top=Object.keys(qb).sort((a,b)=>qb[b]-qb[a])[0];
+  modal('',`<div class="sum"><p class="small muted">${q===2?'하프타임':q+'쿼터 종료'} · ${tb(S.my)}vs ${tb(ctx.opp)}</p><div class="big">${sa} : ${sb} ${sa>sb?'<em>리드</em>':sa<sb?'<span style="color:var(--red)">추격</span>':''}</div>
+   <div class="kv"><span>${q}쿼터</span><b>${ctx.qa[q-1]} - ${ctx.qb[q-1]}${top?` · ${esc(P(+top).n)} ${qb[top]}점`:''}</b></div>
+   <div class="note ${x.cA>0?'good':x.cA<0?'bad':''}">⚔️ 우리 <b>${OFFS[x.mo].n}</b> vs 상대 <b>${DEFS[x.od].n}</b> — ${cmTxt(x.cA)}</div>
+   <div class="note ${x.cB<0?'good':x.cB>0?'bad':''}">🛡️ 상대 <b>${OFFS[x.oo].n}</b> vs 우리 <b>${DEFS[x.md].n}</b> — ${cmTxt(-x.cB)}</div>
+   <h4>⚔️ ${q+1}쿼터 공격 전술</h4><div class="chips">${Object.entries(OFFS).map(([k,v])=>`<button class="chip${ctx.mo===k?' on':''}" data-qo="${k}">${v.ic} ${v.n}</button>`).join('')}</div>
+   <h4>🛡️ ${q+1}쿼터 수비 전술</h4><div class="chips">${Object.entries(DEFS).map(([k,v])=>`<button class="chip${ctx.md===k?' on':''}" data-qd="${k}">${v.ic} ${v.n}</button>`).join('')}</div>
+   <p class="hint">💡 코치 추천: 공격 <b>${OFFS[rec.o].n}</b> · 수비 <b>${DEFS[rec.d].n}</b> (상대가 방금 쓴 전술 기준, 상대도 전술을 바꿀 수 있어요)</p></div>`,
+   [{t:`▶ ${q+1}쿼터 시작`,cls:'pri',fn:cont},{t:'⏭ 남은 경기는 이 전술로 진행',fn:()=>{ctx.noBreak=true;cont()}}],
+   root=>{root.querySelectorAll('[data-qo]').forEach(b=>b.onclick=()=>{ctx.mo=b.dataset.qo;qBreak(ctx,cont)});root.querySelectorAll('[data-qd]').forEach(b=>b.onclick=()=>{ctx.md=b.dataset.qd;qBreak(ctx,cont)})});
+}
+function runLive(ctx,label,cb){
+  const fin=r=>{liveHide();cb(r)};
+  const after=r=>{if(r.clutchAt)clutchPick(r,()=>fin(r));else fin(r)};
+  if(S.liveOn===false){const step=()=>{playQ(ctx);if(ctx.qa.length<4)qBreak(ctx,step);else after(finalizeCtx(ctx))};step();return}
+  liveStart(ctx,label);
+  const nextQ=()=>{playQ(ctx);const q=ctx.qa.length-1;if(q===3)LV.r=finalizeCtx(ctx);
+    livePlayQ(ctx,q,()=>{if(q<3){if(LV.skipAll)ctx.noBreak=true;qBreak(ctx,nextQ)}else liveEndQ(LV.r,()=>after(LV.r))})};
+  later(nextQ,600);
 }
 function clutchOpts(r){
   const ids=[...r.me.st,...r.me.bn].map(P);
@@ -485,35 +558,12 @@ function clutchPick(r,done){
       r.notes.unshift(ok?`⏱ 버저비터! ${o.who.n}의 위닝샷으로 역전승!`:`⏱ ${o.who.n}의 마지막 슛이 빗나갔다…`);
       if(LV)liveShot(r,o,ok,done);else done()}})));
 }
-function watch(r,label,done){
-  const fin=()=>{liveHide();done()};
-  const after=()=>{if(r.clutchAt)clutchPick(r,fin);else fin()};
-  if(S.liveOn!==false)liveRun(r,label,after);else after();
-}
-function finishGame(r){
-  let m=Math.round(r.margin);if(m===0)m=Math.random()<.5?1:-1;r.margin=m;r.win=m>0;
-  const base=Math.round(rnd(104,120));r.sc=Math.round(base+m/2);r.os=r.sc-m;
-  // box score
-  const mins=r.me.mins,ids=Object.keys(mins).map(Number),box={};
-  let wp=0,wr=0,wa=0;const W={};
-  const hc=id=>r.opt&&r.opt.hot==id?1.7:r.opt&&r.opt.cold==id?.55:1;
-  ids.forEach(id=>{const p=P(id),m=mins[id];W[id]={p:m*Math.pow(offS(p)/65,2.4)*rnd(.7,1.3)*hc(id),r:m*Math.pow(p.reb/60,2)*rnd(.7,1.3),a:m*Math.pow(p.pla/60,3)*rnd(.6,1.4)};wp+=W[id].p;wr+=W[id].r;wa+=W[id].a});
-  const treb=Math.round(43+(r.me.reb-r.op.reb)*.3+gauss(0,4)),tast=Math.round(25+gauss(0,4));
-  ids.forEach(id=>{const p=P(id),m=Math.round(mins[id]+gauss(0,2));box[id]={min:Math.max(1,m),pts:Math.round(r.sc*W[id].p/wp),reb:Math.round(treb*W[id].r/wr),ast:Math.round(tast*W[id].a/wa),stl:poisson(m/36*(p.def-40)/40),blk:poisson(m/36*Math.max(0,p.ins+p.def-110)/45)}});
-  let diff=r.sc-ids.reduce((s,id)=>s+box[id].pts,0);const top=[...ids].sort((a,b)=>box[b].pts-box[a].pts);
-  while(diff!==0){const id=top[Math.floor(Math.random()*Math.min(3,top.length))];const d=diff>0?1:-1;if(box[id].pts+d>=0){box[id].pts+=d;diff-=d}else diff=0}
-  r.box=box;
-  // quarters
-  const split=(t)=>{const w=[0,1,2,3].map(()=>rnd(.85,1.15)),s=w.reduce((a,b)=>a+b),q=w.map(x=>Math.round(t*x/s));q[3]+=t-q.reduce((a,b)=>a+b);return q};
-  r.qa=split(r.sc);r.qb=split(r.os);
-}
-
 /* ================= per-game update ================= */
 function ageF(a){return a<=21?1.3:a<=24?1.1:a<=27?.7:a<=30?.3:.05}
 function applyGame(r){
   const me=T(S.my),op=T(r.opp);if(r.win){me.w++;op.l++}else{me.l++;op.w++}
   // stats, fatigue, injuries
-  const notes=[];const fat=r.strat==='press'?1.5:r.strat==='rest'?.6:1;
+  const notes=[];const fat=(r.strat==='fast'?1.25:1)*(r.dstrat==='press'?1.3:1)*(S.rest?.6:1);
   for(const id of S.R[S.my]){const p=P(id),b=r.box[id];
     if(b){const s=p.st;s.gp++;for(const k of['min','pts','reb','ast','stl','blk'])s[k]+=b[k];p.cond-=b.min*.24*fat}
     p.cond=clamp(p.cond+10+(S.train==='rest'?6:0),0,100);
@@ -595,7 +645,7 @@ function offerModal(o,next){
 /* ================= play flow ================= */
 function playOne(){
   if(busy||S.stage!=='season')return;busy=true;
-  simGame(S.next.opp,S.next.home,S.strat,true,r=>watch(r,`${S.year} 정규시즌 · ${S.week}번째 경기`,()=>{applyGame(r);const q=decisionsAfter();save();showResult(r,()=>runQueue(q,endGame))}));
+  simGame(S.next.opp,S.next.home,S.strat,true,r=>{applyGame(r);const q=decisionsAfter();save();showResult(r,()=>runQueue(q,endGame))},{label:`${S.year} 정규시즌 · ${S.week}번째 경기`});
 }
 function endGame(){if(S.week>GAMES){seasonEnd();return}S.next=nextGame();save();busy=false;render()}
 function showResult(r,next){
@@ -605,7 +655,7 @@ function showResult(r,next){
    <div class="res ${r.win?'W':'L'}">${r.win?'승리':'패배'} · ${me.w}승 ${me.l}패</div>
    <table class="qt"><tr><th></th><th>1Q</th><th>2Q</th><th>3Q</th><th>4Q</th><th>합계</th></tr>
     <tr><td>${esc(short(me.name))}</td>${r.qa.map(x=>`<td>${x}</td>`).join('')}<td>${r.sc}</td></tr><tr><td>${esc(short(op.name))}</td>${r.qb.map(x=>`<td>${x}</td>`).join('')}<td>${r.os}</td></tr></table>
-   <div class="note">작전: <b>${STRATS[r.strat].ic} ${STRATS[r.strat].n}</b> · 상대 성향: ${STYLES[r.op.style]}</div>
+   <h4>쿼터별 전술</h4>${r.qs.map((x,i)=>`<div class="kv"><span>${i+1}Q <b style="color:var(--ink)">${r.qa[i]}-${r.qb[i]}</b></span><b style="font-size:14px;text-align:right">${OFFS[x.mo].ic}${OFFS[x.mo].n} ${cmTxt(x.cA)} · ${DEFS[x.md].ic}${DEFS[x.md].n} ${cmTxt(-x.cB)}<br><span class="muted" style="font-weight:400">상대 ${OFFS[x.oo].n} / ${DEFS[x.od].n}</span></b></div>`).join('')}
    ${r.notes.map(n=>`<div class="note ${/✅|버저비터/.test(n)?'good':/⚠️|빗나/.test(n)?'bad':''}">${n}</div>`).join('')}
    ${r.inj.map(n=>`<div class="note bad">${n}</div>`).join('')}
    <h4>박스스코어</h4><table class="box"><tr><th>선수</th><th>분</th><th>득점</th><th>리바</th><th>어시</th></tr>
@@ -644,15 +694,16 @@ function autoStep(){
 function autoEnd(q){const A=AR;AR=null;save();$('#pgBtns').innerHTML='';const me=T(S.my);
   setTimeout(()=>{progHide();
     modal('',`<div class="sum"><p class="small muted">${S.year} 시즌 · ${S.week>GAMES?'정규시즌 종료':`${S.week-1}/${GAMES}경기`}</p><div class="big">이번 구간<br><em>${A.w}승 ${A.l}패</em></div>
-     <div class="kv"><span>시즌 성적</span><b>${me.w}승 ${me.l}패 · ${rankOf(S.my)}위</b></div>
+     <div class="kv"><span>시즌 성적</span><b>${me.w}승 ${me.l}패 · ${rankTxt(S.my)}</b></div>
      <div class="kv"><span>팀 케미스트리</span><b>${Math.round(S.chem)}</b></div>
      ${A.notes.length?'<h4>주요 사건</h4>'+A.notes.map(e=>`<div class="note bad">${e}</div>`).join(''):''}
      ${q.length?'<div class="note hot">결정할 일이 생겨서 진행을 멈췄어요.</div>':''}</div>`,[{t:'확인',cls:'pri',fn:()=>runQueue(q,endGame)}])},A.skip?50:350);
 }
 
 /* ================= season end ================= */
-function standings(){return[...S.teams].sort((a,b)=>(b.w/(b.w+b.l||1))-(a.w/(a.w+a.l||1))||teamOvr(b.id)-teamOvr(a.id))}
-function rankOf(tid){return standings().findIndex(t=>t.id===tid)+1}
+function standings(c){return[...S.teams].filter(t=>!c||confOf(t.id)===c).sort((a,b)=>(b.w/(b.w+b.l||1))-(a.w/(a.w+a.l||1))||teamOvr(b.id)-teamOvr(a.id))}
+function rankOf(tid){return standings(confOf(tid)).findIndex(t=>t.id===tid)+1}
+const rankTxt=tid=>`${CN[confOf(tid)]} ${rankOf(tid)}위`;
 function setFlow(step,data){S.flow={step,data:Object.assign({},S.flow&&S.flow.data,data||{})};S.stage='flow';save();busy=true;render();FLOWS[step]()}
 const FLOWS={};const D=()=>S.flow.data;
 function topPlayerName(){const ids=S.R[S.my].slice().sort((a,b)=>(P(b).st.pts/(P(b).st.gp||1))-(P(a).st.pts/(P(a).st.gp||1)));const p=P(ids[0]);return p?`${p.n} ${f1(p.st.pts/(p.st.gp||1))}점`:'-'}
@@ -671,7 +722,7 @@ FLOWS.sum=()=>{
   const d=D(),me=T(S.my),champ=d.champ===S.my;
   const tops=S.R[S.my].slice().sort((a,b)=>(P(b).st.pts/(P(b).st.gp||1))-(P(a).st.pts/(P(a).st.gp||1))).slice(0,3);
   modal('',`<div class="sum"><p class="small muted">${S.year} 시즌이 끝났어요</p><div class="big">${champ?'<em>NBA 챔피언!</em> 💍':`${esc(short(me.name))}<br><em>${d.result}</em>`}</div>
-   <div class="kv"><span>정규시즌</span><b>${d.w}승 ${d.l}패 · ${d.rank}위</b></div>
+   <div class="kv"><span>정규시즌</span><b>${d.w}승 ${d.l}패 · ${d.rank}</b></div>
    <div class="kv"><span>구단주 기대 승수</span><b>${S.exp}승</b></div>
    <div class="kv"><span>구단주 신뢰</span><b>${S.owner} <span class="${d.delta>=0?'up':'dn'}">${d.delta>=0?'+':''}${d.delta}</span></b></div>
    <div class="kv"><span>NBA 우승</span><b>${esc(T(d.champ).name)}</b></div>
@@ -768,26 +819,25 @@ const MV3=['코너 3점','탑에서 스텝백 3점','캐치앤슛 3점','딥 쓰
 let LV=null;
 function wsel(arr,wf){const ws=arr.map(wf),t=ws.reduce((a,b)=>a+b,0)||1;let x=Math.random()*t;for(let i=0;i<arr.length;i++){x-=ws[i];if(x<=0)return arr[i]}return arr[arr.length-1]}
 function tokensFor(pts,tr){const t=[];let p=pts;while(p>0){if(p>=3&&Math.random()<tr){t.push({v:3,k:'3'});p-=3}else if(p>=3&&Math.random()<.1){t.push({v:3,k:'and1'});p-=3}else if(p>=2){t.push({v:2,k:'2'});p-=2}else{t.push({v:1,k:'ft'});p-=1}}return t}
-function genPlays(r,myOn,opOn){
-  const plays=[],trA=clamp((r.me.sht-58)/55,.18,.55),trB=clamp((r.op.sht-58)/55,.18,.55);
-  const rem={};for(const id in r.box)rem[id]=r.box[id].pts;
-  const myAll=Object.keys(r.box).map(Number),opAll=Object.keys(r.op.mins).map(Number);
-  for(let q=0;q<4;q++){
-    const A=shuffle(tokensFor(r.qa[q],trA).concat(Array.from({length:ri(2,5)},()=>({v:0,k:'miss'})))).map(x=>({...x,t:0}));
-    const B=shuffle(tokensFor(r.qb[q],trB).concat(Array.from({length:ri(2,5)},()=>({v:0,k:'miss'})))).map(x=>({...x,t:1}));
-    const seq=[];let turn=Math.random()<.5?0:1;
-    while(A.length||B.length){if(turn===0&&A.length)seq.push(A.shift());else if(turn===1&&B.length)seq.push(B.shift());else seq.push((A.length?A:B).shift());turn^=1}
-    seq.forEach((x,k)=>{x.q=q;x.clock=Math.max(0,Math.round(720*(1-(k+1)/seq.length)-rnd(0,8)));
-      if(x.t===0){x.who=x.v?wsel(myAll,id=>Math.max(.3,rem[id]||0)):wsel(myAll,id=>r.me.mins[id]*offS(P(id))/60);if(x.v)rem[x.who]=(rem[x.who]||0)-x.v;
-        if(x.v>=2&&Math.random()<.6){const o=myAll.filter(id=>id!==x.who);if(o.length)x.ast=wsel(o,id=>Math.pow(P(id).pla/60,3)*r.me.mins[id])}}
-      else x.who=wsel(opAll,id=>Math.pow(offS(P(id))/65,3)*r.op.mins[id]);
-      x.def=x.t===0?wsel(opAll,id=>r.op.mins[id]):wsel(myAll,id=>r.me.mins[id]);
-      plays.push(x)});
-  }
-  return plays;
+function genQPlays(ctx,q){
+  const x=ctx.qs[q],adj={three:.15,pnp:.1,post:-.12,pnr:-.05,motion:.05,iso:0,fast:0};
+  const trA=clamp((ctx.me.sht-58)/55+adj[x.mo],.12,.65),trB=clamp((ctx.op.sht-58)/55+adj[x.oo],.12,.65);
+  const rem=Object.assign({},ctx.qbox[q]),myAll=Object.keys(ctx.me.mins).map(Number),opAll=Object.keys(ctx.op.mins).map(Number);
+  const A=shuffle(tokensFor(ctx.qa[q],trA).concat(Array.from({length:ri(2,5)},()=>({v:0,k:'miss'})))).map(z=>({...z,t:0}));
+  const B=shuffle(tokensFor(ctx.qb[q],trB).concat(Array.from({length:ri(2,5)},()=>({v:0,k:'miss'})))).map(z=>({...z,t:1}));
+  const seq=[];let turn=Math.random()<.5?0:1;
+  while(A.length||B.length){if(turn===0&&A.length)seq.push(A.shift());else if(turn===1&&B.length)seq.push(B.shift());else seq.push((A.length?A:B).shift());turn^=1}
+  seq.forEach((z,k)=>{z.q=q;z.clock=Math.max(0,Math.round(720*(1-(k+1)/seq.length)-rnd(0,8)));z.set=z.t===0?x.mo:x.oo;z.dset=z.t===0?x.od:x.md;
+    const pp=z.t===0?ctx.mp:ctx.opp_p;
+    if(z.t===0){z.who=z.v?wsel(myAll,id=>Math.max(.2,rem[id]||0)):wsel(myAll,id=>ctx.me.mins[id]*offS(P(id))/60);if(z.v)rem[z.who]=(rem[z.who]||0)-z.v}
+    else z.who=wsel(opAll,id=>Math.pow(offS(P(id))/65,3)*ctx.op.mins[id]*boostOf(x.oo,id,ctx.opp_p));
+    const all=z.t===0?myAll:opAll,mins=z.t===0?ctx.me.mins:ctx.op.mins;
+    if(z.v>=2){if((z.set==='pnr'||z.set==='pnp')&&z.who!==pp.h.id)z.ast=pp.h.id;else if(z.set!=='iso'&&Math.random()<.6){const o=all.filter(id=>id!==z.who);if(o.length)z.ast=wsel(o,id=>Math.pow(P(id).pla/60,3)*mins[id])}}
+    z.def=z.t===0?wsel(opAll,id=>ctx.op.mins[id]):wsel(myAll,id=>ctx.me.mins[id])});
+  return seq;
 }
 function courtSVG(){
-  const a=TC[S.my],b=TC[LV.r.opp];
+  const a=TC[S.my],b=TC[LV.opp];
   const dot=(i,c,lbl)=>`<g class="pd" id="pv${i}"><circle r="23" fill="${c[1]}" stroke="${c[2]}" stroke-width="4"/><text id="pt${i}">${lbl}</text></g>`;
   return`<svg viewBox="0 0 940 500" class="court"><rect width="940" height="500" rx="18" class="cf"/>
   <g class="cl"><rect x="10" y="10" width="920" height="480"/><line x1="470" y1="10" x2="470" y2="490"/><circle cx="470" cy="250" r="60"/>
@@ -802,25 +852,29 @@ function mv(el,x,y){const e=document.getElementById(el);if(e)e.style.transform=`
 function dur(ms){document.querySelectorAll('#lvCourt .pd').forEach(e=>e.style.transitionDuration=ms+'ms')}
 function later(fn,ms){if(!LV)return;const tk=LV.tok;const id=setTimeout(()=>{if(LV&&LV.tok===tk)fn()},ms);LV.tids.push(id)}
 function fill5(st,bn){const a=st.slice(0,5);for(const id of bn)if(a.length<5)a.push(id);return a}
-function liveRun(r,label,done){
-  LV={r,done,i:0,q:0,sa:0,sb:0,tok:1,tids:[],sp:S.lvSp||2,myOn:fill5(r.me.st,r.me.bn),opOn:fill5(r.op.st,r.op.bn)};
-  LV.plays=genPlays(r,LV.myOn,LV.opOn);
+function liveStart(ctx,label){
+  LV={opp:ctx.opp,ctx,i:0,q:0,sa:0,sb:0,tok:1,tids:[],sp:S.lvSp||2,myOn:fill5(ctx.me.st,ctx.me.bn),opOn:fill5(ctx.op.st,ctx.op.bn)};
   $('#lvLbl').textContent=label;
-  $('#lvA').innerHTML=`${tb(S.my)}<span>${esc(short(T(S.my).name))}</span>`;$('#lvB').innerHTML=`<span>${esc(short(T(r.opp).name))}</span>${tb(r.opp)}`;
+  $('#lvA').innerHTML=`${tb(S.my)}<span>${esc(short(T(S.my).name))}</span>`;$('#lvB').innerHTML=`<span>${esc(short(T(ctx.opp).name))}</span>${tb(ctx.opp)}`;
   $('#lvCourt').innerHTML=courtSVG();$('#lvLog').innerHTML='';
   document.querySelectorAll('[data-sp]').forEach(b=>{b.classList.toggle('on',+b.dataset.sp===LV.sp);b.onclick=()=>{LV&&(LV.sp=+b.dataset.sp);S.lvSp=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b))}});
   $('#lvSkip').onclick=liveSkip;
   dur(0);LV.myOn.forEach((id,i)=>mv('pv'+i,330-i*20,90+i*80));LV.opOn.forEach((id,i)=>mv('pv'+(i+5),610+i*20,90+i*80));mv('ball',470,250);
-  lvScore(0,720);lvCom('🏀 점프볼! 경기 시작');
+  lvScore(0,720);lvCom(`🏀 점프볼! 우리 ${OFFS[ctx.mo].ic}${OFFS[ctx.mo].n} · ${DEFS[ctx.md].ic}${DEFS[ctx.md].n}로 시작`);
   $('#live').classList.add('on');
-  later(liveStep,700);
+}
+function livePlayQ(ctx,q,done){
+  const sum=a=>a.slice(0,q+1).reduce((x,y)=>x+y,0);
+  if(LV.skipAll){LV.sa=sum(ctx.qa);LV.sb=sum(ctx.qb);lvScore(q,0);done();return}
+  LV.plays=genQPlays(ctx,q);LV.i=0;LV.q=q;LV.qdone=()=>{LV.sa=sum(ctx.qa);LV.sb=sum(ctx.qb);lvScore(q,0);lvCom(`⏸ ${q+1}쿼터 종료 · ${LV.sa}-${LV.sb}`);later(done,800/LV.sp)};
+  if(q>0)lvCom(`🔔 ${q+1}쿼터 시작 · 우리 ${OFFS[ctx.mo].n} / ${DEFS[ctx.md].n}, 상대 ${OFFS[ctx.oo].n} / ${DEFS[ctx.od].n}`);
+  later(liveStep,500/LV.sp);
 }
 function lvScore(q,c){$('#lvSA').textContent=LV.sa;$('#lvSB').textContent=LV.sb;$('#lvQ').textContent=`${q+1}Q ${Math.floor(c/60)}:${String(c%60).padStart(2,'0')}`}
 function lvCom(t,log){$('#lvCom').innerHTML=t;if(log!==false){const d=document.createElement('div');d.innerHTML=t;const lg=$('#lvLog');lg.insertBefore(d,lg.firstChild);while(lg.children.length>30)lg.removeChild(lg.lastChild)}}
 function liveStep(){
   if(!LV)return;const p=LV.plays[LV.i];
-  if(!p)return liveEnd();
-  if(p.q!==LV.q){lvCom(`⏸ ${LV.q+1}쿼터 종료 · ${LV.sa}-${LV.sb}`);LV.q=p.q;later(liveStep,1000/LV.sp);return}
+  if(!p)return LV.qdone();
   poss(p,()=>{LV.i++;liveStep()});
 }
 function poss(p,cb){
@@ -836,34 +890,47 @@ function poss(p,cb){
   const hd=p.ast!=null&&offIds.includes(p.ast)?offIds.indexOf(p.ast):0;
   mv('ball',spots[hd][0],spots[hd][1]);
   lvScore(p.q,p.clock);
+  const scr=(p.set==='pnr'||p.set==='pnp')&&si!==hd;
+  if(scr)later(()=>{mv('pv'+(base+si),spots[hd][0]+(side==='r'?30:-30),spots[hd][1]+(spots[hd][1]>250?-34:34));
+    later(()=>{if(p.set==='pnr'){const rx=rim[0]+(side==='r'?-70:70),ry=rim[1]+rnd(-30,30);spots[si]=[rx,ry]}else spots[si]=mir([700,spots[hd][1]>250?150:350]);mv('pv'+(base+si),spots[si][0],spots[si][1])},ms*.5)},ms*.6);
   later(()=>{
     mv('ball',spots[si][0],spots[si][1]);
     if(p.k==='2'||p.k==='and1'){const nx=spots[si][0]+(rim[0]-spots[si][0])*.65,ny=spots[si][1]+(rim[1]-spots[si][1])*.65;mv('pv'+(base+si),nx,ny);later(()=>mv('ball',nx,ny),ms*.4)}
     later(()=>{
       const n=esc(P(p.who).n),dn=esc(P(p.def).n),an=p.ast!=null?esc(P(p.ast).n):null;
-      if(p.k==='miss'&&Math.random()<.3){const d=document.getElementById('pv'+(dbase+si));mv('ball',spots[si][0]+(rim[0]-spots[si][0])*.3,spots[si][1]);lvCom(pick([`🦅 ${dn} 스틸!`,`🖐 ${dn}의 블록슛!`]))}
+      const sx=setText(p,n,dn,an);
+      if(p.k==='miss'&&Math.random()<.35){const dtx={press:`🔥 전면 압박에 걸려 턴오버! ${dn} 스틸`,zone:'🧱 지역 방어에 막혀 샷클락 바이얼레이션',box:`🎯 박스앤원에 ${n} 봉쇄!`,switch:`🔀 스위치 수비에 막혀 ${n}의 공격이 무산`,drop:`⬇️ 드롭 수비 ${dn}의 블록!`}[p.dset];const d=document.getElementById('pv'+(dbase+si));mv('ball',spots[si][0]+(rim[0]-spots[si][0])*.3,spots[si][1]);lvCom(dtx&&Math.random()<.6?dtx:pick([`🦅 ${dn} 스틸!`,`🖐 ${dn}의 블록슛!`]))}
       else{mv('ball',rim[0]+(side==='r'?-8:8),rim[1]);
         if(p.v){if(p.t===0)LV.sa+=p.v;else LV.sb+=p.v;const rm=document.getElementById(side==='r'?'rimR':'rimL');rm.classList.add('fl');later(()=>rm.classList.remove('fl'),ms)}
         const who=p.t===0?`<b style="color:var(--org2)">${n}</b>`:`<b>${n}</b>`;
-        lvCom(p.k==='3'?`🏹 ${who}, ${pick(MV3)}… 꽂힙니다!${an?` <span class="muted">(${an} 어시스트)</span>`:''}`:
+        lvCom(sx?sx.split('$W').join(who):p.k==='3'?`🏹 ${who}, ${pick(MV3)}… 꽂힙니다!${an?` <span class="muted">(${an} 어시스트)</span>`:''}`:
           p.k==='2'?`🏀 ${who}의 ${pick(MV2)}!${an?` <span class="muted">(${an} 어시스트)</span>`:''}`:
           p.k==='and1'?`💥 ${who} 앤드원! 파울 얻고 자유투까지`:p.k==='ft'?`🎯 ${who} 자유투 성공`:
           pick([`${who}의 슛이 림을 돌아 나옵니다`,`${who}의 3점 시도, 빗나갑니다`,`${who} 레이업 실패, 리바운드 ${dn}`]))}
       lvScore(p.q,p.clock);
       later(cb,ms*.9);
     },ms);
-  },ms);
+  },scr?ms*1.7:ms);
 }
-function liveEnd(){
-  if(!LV)return;const r=LV.r;LV.sa=r.sc;LV.sb=r.os;
-  if(r.clutchAt){lvScore(3,ri(4,9));lvCom(`⏱ 종료 직전 <b style="color:var(--red)">${r.sc}-${r.os}</b>, 1점 차! 작전 타임!`);later(()=>LV.done(),900);return}
+function setText(p,n,dn,an){
+  if(!p.v)return null;const k=p.k,s=p.set;
+  if(s==='pnr'&&k!=='3')return an?`🤝 ${an}–$W 픽앤롤! $W 롤 다운 ${pick(['덩크!','레이업','앨리웁 덩크!'])}`:`🤝 픽앤롤 스크린을 타고 $W ${pick(['풀업 점퍼','플로터','돌파 레이업'])}!`;
+  if(s==='pnp'&&k==='3')return`🎯 ${an?an+'의 ':''}픽앤팝! $W 팝아웃 3점 꽂습니다!`;
+  if(s==='iso')return`⭐ $W 아이솔레이션… ${k==='3'?'스텝백 3점!':pick(MV2)+'!'}`;
+  if(s==='post'&&k!=='3')return`💪 $W 포스트업, ${pick(['훅슛','페이더웨이','드롭스텝 레이업','파워 덩크'])}!`;
+  if(s==='motion')return`🔄 패스 ${ri(3,6)}번 연결! $W ${k==='3'?'오픈 3점':pick(MV2)}${an?` <span class="muted">(${an} 어시스트)</span>`:''}`;
+  if(s==='fast')return`⚡ 속공! $W ${k==='3'?'트레일러 3점':pick(['레이업','원핸드 덩크','앨리웁'])}!`;
+  return null}
+function liveEndQ(r,cb){
+  if(!LV)return;LV.sa=r.sc;LV.sb=r.os;
+  if(r.clutchAt){lvScore(3,ri(4,9));lvCom(`⏱ 종료 직전 <b style="color:var(--red)">${r.sc}-${r.os}</b>, 1점 차! 작전 타임!`);later(cb,900);return}
   lvScore(3,0);lvCom(`🏁 경기 종료! <b style="color:${r.win?'var(--green)':'var(--red)'}">${r.sc}-${r.os} ${r.win?'승리':'패배'}</b>`);
-  later(()=>LV.done(),1300/LV.sp);
+  later(cb,LV.skipAll?300:1300/LV.sp);
 }
-function liveSkip(){if(!LV)return;LV.tids.forEach(clearTimeout);LV.tids=[];LV.tok++;LV.i=LV.plays.length;liveEnd()}
+function liveSkip(){if(!LV||LV.skipAll)return;LV.tids.forEach(clearTimeout);LV.tids=[];LV.tok++;LV.skipAll=true;if(LV.ctx)LV.ctx.noBreak=true;if(LV.qdone){const d=LV.qdone;LV.qdone=null;d()}}
 function liveShot(r,o,ok,done){
   if(!LV){done();return}
-  LV.tids.forEach(clearTimeout);LV.tids=[];LV.tok++;LV.sp=1;
+  LV.tids.forEach(clearTimeout);LV.tids=[];LV.tok++;LV.sp=1;LV.skipAll=false;
   const p={t:0,q:3,clock:1,v:ok?o.pts:0,k:ok?(o.pts===3?'3':'2'):'miss',who:o.who.id,ast:o.ast?o.ast.id:null,def:LV.opOn[0]};
   LV.sa=r.sc-(ok?o.pts:0);
   poss(p,()=>{lvScore(3,0);lvCom(ok?`🚨 버저비터!!! <b style="color:var(--green)">${r.sc}-${r.os} 역전승!</b>`:`🏁 마지막 슛 실패… <b style="color:var(--red)">${r.sc}-${r.os}</b>`);later(done,1800)});
@@ -871,25 +938,39 @@ function liveShot(r,o,ok,done){
 function liveHide(){if(LV){LV.tids.forEach(clearTimeout);LV.tok++}LV=null;$('#live').classList.remove('on')}
 
 /* ================= playoffs ================= */
-const PR=['1라운드','2라운드','컨퍼런스 결승','NBA 파이널'];
+const PR=['1라운드','컨퍼런스 준결승','컨퍼런스 결승','NBA 파이널'];
 function simSeries(A,B){let wa=0,wb=0,g=0;const ra=rate(A,'balance').R,rb=rate(B,'balance').R;
   while(wa<4&&wb<4){const hA=[0,1,4,6].includes(g);if(Math.random()<1/(1+Math.exp(-(ra-rb+(hA?1.5:-1.5))/11)))wa++;else wb++;g++}
   return{A,B,wa,wb,w:wa>wb?A:B}}
 function seasonEnd(){
-  busy=true;const seeds=standings().slice(0,16).map(t=>t.id),inPo=seeds.includes(S.my);
-  S.po={seeds,br:[0,15,7,8,3,12,4,11,1,14,6,9,2,13,5,10].map(i=>seeds[i]),ri:0,rounds:[],pst:{},won:0,out:!inPo,result:inPo?'':'플레이오프 진출 실패',cur:null};
+  busy=true;const seeds=[],br=[],pi=[];const nm=id=>short(T(id).name);
+  const g=(a,b)=>{if(a===S.my||b===S.my){let r;simGame(a===S.my?b:a,a===S.my,'',false,x=>r=x,{});return(a===S.my)===r.win?a:b}
+    const ra=rate(a,'').R+1.5,rb=rate(b,'').R;return Math.random()<1/(1+Math.exp(-(ra-rb)/11))?a:b};
+  for(const c of['E','W']){const st=standings(c).map(t=>t.id),sd=st.slice(0,6);
+    const w78=g(st[6],st[7]),l78=w78===st[6]?st[7]:st[6],w910=g(st[8],st[9]),s8=g(l78,w910);sd.push(w78,s8);
+    pi.push({c,top:sd.slice(),lines:[`7-8위전: ${nm(st[6])} vs ${nm(st[7])} → <b>${nm(w78)}</b> 7번 시드`,`9-10위전: ${nm(st[8])} vs ${nm(st[9])} → <b>${nm(w910)}</b> 생존`,`8번 시드 결정전: ${nm(l78)} vs ${nm(w910)} → <b>${nm(s8)}</b>`]});
+    seeds.push(...sd);br.push(...[0,7,3,4,2,5,1,6].map(i=>sd[i]))}
+  const inPo=seeds.includes(S.my);
+  S.po={seeds,br,pi,ri:0,rounds:[],pst:{},won:0,out:!inPo,result:inPo?'':'플레이오프 진출 실패',cur:null};
   for(const id of S.R[S.my]){P(id).cond=Math.max(P(id).cond,95)}
   setFlow('poRound');
 }
+const seedOf=id=>S.po.seeds.indexOf(id)%8+1;
+const wp=id=>T(id).w/(T(id).w+T(id).l||1);
 FLOWS.poRound=()=>{
   const po=S.po;
+  if(!po.piShown){po.piShown=true;save();
+    modal('',`<div class="sum"><p class="small muted">${S.year} 플레이오프 대진</p><div class="big">플레이인 결과</div>
+      ${po.pi.map(x=>`<h4>${CN[x.c]} 컨퍼런스</h4>${x.lines.map(l=>`<div class="note">${l}</div>`).join('')}<div class="kv"><span>시드 1~8</span><b style="font-size:14px;text-align:right">${x.top.map((id,i)=>`${i+1}.${id===S.my?'<span style="color:var(--org2)">':''}${esc(short(T(id).name))}${id===S.my?'</span>':''}`).join(' ')}</b></div>`).join('')}
+      <div class="note ${po.out?'bad':'good'}">${po.out?`${esc(T(S.my).name)}는 플레이오프에 오르지 못했다.`:`${esc(T(S.my).name)}, ${CN[confOf(S.my)]} ${seedOf(S.my)}번 시드로 플레이오프 진출!`}</div></div>`,
+      [{t:po.out?'시즌 결산':'플레이오프 시작 ▶',cls:'pri',fn:()=>FLOWS.poRound()}]);return}
   while(true){
     if(po.ri>=4){finishSeason();return}
     if(!po.cur){const ser=[];let mine=null;
       for(let i=0;i<po.br.length;i+=2){const A=po.br[i],B=po.br[i+1];
-        if(!po.out&&(A===S.my||B===S.my)){const opp=A===S.my?B:A;mine={opp,hf:po.seeds.indexOf(S.my)<po.seeds.indexOf(opp),wa:0,wb:0,g:0,mom:0,fat:0,last:null,games:[],ev:null};ser.push(null)}
+        if(!po.out&&(A===S.my||B===S.my)){const opp=A===S.my?B:A;mine={opp,hf:po.ri<3?seedOf(S.my)<seedOf(opp):wp(S.my)>=wp(opp),wa:0,wb:0,g:0,mom:0,fat:0,last:null,games:[],ev:null};ser.push(null)}
         else ser.push(simSeries(A,B))}
-      po.cur={nm:PR[po.ri],ser,mine};save()}
+      po.cur={nm:po.ri<3&&mine?`${CN[confOf(S.my)]} ${PR[po.ri]}`:PR[po.ri],ser,mine};save()}
     const c=po.cur;
     if(c.mine&&!c.mine.done){FLOWS.poPrep();return}
     const ser=c.ser.map((x,i)=>x||{A:po.br[i*2],B:po.br[i*2+1],wa:po.br[i*2]===S.my?c.mine.wa:c.mine.wb,wb:po.br[i*2]===S.my?c.mine.wb:c.mine.wa,w:c.mine.wa===4?S.my:c.mine.opp,mine:true});
@@ -937,12 +1018,13 @@ FLOWS.poPrep=()=>{
   modal('',`<div class="sum"><p class="small muted">${S.year} 플레이오프 · ${c.nm}</p><div class="big">${m.g+1}차전<br><em>${m.wa} : ${m.wb}</em></div>
     <div class="kv"><span>상대</span><b>${tb(m.opp)}${esc(opn)}</b></div><div class="kv"><span>장소</span><b>${home?'🏠 홈':'✈️ 원정'}</b></div>
     <h4>${fin?'🏆 파이널 변수':'경기 변수'}</h4>${evH||'<p class="small muted">특별한 변수 없음</p>'}
-    <h4>🎯 작전</h4><div class="chips">${Object.entries(STRATS).map(([k,s])=>`<button class="chip${S.strat===k?' on':''}" data-pst="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
-    <p class="hint">${m.last&&m.last===S.strat?`⚠️ 지난 경기와 같은 작전이에요. 상대가 대비해서 불리해져요(${fin?'-3':'-2'}).`:`상대 성향: ${STYLES[rate(m.opp,'balance').style]}`}</p></div>`,
+    <h4>⚔️ 시작 공격 전술</h4><div class="chips">${Object.entries(OFFS).map(([k,s])=>`<button class="chip${S.strat===k?' on':''}" data-pst="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
+    <h4>🛡️ 시작 수비 전술</h4><div class="chips">${Object.entries(DEFS).map(([k,s])=>`<button class="chip${S.dstrat===k?' on':''}" data-pds="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
+    <p class="hint">${(()=>{const sc=recFor(pers(rate(m.opp,'').st));return`🔎 스카우팅: 상대 주 공격 <b>${OFFS[sc.o].n}</b>, 주 수비 <b>${DEFS[sc.d].n}</b>. `})()}${m.last&&m.last===S.strat?`⚠️ 지난 경기와 같은 공격 전술이면 상대가 맞춤 수비로 대비해요(${fin?'-3':'-2'}).`:'쿼터마다 전술을 바꿀 수 있어요.'}</p></div>`,
     [{t:ready?'🏀 경기 시작':'변수에 대한 결정을 모두 내려주세요',cls:ready?'pri':'',fn:()=>{if(ready)poPlay(false);else FLOWS.poPrep()}},
      {t:'⏩ 이 시리즈 자동 진행',fn:()=>poAuto()}],
     root=>{root.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const [i,j]=b.dataset.ev.split(':').map(Number);m.ev[i].pick=j;save();FLOWS.poPrep()});
-      root.querySelectorAll('[data-pst]').forEach(b=>b.onclick=()=>{S.strat=b.dataset.pst;save();FLOWS.poPrep()})});
+      root.querySelectorAll('[data-pst]').forEach(b=>b.onclick=()=>{S.strat=b.dataset.pst;save();FLOWS.poPrep()});root.querySelectorAll('[data-pds]').forEach(b=>b.onclick=()=>{S.dstrat=b.dataset.pds;save();FLOWS.poPrep()})});
 };
 function poOpt(m,fin){
   const o={adj:0,sd:fin?2:0,notes:[],out:[],fin,cp:fin?.85:.6,cth:fin?6:4.5};
@@ -956,7 +1038,7 @@ function poOpt(m,fin){
     if(c&&c.fx==='bench')o.cold=null;
     if(c&&c.fx==='deep')o.deep=1;if(c&&c.fx==='push')o.push=1;
     if(!e.ch&&e.adj&&Math.abs(e.adj)>=1)o.notes.push(`${e.ic} ${e.t} (${e.adj>0?'+':''}${f1(e.adj)})`)}
-  if(m.last&&m.last===S.strat){o.adj-=fin?3:2;o.notes.push('🧠 상대가 우리 작전을 읽고 대비했다')}
+  o.po=1;if(m.last&&m.last===S.strat){o.adj-=fin?3:2;o.counter=1;o.notes.push('🧠 상대가 우리 공격 전술을 읽고 맞춤 수비를 준비했다')}
   return o;
 }
 function poPlay(auto,cb){
@@ -965,11 +1047,8 @@ function poPlay(auto,cb){
   const o=poOpt(m,fin);o.out.forEach(id=>P(id).inj=Math.max(P(id).inj,1));
   for(const id of S.R[S.my])P(id).cond=clamp(Math.max(P(id).cond,90)-m.fat*3,40,100);
   busy=true;
-  simGame(m.opp,home,S.strat,!auto,r=>{
-    const end=()=>{poAfter(r,o);if(auto){cb&&cb(r);return}showPoResult(r,()=>{if(m.done)poSeriesEnd();else FLOWS.poPrep()})};
-    if(auto){if(r.clutchAt){const op=clutchOpts(r).sort((a,b)=>b.pr-a.pr)[0],ok=Math.random()<op.pr;if(ok){r.sc+=op.pts;r.qa[3]+=op.pts;r.margin=r.sc-r.os;r.win=true;if(r.box[op.who.id])r.box[op.who.id].pts+=op.pts}}end()}
-    else watch(r,`${S.year} 플레이오프 · ${c.nm} ${m.g+1}차전`,end);
-  },o);
+  o.label=`${S.year} 플레이오프 · ${c.nm} ${m.g+1}차전`;
+  simGame(m.opp,home,S.strat,!auto,r=>{poAfter(r,o);if(auto){cb&&cb(r);return}showPoResult(r,()=>{if(m.done)poSeriesEnd();else FLOWS.poPrep()})},o);
 }
 function poAfter(r,o){
   const po=S.po,c=po.cur,m=c.mine,fin=po.ri===3;
@@ -991,6 +1070,7 @@ function showPoResult(r,next){
    <div class="res ${r.win?'W':'L'}">${r.win?'승리':'패배'} · 시리즈 ${m.wa}-${m.wb}</div>
    <table class="qt"><tr><th></th><th>1Q</th><th>2Q</th><th>3Q</th><th>4Q</th><th>합계</th></tr>
     <tr><td>${esc(short(T(S.my).name))}</td>${r.qa.map(x=>`<td>${x}</td>`).join('')}<td>${r.sc}</td></tr><tr><td>${esc(short(T(r.opp).name))}</td>${r.qb.map(x=>`<td>${x}</td>`).join('')}<td>${r.os}</td></tr></table>
+   <h4>쿼터별 전술</h4>${r.qs.map((x,i)=>`<div class="kv"><span>${i+1}Q <b style="color:var(--ink)">${r.qa[i]}-${r.qb[i]}</b></span><b style="font-size:14px;text-align:right">${OFFS[x.mo].ic}${OFFS[x.mo].n} ${cmTxt(x.cA)} · ${DEFS[x.md].ic}${DEFS[x.md].n} ${cmTxt(-x.cB)}<br><span class="muted" style="font-weight:400">상대 ${OFFS[x.oo].n} / ${DEFS[x.od].n}</span></b></div>`).join('')}
    ${r.notes.map(n=>`<div class="note ${/✅|버저비터|🔥|불을|보답/.test(n)?'good':/⚠️|빗나|🚑|🧠|자극|계속됐/.test(n)?'bad':''}">${n}</div>`).join('')}
    ${r.inj.map(n=>`<div class="note bad">${n}</div>`).join('')}
    <h4>박스스코어</h4><table class="box"><tr><th>선수</th><th>분</th><th>득점</th><th>리바</th><th>어시</th></tr>
@@ -1010,13 +1090,13 @@ function poSeriesEnd(){
     [{t:won&&!fin?'다음으로':'시즌 결산',cls:'pri',fn:()=>FLOWS.poRound()}]);
 }
 function finishSeason(){
-  const po=S.po,my=S.my,champ=po.br[0],me=T(my),w=me.w,l=me.l,rank=rankOf(my),pst=po.pst,inPo=po.seeds.includes(my);
+  const po=S.po,my=S.my,champ=po.br[0],me=T(my),w=me.w,l=me.l,rank=rankTxt(my),pst=po.pst,inPo=po.seeds.includes(my);
   const aw=[];
   const cand=[];for(const t of S.teams)for(const id of S.R[t.id]){const p=P(id);if(ovr(p)>=78)cand.push({id,t:t.id,s:ovr(p)+(t.w/(t.w+t.l||1)-.5)*22+gauss(0,1.5)})}
   cand.sort((a,b)=>b.s-a.s);const mvp=cand[0];if(mvp&&mvp.t===my)aw.push('mvp');
   let fmvp=null;if(champ===my){aw.push('ring');const ids=Object.keys(pst).map(Number).filter(id=>S.R[my].includes(id)).sort((a,b)=>pst[b].pts/pst[b].gp-pst[a].pts/pst[a].gp);fmvp=ids[0];aw.push('fmvp')}
   else{fmvp=S.R[champ].slice().sort(byOvr)[0]}
-  if(inPo)aw.push('po');if(rank===1)aw.push('best');if(w-S.exp>=12&&w>=45)aw.push('coy');
+  if(inPo)aw.push('po');if(standings()[0].id===my)aw.push('best');if(w-S.exp>=12&&w>=45)aw.push('coy');
   const rook=[];for(const t of S.teams)for(const id of S.R[t.id]){const p=P(id);if(p.rookie===S.year)rook.push({id,t:t.id,s:ovr(p)+gauss(0,2)})}
   rook.sort((a,b)=>b.s-a.s);if(rook[0]&&rook[0].t===my)aw.push('roy');
   for(const k of aw)S.tro[k]=(S.tro[k]||0)+1;
@@ -1043,7 +1123,7 @@ function render(){
 }
 function homeHTML(){
   const me=T(S.my);if(S.stage==='over')return clubHTML();
-  let h=`<div class="card pc"><div class="row"><div><div class="nm">${tb(S.my,1)}${esc(me.name)}</div><div class="sub">${S.year} 시즌 · ${me.w}승 ${me.l}패 · ${rankOf(S.my)}위</div></div><div class="ovr"><b>전력</b><span>${Math.round(teamOvr(S.my))}</span></div></div>
+  let h=`<div class="card pc"><div class="row"><div><div class="nm">${tb(S.my,1)}${esc(me.name)}</div><div class="sub">${S.year} 시즌 · ${me.w}승 ${me.l}패 · ${rankTxt(S.my)}</div></div><div class="ovr"><b>전력</b><span>${Math.round(teamOvr(S.my))}</span></div></div>
    <div class="badges"><span class="tag">💰 연봉 ${money(payroll(S.my))} / ${money(CAP)}</span><span class="tag">기대 ${S.exp}승</span><span class="tag">💍 ${S.tro.ring||0}</span></div>
    <div class="bars">${bar('케미스트리',S.chem,'var(--green)')}${bar('구단주 신뢰',S.owner,S.owner<30?'var(--red)':'var(--blue)')}</div>
    <div class="goal">최종 목표: NBA 우승 반지 💍</div></div>`;
@@ -1053,14 +1133,21 @@ function homeHTML(){
    <div class="row"><div><b style="font-size:20px">${tb(S.next.opp)}vs ${esc(op.name)}</b><div class="small muted">${op.w}승 ${op.l}패 · 상대 성향 <b style="color:var(--org2)">${STYLES[ro.style]}</b></div></div></div>
    <div class="strip" style="margin-top:12px"><div><b>${Math.round(rm.off)}</b><span>우리 공격</span></div><div><b>${Math.round(rm.def)}</b><span>우리 수비</span></div><div><b>${Math.round(ro.off)}</b><span>상대 공격</span></div><div><b>${Math.round(ro.def)}</b><span>상대 수비</span></div></div>
    ${injured.length?`<div class="note bad">부상: ${injured.map(id=>`${esc(P(id).n)}(${P(id).inj})`).join(', ')}</div>`:''}</div>
-  <div class="card"><h3><span>🎯 작전</span><span class="small" style="font-weight:400">상대가 ${STYLES[ro.style]}이면 ${Object.entries(COUNTER[ro.style]).filter(x=>x[1]>0).map(x=>STRATS[x[0]].n).join('·')} 추천</span></h3>
-   <div class="chips">${Object.entries(STRATS).map(([k,s])=>`<button class="chip${S.strat===k?' on':''}" data-st="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
-   <p class="hint">${STRATS[S.strat].d}</p></div>
+  ${(()=>{const mp=pers(lineup(S.my).st),sc=recFor(pers(ro.st)),rec=recFor(mp,sc.d,sc.o),fr=Object.keys(OFFS).sort((a,b)=>offVal(b,mp,S.chem)-offVal(a,mp,S.chem)).indexOf(S.strat);
+   return`<div class="card"><h3><span>🔎 스카우팅 리포트</span></h3><div class="kv"><span>상대 주 공격</span><b>${OFFS[sc.o].ic} ${OFFS[sc.o].n}</b></div><div class="kv"><span>상대 주 수비</span><b>${DEFS[sc.d].ic} ${DEFS[sc.d].n}</b></div>
+   <div class="kv"><span>코치 추천</span><b>${OFFS[rec.o].n} · ${DEFS[rec.d].n}</b></div></div>
+   <div class="card"><h3><span>⚔️ 공격 전술</span><span class="small" style="font-weight:400">vs ${DEFS[sc.d].n}: ${cmTxt(CM[S.strat][sc.d])}</span></h3>
+   <div class="chips">${Object.entries(OFFS).map(([k,s])=>`<button class="chip${S.strat===k?' on':''}" data-st="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
+   <p class="hint">${OFFS[S.strat].d} · 우리 로스터 적합도 <b style="color:${fr<2?'var(--green)':fr<5?'var(--gold)':'var(--red)'}">${'★'.repeat(5-Math.floor(fr*5/7))}${'☆'.repeat(Math.floor(fr*5/7))}</b> (${esc(S.strat==='pnr'?mp.h.n+'–'+mp.big.n:S.strat==='pnp'?mp.h.n+'–'+mp.pop.n:S.strat==='iso'?mp.star.n:S.strat==='post'?mp.post.n:'팀 전체')})</p></div>
+   <div class="card"><h3><span>🛡️ 수비 전술</span><span class="small" style="font-weight:400">vs ${OFFS[sc.o].n}: ${cmTxt(-CM[sc.o][S.dstrat])}</span></h3>
+   <div class="chips">${Object.entries(DEFS).map(([k,s])=>`<button class="chip${S.dstrat===k?' on':''}" data-ds="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
+   <p class="hint">${DEFS[S.dstrat].d} 경기 중 쿼터마다 바꿀 수 있어요.</p>
+   <label class="tgl" style="margin-top:10px"><input type="checkbox" id="restT" ${S.rest?'checked':''}>🛌 주전 출전시간 관리 (전력↓, 체력↑)</label></div>`})()}
   <div class="card"><h3><span>🏋️ 팀 훈련</span><span class="small" style="font-weight:400">매 경기 후 적용</span></h3>
    <div class="chips">${Object.entries(TRAINS).map(([k,n])=>`<button class="chip${S.train===k?' on':''}" data-tr="${k}">${n}</button>`).join('')}</div>
    <p class="hint">집중 육성 선수(로스터에서 최대 2명 지정)는 훈련 효과 2.2배. 젊고 잠재력이 높을수록 빨리 성장해요. ${S.dev.length?'현재: '+S.dev.map(id=>esc(P(id).n)).join(', '):''}</p></div>
   <button class="btn pri" id="play" style="font-size:19px;padding:18px">▶ ${S.week}번째 경기 시작</button>
-  <label class="tgl" style="justify-content:center;margin-top:10px;font-size:15px"><input type="checkbox" id="liveOn" ${S.liveOn!==false?'checked':''}>🏟 경기 중계 화면 보기 (선수 움직임)</label>
+  <label class="tgl" style="justify-content:center;margin-top:10px;font-size:15px"><input type="checkbox" id="liveOn" ${S.liveOn!==false?'checked':''}>🏟 경기 중계 화면 보기 (꺼도 쿼터마다 전술 변경 가능)</label>
   <button class="btn" id="auto" style="margin-top:10px">⏩ 자동 진행 <small class="muted">· 한 경기씩, 언제든 멈추기</small></button>
   <div class="card" style="margin-top:14px"><h3><span>최근 경기</span></h3><div class="glist">${S.games.slice(-5).reverse().map(g=>`<div class="g"><div class="wl ${g.win?'W':'L'}">${g.win?'W':'L'}</div><div><div>G${g.g} ${g.home?'vs':'@'} ${esc(short(T(g.opp).name))} <span class="muted">${g.sc}-${g.os}</span> ${STRATS[g.strat].ic}</div><div class="ln">${g.top?`${esc(g.top.n)} ${g.top.pts}점 ${g.top.reb}리바 ${g.top.ast}어시`:''}</div></div><div></div></div>`).join('')||'<p class="small muted">아직 경기가 없어요.</p>'}</div></div>
   <div class="card"><h3><span>💬 반응</span></h3><div class="feed">${S.feed.slice(0,3).map(x=>`<div class="post"><div class="ph"><b>${esc(x.who)}</b><span>${x.y}</span></div><p>${esc(x.txt)}</p></div>`).join('')||'<p class="small muted">아직 반응이 없어요.</p>'}</div></div>`;
@@ -1109,10 +1196,11 @@ function tradeHTML(){
     <button class="btn pri" id="tGo" ${c.err?'disabled':''} style="margin-top:10px">트레이드 제안하기</button></div>`;
 }
 function leagueHTML(){
-  const st=standings();
-  return`<div class="card"><h3><span>${S.year} 순위</span><span class="small" style="font-weight:400">상위 16팀 플레이오프</span></h3><div class="scroll"><table class="tbl">
-   <tr><th>#</th><th class="l">팀</th><th>승</th><th>패</th><th>전력</th></tr>
-   ${st.map((t,i)=>`<tr class="${t.id===S.my?'me':''}${i===15?' cut':''}"><td>${i+1}</td><td class="l">${tb(t.id)}${esc(short(t.name))}</td><td>${t.w}</td><td>${t.l}</td><td>${Math.round(teamOvr(t.id))}</td></tr>`).join('')}</table></div></div>
+  const tbl=c=>{const st=standings(c),l0=st[0];return`<div class="card"><h3><span>${CN[c]} 컨퍼런스</span><span class="small" style="font-weight:400">1~6위 직행 · 7~10위 플레이인</span></h3><div class="scroll"><table class="tbl">
+   <tr><th>#</th><th class="l">팀</th><th>승</th><th>패</th><th>승차</th><th>전력</th></tr>
+   ${st.map((t,i)=>`<tr class="${t.id===S.my?'me':''}${i===5||i===9?' cut':''}"><td>${i+1}</td><td class="l">${tb(t.id)}${esc(short(t.name))}</td><td>${t.w}</td><td>${t.l}</td><td>${i?f1(((l0.w-t.w)+(t.l-l0.l))/2):'-'}</td><td>${Math.round(teamOvr(t.id))}</td></tr>`).join('')}</table></div></div>`};
+  const mc=confOf(S.my);
+  return tbl(mc)+tbl(mc==='E'?'W':'E')+`
    <div class="card"><h3><span>리그 톱 플레이어</span></h3><table class="tbl"><tr><th class="l">선수</th><th>팀</th><th>나이</th><th>OVR</th></tr>
    ${S.teams.flatMap(t=>S.R[t.id].map(id=>[id,t.id])).sort((a,b)=>ovr(P(b[0]))-ovr(P(a[0]))).slice(0,12).map(([id,t])=>`<tr class="${t===S.my?'me':''}"><td class="l">${esc(P(id).n)} <span class="muted small">${P(id).pos}</span></td><td>${esc(short(T(t).name))}</td><td>${P(id).age}</td><td>${Math.round(ovr(P(id)))}</td></tr>`).join('')}</table></div>`;
 }
@@ -1147,6 +1235,8 @@ function bind(){
   const on=(sel,fn)=>{const e=$(sel);if(e)e.onclick=fn};
   on('#play',playOne);const lo=$('#liveOn');if(lo)lo.onchange=()=>{S.liveOn=lo.checked;save()};on('#auto',autoRun);on('#resume',()=>{busy=true;FLOWS[S.flow.step]()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{S.strat=b.dataset.st;save();const y=scrollY;render();scrollTo(0,y)});
+  document.querySelectorAll('[data-ds]').forEach(b=>b.onclick=()=>{S.dstrat=b.dataset.ds;save();const y=scrollY;render();scrollTo(0,y)});
+  const rt=$('#restT');if(rt)rt.onchange=()=>{S.rest=rt.checked;save()};
   document.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{S.train=b.dataset.tr;save();const y=scrollY;render();scrollTo(0,y)});
   document.querySelectorAll('[data-pl]').forEach(b=>b.onclick=()=>playerModal(+b.dataset.pl));
   on('#autoLine',()=>{S.starters=[...S.R[S.my]].filter(id=>!P(id).inj).sort(byOvr).slice(0,5);save();render()});
