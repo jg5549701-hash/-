@@ -241,7 +241,9 @@ input.txt{width:100%;background:var(--panel2);border:1px solid var(--line);borde
 .box td{text-align:right;padding:9px 4px;border-bottom:1px solid #262a35}
 .box th:first-child,.box td:first-child{text-align:left}
 .box tr.tp td{color:var(--org2);font-weight:700}
-.teamrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-align:left;width:100%}
+.tb{display:inline-grid;place-items:center;min-width:44px;height:30px;padding:0 6px;border-radius:8px;border:2px solid;font-weight:900;font-size:13px;letter-spacing:.03em;vertical-align:middle;margin-right:8px;font-family:'Noto Sans KR',sans-serif}
+.tb.lg{min-width:58px;height:40px;font-size:16px;border-radius:10px}
+.teamrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-align:left;width:100%}
 .teamrow b{display:block;font-size:16px}.teamrow small{color:var(--dim);font-size:13.5px}
 .teamrow .r{font-family:'Black Han Sans';font-size:22px;color:var(--org2)}
 </style>
@@ -310,6 +312,12 @@ const REAL=[
 const ARCH={sc:{sht:5,pla:0,ins:3,def:-5,reb:-5},sh:{sht:9,pla:-3,ins:-6,def:-2,reb:-3},pm:{sht:2,pla:9,ins:-4,def:-3,reb:-4},sl:{sht:-4,pla:1,ins:7,def:-1,reb:0},
  '3d':{sht:4,pla:-5,ins:-5,def:7,reb:0},bg:{sht:0,pla:0,ins:6,def:0,reb:5},rp:{sht:-12,pla:-8,ins:2,def:9,reb:7},ar:{sht:0,pla:0,ins:0,def:0,reb:0}};
 const TEAM_NAMES=REAL.map(x=>x[0]);
+const TC=[['ATL','#E03A3E','#C1D32F'],['BOS','#007A33','#BA9653'],['BKN','#000000','#FFFFFF'],['CHA','#1D1160','#00788C'],['CHI','#CE1141','#000000'],['CLE','#860038','#FDBB30'],
+ ['DAL','#00538C','#B8C4CA'],['DEN','#0E2240','#FEC524'],['DET','#C8102E','#1D42BA'],['GSW','#1D428A','#FFC72C'],['HOU','#CE1141','#C4CED4'],['IND','#002D62','#FDBB30'],
+ ['LAC','#C8102E','#1D428A'],['LAL','#552583','#FDB927'],['MEM','#5D76A9','#12173F'],['MIA','#98002E','#F9A01B'],['MIL','#00471B','#EEE1C6'],['MIN','#0C2340','#78BE20'],
+ ['NOP','#0C2340','#C8102E'],['NYK','#006BB6','#F58426'],['OKC','#007AC1','#EF3B24'],['ORL','#0077C0','#C4CED4'],['PHI','#006BB6','#ED174C'],['PHX','#1D1160','#E56020'],
+ ['POR','#E03A3E','#000000'],['SAC','#5A2D81','#63727A'],['SAS','#C4CED4','#000000'],['TOR','#CE1141','#A1A1A4'],['UTA','#002B5C','#F9A01B'],['WAS','#002B5C','#E31837']];
+const tb=(tid,lg)=>{const c=TC[tid];return`<span class="tb${lg?' lg':''}" style="background:${c[1]};border-color:${c[2]};color:${c[0]==='SAS'?'#000':'#fff'}">${c[0]}</span>`};
 const FIRST=['마커스','다리우스','제일런','트레이','카이','안드레','말릭','이사야','데빈','오마르','루카스','테렌스','자비어','니코','엘리야','브랜든','코디','라샤드','지훈','도윤','타일러','케빈','조던','레지','알렉스','카메론','디안젤로','미카','토마스','빅터','세르히오','하킴'];
 const LAST=['리드','콜','브룩스','헤이스','몬로','카터','그레이','밴스','풀러','오코로','실바','페트로프','나카무라','블레이크','아데예미','토레스','맥브라이드','한','윌킨스','포터','존스','에반스','디알로','가르시아','욘손','미첼','벨','하딩'];
 const rname=()=>pick(FIRST)+' '+pick(LAST);
@@ -541,7 +549,7 @@ function endGame(){if(S.week>GAMES){seasonEnd();return}S.next=nextGame();save();
 function showResult(r,next){
   const me=T(S.my),op=T(r.opp),ids=Object.keys(r.box).map(Number).sort((a,b)=>r.box[b].pts-r.box[a].pts),tl=ids[0];
   modal(`${r.g}번째 경기 · vs ${short(op.name)}`,`
-   <div class="score"><span>${esc(short(me.name))}<br><small>${r.home?'홈':'원정'}</small></span><b style="color:${r.win?'var(--green)':'var(--ink)'}">${r.sc}</b><b class="muted">:</b><b>${r.os}</b><span>${esc(short(op.name))}</span></div>
+   <div class="score"><span>${tb(S.my,1)}<br><small>${r.home?'홈':'원정'}</small></span><b style="color:${r.win?'var(--green)':'var(--ink)'}">${r.sc}</b><b class="muted">:</b><b>${r.os}</b><span>${tb(r.opp,1)}</span></div>
    <div class="res ${r.win?'W':'L'}">${r.win?'승리':'패배'} · ${me.w}승 ${me.l}패</div>
    <table class="qt"><tr><th></th><th>1Q</th><th>2Q</th><th>3Q</th><th>4Q</th><th>합계</th></tr>
     <tr><td>${esc(short(me.name))}</td>${r.qa.map(x=>`<td>${x}</td>`).join('')}<td>${r.sc}</td></tr><tr><td>${esc(short(op.name))}</td>${r.qb.map(x=>`<td>${x}</td>`).join('')}<td>${r.os}</td></tr></table>
@@ -748,14 +756,14 @@ function render(){
 }
 function homeHTML(){
   const me=T(S.my);if(S.stage==='over')return clubHTML();
-  let h=`<div class="card pc"><div class="row"><div><div class="nm">${esc(me.name)}</div><div class="sub">${S.year} 시즌 · ${me.w}승 ${me.l}패 · ${rankOf(S.my)}위</div></div><div class="ovr"><b>전력</b><span>${Math.round(teamOvr(S.my))}</span></div></div>
+  let h=`<div class="card pc"><div class="row"><div><div class="nm">${tb(S.my,1)}${esc(me.name)}</div><div class="sub">${S.year} 시즌 · ${me.w}승 ${me.l}패 · ${rankOf(S.my)}위</div></div><div class="ovr"><b>전력</b><span>${Math.round(teamOvr(S.my))}</span></div></div>
    <div class="badges"><span class="tag">💰 연봉 ${money(payroll(S.my))} / ${money(CAP)}</span><span class="tag">기대 ${S.exp}승</span><span class="tag">💍 ${S.tro.ring||0}</span></div>
    <div class="bars">${bar('케미스트리',S.chem,'var(--green)')}${bar('구단주 신뢰',S.owner,S.owner<30?'var(--red)':'var(--blue)')}</div>
    <div class="goal">최종 목표: NBA 우승 반지 💍</div></div>`;
   if(S.stage==='flow'){return h+`<div class="card"><p class="small muted" style="margin-bottom:10px">진행 중인 비시즌 일정이 있어요.</p><button class="btn pri" id="resume">계속하기 ▶</button></div>`}
   const op=T(S.next.opp),ro=rate(S.next.opp,'balance'),rm=rate(S.my,S.strat),injured=S.R[S.my].filter(id=>P(id).inj>0);
   h+=`<div class="card"><h3><span>다음 경기 · G${S.week}</span><span>${S.next.home?'홈':'원정'}</span></h3>
-   <div class="row"><div><b style="font-size:20px">vs ${esc(op.name)}</b><div class="small muted">${op.w}승 ${op.l}패 · 상대 성향 <b style="color:var(--org2)">${STYLES[ro.style]}</b></div></div></div>
+   <div class="row"><div><b style="font-size:20px">${tb(S.next.opp)}vs ${esc(op.name)}</b><div class="small muted">${op.w}승 ${op.l}패 · 상대 성향 <b style="color:var(--org2)">${STYLES[ro.style]}</b></div></div></div>
    <div class="strip" style="margin-top:12px"><div><b>${Math.round(rm.off)}</b><span>우리 공격</span></div><div><b>${Math.round(rm.def)}</b><span>우리 수비</span></div><div><b>${Math.round(ro.off)}</b><span>상대 공격</span></div><div><b>${Math.round(ro.def)}</b><span>상대 수비</span></div></div>
    ${injured.length?`<div class="note bad">부상: ${injured.map(id=>`${esc(P(id).n)}(${P(id).inj})`).join(', ')}</div>`:''}</div>
   <div class="card"><h3><span>🎯 작전</span><span class="small" style="font-weight:400">상대가 ${STYLES[ro.style]}이면 ${Object.entries(COUNTER[ro.style]).filter(x=>x[1]>0).map(x=>STRATS[x[0]].n).join('·')} 추천</span></h3>
@@ -796,7 +804,7 @@ function tradeHTML(){
   if(S.stage==='season'&&S.week>DEADLINE)return`<div class="card"><h3><span>🔁 트레이드</span></h3><p>트레이드 마감(${DEADLINE}번째 경기)이 지났어요. 시즌이 끝나면 다시 열려요.</p></div>`;
   if(S.stage!=='season')return`<div class="card"><h3><span>🔁 트레이드</span></h3><p>시즌 중에만 트레이드할 수 있어요.</p></div>`;
   if(ui.tTeam===null)return`<div class="card"><h3><span>🔁 트레이드 상대 고르기</span><span class="small" style="font-weight:400">마감 G${DEADLINE}</span></h3><div class="plist">
-    ${standings().filter(t=>t.id!==S.my).map(t=>`<button class="teamrow" data-tt="${t.id}"><div><b>${esc(t.name)}</b><small>${t.w}승 ${t.l}패 · 연봉 ${money(payroll(t.id))}</small></div><div class="r">${Math.round(teamOvr(t.id))}</div></button>`).join('')}</div></div>`;
+    ${standings().filter(t=>t.id!==S.my).map(t=>`<button class="teamrow" data-tt="${t.id}">${tb(t.id,1)}<div><b>${esc(t.name)}</b><small>${t.w}승 ${t.l}패 · 연봉 ${money(payroll(t.id))}</small></div><div class="r">${Math.round(teamOvr(t.id))}</div></button>`).join('')}</div></div>`;
   const tid=ui.tTeam;ui.give=ui.give.filter(id=>S.R[S.my].includes(id));ui.get=ui.get.filter(id=>S.R[tid].includes(id));
   const c=tradeCheck(ui.give,ui.get,tid),pr=clamp(c.ratio,0,1.3)/1.3*100;
   return`<div class="card"><h3><span>${esc(T(tid).name)}에서 받을 선수</span><button class="btn sm" id="tBack">← 팀 목록</button></h3><div class="plist">
@@ -815,7 +823,7 @@ function leagueHTML(){
   const st=standings();
   return`<div class="card"><h3><span>${S.year} 순위</span><span class="small" style="font-weight:400">상위 16팀 플레이오프</span></h3><div class="scroll"><table class="tbl">
    <tr><th>#</th><th class="l">팀</th><th>승</th><th>패</th><th>전력</th></tr>
-   ${st.map((t,i)=>`<tr class="${t.id===S.my?'me':''}${i===15?' cut':''}"><td>${i+1}</td><td class="l">${esc(t.name)}</td><td>${t.w}</td><td>${t.l}</td><td>${Math.round(teamOvr(t.id))}</td></tr>`).join('')}</table></div></div>
+   ${st.map((t,i)=>`<tr class="${t.id===S.my?'me':''}${i===15?' cut':''}"><td>${i+1}</td><td class="l">${tb(t.id)}${esc(short(t.name))}</td><td>${t.w}</td><td>${t.l}</td><td>${Math.round(teamOvr(t.id))}</td></tr>`).join('')}</table></div></div>
    <div class="card"><h3><span>리그 톱 플레이어</span></h3><table class="tbl"><tr><th class="l">선수</th><th>팀</th><th>나이</th><th>OVR</th></tr>
    ${S.teams.flatMap(t=>S.R[t.id].map(id=>[id,t.id])).sort((a,b)=>ovr(P(b[0]))-ovr(P(a[0]))).slice(0,12).map(([id,t])=>`<tr class="${t===S.my?'me':''}"><td class="l">${esc(P(id).n)} <span class="muted small">${P(id).pos}</span></td><td>${esc(short(T(t).name))}</td><td>${P(id).age}</td><td>${Math.round(ovr(P(id)))}</td></tr>`).join('')}</table></div>`;
 }
@@ -833,8 +841,8 @@ function startHTML(){
   const list=[...S.teams].sort((a,b)=>teamOvr(a.id)-teamOvr(b.id));
   return`<div class="hero"><div class="ball">🏀</div><h1>벤치에서<br><em>우승 반지까지</em></h1><p>실제 NBA 30개 구단 중 하나를 맡아<br>트레이드·훈련·작전으로 한 경기씩 이겨 우승 반지를 끼세요.</p></div>
    <div class="card"><h3><span>맡을 구단 고르기</span><span class="small" style="font-weight:400">약할수록 어려움</span></h3><div class="plist">
-   ${list.map((t,i)=>`<button class="teamrow" data-pick="${t.id}"><div><b>${esc(t.name)}</b><small>${i<8?'🔥 하위권':i<20?'중위권':'⭐ 우승 후보'} · 연봉 ${money(payroll(t.id))} · 에이스 ${esc(P(S.R[t.id].slice().sort(byOvr)[0]).n)}</small></div><div class="r">${Math.round(teamOvr(t.id))}</div></button>`).join('')}</div>
-</div><div class="card small muted" style="line-height:1.7">ℹ️ 비공식 팬 게임이에요. NBA·각 구단과 관계없어요. 선수 소속은 2025-26 시즌 개막 기준이고, 능력치·연봉은 게임용 추정치예요. 로스터의 무명 벤치 선수와 드래프트 유망주·FA 일부는 가상 인물이에요.</div>
+   ${list.map((t,i)=>`<button class="teamrow" data-pick="${t.id}">${tb(t.id,1)}<div><b>${esc(t.name)}</b><small>${i<8?'🔥 하위권':i<20?'중위권':'⭐ 우승 후보'} · 연봉 ${money(payroll(t.id))} · 에이스 ${esc(P(S.R[t.id].slice().sort(byOvr)[0]).n)}</small></div><div class="r">${Math.round(teamOvr(t.id))}</div></button>`).join('')}</div>
+</div><div class="card small muted" style="line-height:1.7">ℹ️ 비공식 팬 게임이에요. NBA·각 구단과 관계없고 공식 로고는 쓰지 않았어요(팀 컬러 배지). 선수 소속은 2025-26 시즌 개막 기준이고, 능력치·연봉은 게임용 추정치예요. 로스터의 무명 벤치 선수와 드래프트 유망주·FA 일부는 가상 인물이에요.</div>
    <div class="card small muted" style="line-height:1.8">• 한 번 누를 때마다 <b>한 경기</b>. 82경기 정규시즌, 상위 16팀 플레이오프(7전 4선승).<br>• 경기 전 상대 성향을 보고 <b>작전</b>을 고르세요. 상성이 맞으면 보너스.<br>• <b>팀 훈련</b>과 <b>집중 육성</b>으로 선수를 키우고, 선발 라인업을 정하세요.<br>• <b>트레이드</b>(마감 G${DEADLINE})로 전력을 보강하세요. 상대 단장이 가치를 따집니다.<br>• 비시즌: 드래프트 → 재계약 → FA. 구단주 신뢰가 바닥나면 경질!</div>`;
 }
 function bindStart(){
