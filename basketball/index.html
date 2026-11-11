@@ -246,6 +246,32 @@ input.txt{width:100%;background:var(--panel2);border:1px solid var(--line);borde
 .teamrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-align:left;width:100%}
 .teamrow b{display:block;font-size:16px}.teamrow small{color:var(--dim);font-size:13.5px}
 .teamrow .r{font-family:'Black Han Sans';font-size:22px;color:var(--org2)}
+/* live court */
+.live{position:fixed;inset:0;background:#06070a;display:none;justify-content:center;z-index:9}
+.live.on{display:flex}
+.lin{width:100%;max-width:760px;height:100%;display:flex;flex-direction:column;gap:10px;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px)}
+.lbl{font-size:13px;color:var(--dim);text-align:center}
+.lsb{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px}
+.lt{display:flex;align-items:center;gap:6px;font-weight:900;font-size:15px;min-width:0}
+.lt.r{justify-content:flex-end}
+.lsc{text-align:center;white-space:nowrap}.lsc b{font-family:'Black Han Sans';font-size:40px;font-weight:400;padding:0 6px}
+.lsc span{display:block;font-size:14px;color:var(--org2);font-weight:700}
+.court{width:100%;height:auto;display:block;border-radius:14px}
+.cf{fill:#3b2a1b}.cl{stroke:rgba(255,236,210,.5);stroke-width:3;fill:none}
+.pd{transition:transform .3s ease}
+.pd text{font-size:21px;font-weight:900;fill:#fff;text-anchor:middle;dominant-baseline:central;font-family:'Noto Sans KR',sans-serif}
+.rim{fill:none;stroke:#ff7a1a;stroke-width:4;transition:all .2s}.rim.fl{stroke:#ffd166;stroke-width:10}
+.lcom{font-size:19px;font-weight:900;min-height:54px;line-height:1.45}
+.llog{flex:1;overflow:auto;font-size:14px;color:var(--dim);display:grid;align-content:start;gap:5px;min-height:40px}
+.lbtns{display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:8px}
+.lbtns .btn{padding:12px 6px;font-size:15px}
+.lbtns .btn.on{border-color:var(--org);color:var(--org2)}
+.evc{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px}
+.evc b{font-size:16px}.evc p{font-size:14.5px;color:var(--dim);margin:4px 0 0}
+.evc .eb{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.evc .eb .btn{flex:1}
+.evc .eb .btn.on{border-color:var(--org);color:var(--org2);background:rgba(255,122,26,.12)}
+.evc.fin{border-color:#6b4a12}
 </style>
 </head>
 <body>
@@ -257,6 +283,14 @@ input.txt{width:100%;background:var(--panel2);border:1px solid var(--line);borde
   <button data-t="league"><b>🏆</b>리그</button>
   <button data-t="club"><b>📜</b>구단</button>
 </div></nav>
+<div class="live" id="live"><div class="lin">
+ <div class="lbl" id="lvLbl"></div>
+ <div class="lsb"><div class="lt" id="lvA"></div><div class="lsc"><b id="lvSA">0</b>:<b id="lvSB">0</b><span id="lvQ">1Q 12:00</span></div><div class="lt r" id="lvB"></div></div>
+ <div id="lvCourt"></div>
+ <div class="lcom" id="lvCom"></div>
+ <div class="llog" id="lvLog"></div>
+ <div class="lbtns"><button class="btn" data-sp="1">×1</button><button class="btn" data-sp="2">×2</button><button class="btn" data-sp="4">×4</button><button class="btn pri" id="lvSkip">결과 보기 ⏭</button></div>
+</div></div>
 <div class="prog" id="prog"><div class="pin"><p class="pk" id="pgK"></p><h2 id="pgT"></h2><div class="pbar"><u id="pgBar" style="width:0"></u></div><div class="pm"><span id="pgM"></span><span id="pgR"></span></div><div class="plog" id="pgLog"></div><div class="pbtns" id="pgBtns"></div></div></div>
 <div class="modal" id="modal"><div class="mbox"><h2 id="mTitle"></h2><div class="mbody" id="mBody"></div><div class="mbtns" id="mBtns"></div></div></div>
 
@@ -336,7 +370,7 @@ const HANDLES=['@hoops_daily','@코트위의시인','@농구중독자','@스카�
 const AWARDS={ring:{n:'NBA 우승',ic:'💍'},fmvp:{n:'파이널 MVP 배출',ic:'🏆'},mvp:{n:'정규시즌 MVP 배출',ic:'👑'},coy:{n:'올해의 감독',ic:'🧠'},roy:{n:'신인왕 배출',ic:'🌱'},po:{n:'플레이오프 진출',ic:'🎟'},best:{n:'정규시즌 1위',ic:'🥇'}};
 
 /* ================= state ================= */
-const KEY='ring-gm-v5';
+const KEY='ring-gm-v6';
 let S=null,tab='home',busy=false,ui={tTeam:null,give:[],get:[]};
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
@@ -423,27 +457,38 @@ function stratEffect(me,op,strat){
   if(c<0)notes.push(`⚠️ ${STRATS[strat].n}${josa(STRATS[strat].n,'은','는')} ${STYLES[op.style]} 팀 상대로 불리했다 (${c})`);
   return{adj,sd,notes};
 }
-function simGame(oppId,home,strat,interactive,cb){
-  const me=rate(S.my,strat),opS=pick(['balance','balance','press','three','paint']),op=rate(oppId,opS);
+function simGame(oppId,home,strat,interactive,cb,opt){
+  opt=opt||{};
+  const me=rate(S.my,strat),opS=opt.opS||pick(['balance','balance','press','three','paint']),op=rate(oppId,opS);
   const ef=stratEffect(me,op,strat);
-  const Rme=me.R+ef.adj+(S.chem-60)*.06+(home?1.5:-1.5);
-  let margin=(Rme-op.R-.8)*1.0+gauss(0,ef.sd);
-  const r={opp:oppId,home,strat,me,op,notes:ef.notes,margin};
-  const go=()=>{finishGame(r);cb(r)};
-  if(interactive&&Math.abs(margin)<=3.5&&Math.random()<.4){r.clutchPending=true;clutchModal(r,go);return}
-  go();
+  const Rme=me.R+ef.adj+(S.chem-60)*.06+(home?1.5:-1.5)+(opt.adj||0);
+  let margin=(Rme-op.R-.8)*1.0+gauss(0,ef.sd+(opt.sd||0));
+  const r={opp:oppId,home,strat,me,op,notes:ef.notes.concat(opt.notes||[]),margin,opt};
+  if(interactive&&Math.abs(margin)<=(opt.cth||3.5)&&Math.random()<(opt.cp||.4)){r.margin=-1;r.clutchAt=true}
+  finishGame(r);cb(r);
 }
-function clutchModal(r,go){
+function clutchOpts(r){
   const ids=[...r.me.st,...r.me.bn].map(P);
-  const sh=[...ids].sort((a,b)=>b.sht-a.sht)[0],sc=[...ids].sort((a,b)=>offS(b)-offS(a))[0],pg=[...ids].sort((a,b)=>b.pla-a.pla)[0],big=[...ids].sort((a,b)=>b.ins-a.ins)[0];
-  const opts=[
-    {k:'iso',t:`⭐ ${sc.n}에게 아이솔레이션`,s:`득점력 ${Math.round(offS(sc))}`,pr:.2+offS(sc)*.0048,who:sc,pts:2,by:1},
-    {k:'pnr',t:`🤝 ${pg.n}–${big.n} 픽앤롤`,s:`플레이메이킹 ${Math.round(pg.pla)} · 골밑 ${Math.round(big.ins)}`,pr:.22+(pg.pla+big.ins)*.0023,who:big,ast:pg,pts:2,by:1},
-    {k:'three',t:`🏹 ${sh.n}의 코너 3점 세트`,s:`슈팅 ${Math.round(sh.sht)}`,pr:.1+sh.sht*.0036,who:sh,pts:3,by:2}];
-  modal('⏱ 작전 타임!',`<p>4쿼터 종료 <b>${f1(rnd(4,9))}초</b> 전, <b>${esc(short(T(r.opp).name))}</b>에 <b style="color:var(--red)">1점 차</b>로 뒤지고 있다.</p><p>마지막 공격, 어떤 작전을 그릴까?</p>`,
+  const sh=[...ids].sort((a,b)=>b.sht-a.sht)[0],sc=[...ids].sort((a,b)=>offS(b)-offS(a))[0],pg=[...ids].sort((a,b)=>b.pla-a.pla)[0],big=[...ids].filter(x=>x!==pg).sort((a,b)=>b.ins-a.ins)[0]||pg;
+  const k=r.opt&&r.opt.fin?.94:1;
+  return[
+    {k:'iso',t:`⭐ ${sc.n}에게 아이솔레이션`,s:`득점력 ${Math.round(offS(sc))}`,pr:(.2+offS(sc)*.0048)*k,who:sc,pts:2},
+    {k:'pnr',t:`🤝 ${pg.n}–${big.n} 픽앤롤`,s:`플레이메이킹 ${Math.round(pg.pla)} · 골밑 ${Math.round(big.ins)}`,pr:(.22+(pg.pla+big.ins)*.0023)*k,who:big,ast:pg,pts:2},
+    {k:'three',t:`🏹 ${sh.n}의 코너 3점 세트`,s:`슈팅 ${Math.round(sh.sht)}`,pr:(.1+sh.sht*.0036)*k,who:sh,pts:3}];
+}
+function clutchPick(r,done){
+  const opts=clutchOpts(r);
+  modal('⏱ 작전 타임!',`<p>4쿼터 종료 <b>${f1(rnd(4,9))}초</b> 전, <b>${esc(short(T(r.opp).name))}</b>에 <b style="color:var(--red)">${r.sc}-${r.os}, 1점 차</b>로 뒤지고 있다.</p>${r.opt&&r.opt.fin?'<p style="color:var(--gold)"><b>NBA 파이널의 무게가 어깨를 누른다…</b></p>':''}<p>마지막 공격, 어떤 작전을 그릴까?</p>`,
     opts.map(o=>({t:`${o.t}<br><small class="muted">${o.s}</small>`,fn:()=>{
-      const ok=Math.random()<o.pr;r.clutch={ok,o};r.margin=ok?o.by:-ri(1,3);
-      r.notes.unshift(ok?`⏱ 버저비터! ${o.who.n}의 위닝샷으로 역전승!`:`⏱ ${o.who.n}의 마지막 슛이 빗나갔다…`);go()}})));
+      const ok=Math.random()<o.pr;r.clutch={ok,o};
+      if(ok){r.sc+=o.pts;r.qa[3]+=o.pts;r.margin=r.sc-r.os;r.win=true;if(r.box[o.who.id])r.box[o.who.id].pts+=o.pts;if(o.ast&&r.box[o.ast.id])r.box[o.ast.id].ast++}
+      r.notes.unshift(ok?`⏱ 버저비터! ${o.who.n}의 위닝샷으로 역전승!`:`⏱ ${o.who.n}의 마지막 슛이 빗나갔다…`);
+      if(LV)liveShot(r,o,ok,done);else done()}})));
+}
+function watch(r,label,done){
+  const fin=()=>{liveHide();done()};
+  const after=()=>{if(r.clutchAt)clutchPick(r,fin);else fin()};
+  if(S.liveOn!==false)liveRun(r,label,after);else after();
 }
 function finishGame(r){
   let m=Math.round(r.margin);if(m===0)m=Math.random()<.5?1:-1;r.margin=m;r.win=m>0;
@@ -451,12 +496,12 @@ function finishGame(r){
   // box score
   const mins=r.me.mins,ids=Object.keys(mins).map(Number),box={};
   let wp=0,wr=0,wa=0;const W={};
-  ids.forEach(id=>{const p=P(id),m=mins[id];W[id]={p:m*Math.pow(offS(p)/65,2.4)*rnd(.7,1.3),r:m*Math.pow(p.reb/60,2)*rnd(.7,1.3),a:m*Math.pow(p.pla/60,3)*rnd(.6,1.4)};wp+=W[id].p;wr+=W[id].r;wa+=W[id].a});
+  const hc=id=>r.opt&&r.opt.hot==id?1.7:r.opt&&r.opt.cold==id?.55:1;
+  ids.forEach(id=>{const p=P(id),m=mins[id];W[id]={p:m*Math.pow(offS(p)/65,2.4)*rnd(.7,1.3)*hc(id),r:m*Math.pow(p.reb/60,2)*rnd(.7,1.3),a:m*Math.pow(p.pla/60,3)*rnd(.6,1.4)};wp+=W[id].p;wr+=W[id].r;wa+=W[id].a});
   const treb=Math.round(43+(r.me.reb-r.op.reb)*.3+gauss(0,4)),tast=Math.round(25+gauss(0,4));
   ids.forEach(id=>{const p=P(id),m=Math.round(mins[id]+gauss(0,2));box[id]={min:Math.max(1,m),pts:Math.round(r.sc*W[id].p/wp),reb:Math.round(treb*W[id].r/wr),ast:Math.round(tast*W[id].a/wa),stl:poisson(m/36*(p.def-40)/40),blk:poisson(m/36*Math.max(0,p.ins+p.def-110)/45)}});
   let diff=r.sc-ids.reduce((s,id)=>s+box[id].pts,0);const top=[...ids].sort((a,b)=>box[b].pts-box[a].pts);
   while(diff!==0){const id=top[Math.floor(Math.random()*Math.min(3,top.length))];const d=diff>0?1:-1;if(box[id].pts+d>=0){box[id].pts+=d;diff-=d}else diff=0}
-  if(r.clutch&&r.clutch.ok&&box[r.clutch.o.who.id]){box[r.clutch.o.who.id].pts+=0;if(r.clutch.o.ast&&box[r.clutch.o.ast.id])box[r.clutch.o.ast.id].ast++}
   r.box=box;
   // quarters
   const split=(t)=>{const w=[0,1,2,3].map(()=>rnd(.85,1.15)),s=w.reduce((a,b)=>a+b),q=w.map(x=>Math.round(t*x/s));q[3]+=t-q.reduce((a,b)=>a+b);return q};
@@ -550,7 +595,7 @@ function offerModal(o,next){
 /* ================= play flow ================= */
 function playOne(){
   if(busy||S.stage!=='season')return;busy=true;
-  simGame(S.next.opp,S.next.home,S.strat,true,r=>{applyGame(r);const q=decisionsAfter();save();showResult(r,()=>runQueue(q,endGame))});
+  simGame(S.next.opp,S.next.home,S.strat,true,r=>watch(r,`${S.year} 정규시즌 · ${S.week}번째 경기`,()=>{applyGame(r);const q=decisionsAfter();save();showResult(r,()=>runQueue(q,endGame))}));
 }
 function endGame(){if(S.week>GAMES){seasonEnd();return}S.next=nextGame();save();busy=false;render()}
 function showResult(r,next){
@@ -610,42 +655,6 @@ function standings(){return[...S.teams].sort((a,b)=>(b.w/(b.w+b.l||1))-(a.w/(a.w
 function rankOf(tid){return standings().findIndex(t=>t.id===tid)+1}
 function setFlow(step,data){S.flow={step,data:Object.assign({},S.flow&&S.flow.data,data||{})};S.stage='flow';save();busy=true;render();FLOWS[step]()}
 const FLOWS={};const D=()=>S.flow.data;
-function seasonEnd(){
-  busy=true;const st=standings(),seeds=st.slice(0,16).map(t=>t.id),my=S.my;
-  const R=['1라운드','2라운드','컨퍼런스 결승','NBA 파이널'];let br=[0,15,7,8,3,12,4,11,1,14,6,9,2,13,5,10].map(i=>seeds[i]);
-  const rounds=[],pst={};let result=seeds.includes(my)?'':'플레이오프 진출 실패';
-  for(const nm of R){const next=[],rd={nm,series:[]};
-    for(let i=0;i<br.length;i+=2){const A=br[i],B=br[i+1],mine=A===my||B===my;let wa=0,wb=0,g=0;const games=[];
-      while(wa<4&&wb<4){const hA=[0,1,4,6].includes(g);let aWin;
-        if(mine){const meA=A===my,opp=meA?B:A;let res;for(const id of S.R[my])P(id).cond=Math.max(P(id).cond,90);
-          simGame(opp,meA?hA:!hA,S.strat==='rest'?'balance':S.strat,false,x=>{res=x});games.push({win:res.win,sc:res.sc,os:res.os});
-          for(const id in res.box){const b=res.box[id];pst[id]=pst[id]||{gp:0,pts:0,reb:0,ast:0};pst[id].gp++;pst[id].pts+=b.pts;pst[id].reb+=b.reb;pst[id].ast+=b.ast}
-          aWin=meA?res.win:!res.win}
-        else{const ra=rate(A,'balance').R+(hA?1.5:-1.5),rb=rate(B,'balance').R;aWin=Math.random()<1/(1+Math.exp(-(ra-rb)/11))}
-        aWin?wa++:wb++;g++}
-      const w=wa>wb?A:B;next.push(w);rd.series.push({A,B,wa,wb,w,mine,games});
-      if(mine)result=w===my?(nm==='NBA 파이널'?'🏆 우승':`${nm} 통과`):`${nm} 탈락`}
-    rounds.push(rd);br=next}
-  const champ=br[0],me=T(my),w=me.w,l=me.l,rank=rankOf(my);
-  // awards
-  const aw=[];
-  const cand=[];for(const t of S.teams)for(const id of S.R[t.id]){const p=P(id);if(ovr(p)>=78)cand.push({id,t:t.id,s:ovr(p)+(t.w/(t.w+t.l||1)-.5)*22+gauss(0,1.5)})}
-  cand.sort((a,b)=>b.s-a.s);const mvp=cand[0];if(mvp&&mvp.t===my)aw.push('mvp');
-  let fmvp=null;if(champ===my){aw.push('ring');const ids=Object.keys(pst).map(Number).filter(id=>S.R[my].includes(id)).sort((a,b)=>pst[b].pts/pst[b].gp-pst[a].pts/pst[a].gp);fmvp=ids[0];aw.push('fmvp')}
-  else{const ids=S.R[champ].slice().sort(byOvr);fmvp=ids[0]}
-  if(seeds.includes(my))aw.push('po');if(rank===1)aw.push('best');if(w-S.exp>=12&&w>=45)aw.push('coy');
-  const rook=[];for(const t of S.teams)for(const id of S.R[t.id]){const p=P(id);if(p.rookie===S.year)rook.push({id,t:t.id,s:ovr(p)+gauss(0,2)})}
-  rook.sort((a,b)=>b.s-a.s);if(rook[0]&&rook[0].t===my)aw.push('roy');
-  for(const k of aw)S.tro[k]=(S.tro[k]||0)+1;
-  // owner
-  const roundsWon=rounds.filter(rd=>rd.series.some(s=>s.mine&&s.w===my)).length;
-  const delta=Math.round((w-S.exp)*1.0+(seeds.includes(my)?5:-5)+roundsWon*5+(champ===my?15:0));
-  S.owner=clamp(S.owner+delta,0,100);
-  S.hist.push({year:S.year,w,l,rank,po:result,aw:aw.filter(k=>k!=='po'),exp:S.exp,best:topPlayerName()});
-  if(champ===my)post(`🏆 ${me.name}, ${S.year} NBA 챔피언!!! 우승 반지를 꼈다 💍`,'@NBA_소식');
-  else post(`${champ===my?'':`${S.year} NBA 우승은 ${T(champ).name}. `}${short(me.name)}는 ${result}.`,'@NBA_소식');
-  setFlow('po',{rounds,ri:0,pst,champ,result,aw,mvp:mvp?{id:mvp.id,t:mvp.t}:null,fmvp,delta,w,l,rank,seeds:seeds.includes(my)?seeds.indexOf(my)+1:0});
-}
 function topPlayerName(){const ids=S.R[S.my].slice().sort((a,b)=>(P(b).st.pts/(P(b).st.gp||1))-(P(a).st.pts/(P(a).st.gp||1)));const p=P(ids[0]);return p?`${p.n} ${f1(p.st.pts/(p.st.gp||1))}점`:'-'}
 FLOWS.po=()=>{
   const d=D();
@@ -750,6 +759,277 @@ function newSeason(){
 function ovrRank(tid){return[...S.teams].sort((a,b)=>teamOvr(b.id)-teamOvr(a.id)).findIndex(t=>t.id===tid)+1}
 function expWins(){const r=ovrRank(S.my);return clamp(Math.round(62-r*1.4),18,62)}
 
+
+/* ================= live court ================= */
+const RIMS={r:[888,250],l:[52,250]};
+const SPOTS=[[640,250],[745,95],[745,405],[872,435],[815,185]];
+const MV2=['돌파 후 레이업','풀업 점퍼','플로터','포스트업 훅슛','앨리웁 덩크','유로스텝 레이업','턴어라운드 페이드어웨이','원핸드 덩크','미드레인지 점퍼'];
+const MV3=['코너 3점','탑에서 스텝백 3점','캐치앤슛 3점','딥 쓰리','트랜지션 3점','윙에서 3점'];
+let LV=null;
+function wsel(arr,wf){const ws=arr.map(wf),t=ws.reduce((a,b)=>a+b,0)||1;let x=Math.random()*t;for(let i=0;i<arr.length;i++){x-=ws[i];if(x<=0)return arr[i]}return arr[arr.length-1]}
+function tokensFor(pts,tr){const t=[];let p=pts;while(p>0){if(p>=3&&Math.random()<tr){t.push({v:3,k:'3'});p-=3}else if(p>=3&&Math.random()<.1){t.push({v:3,k:'and1'});p-=3}else if(p>=2){t.push({v:2,k:'2'});p-=2}else{t.push({v:1,k:'ft'});p-=1}}return t}
+function genPlays(r,myOn,opOn){
+  const plays=[],trA=clamp((r.me.sht-58)/55,.18,.55),trB=clamp((r.op.sht-58)/55,.18,.55);
+  const rem={};for(const id in r.box)rem[id]=r.box[id].pts;
+  const myAll=Object.keys(r.box).map(Number),opAll=Object.keys(r.op.mins).map(Number);
+  for(let q=0;q<4;q++){
+    const A=shuffle(tokensFor(r.qa[q],trA).concat(Array.from({length:ri(2,5)},()=>({v:0,k:'miss'})))).map(x=>({...x,t:0}));
+    const B=shuffle(tokensFor(r.qb[q],trB).concat(Array.from({length:ri(2,5)},()=>({v:0,k:'miss'})))).map(x=>({...x,t:1}));
+    const seq=[];let turn=Math.random()<.5?0:1;
+    while(A.length||B.length){if(turn===0&&A.length)seq.push(A.shift());else if(turn===1&&B.length)seq.push(B.shift());else seq.push((A.length?A:B).shift());turn^=1}
+    seq.forEach((x,k)=>{x.q=q;x.clock=Math.max(0,Math.round(720*(1-(k+1)/seq.length)-rnd(0,8)));
+      if(x.t===0){x.who=x.v?wsel(myAll,id=>Math.max(.3,rem[id]||0)):wsel(myAll,id=>r.me.mins[id]*offS(P(id))/60);if(x.v)rem[x.who]=(rem[x.who]||0)-x.v;
+        if(x.v>=2&&Math.random()<.6){const o=myAll.filter(id=>id!==x.who);if(o.length)x.ast=wsel(o,id=>Math.pow(P(id).pla/60,3)*r.me.mins[id])}}
+      else x.who=wsel(opAll,id=>Math.pow(offS(P(id))/65,3)*r.op.mins[id]);
+      x.def=x.t===0?wsel(opAll,id=>r.op.mins[id]):wsel(myAll,id=>r.me.mins[id]);
+      plays.push(x)});
+  }
+  return plays;
+}
+function courtSVG(){
+  const a=TC[S.my],b=TC[LV.r.opp];
+  const dot=(i,c,lbl)=>`<g class="pd" id="pv${i}"><circle r="23" fill="${c[1]}" stroke="${c[2]}" stroke-width="4"/><text id="pt${i}">${lbl}</text></g>`;
+  return`<svg viewBox="0 0 940 500" class="court"><rect width="940" height="500" rx="18" class="cf"/>
+  <g class="cl"><rect x="10" y="10" width="920" height="480"/><line x1="470" y1="10" x2="470" y2="490"/><circle cx="470" cy="250" r="60"/>
+  <rect x="10" y="170" width="180" height="160"/><rect x="750" y="170" width="180" height="160"/><circle cx="190" cy="250" r="60"/><circle cx="750" cy="250" r="60"/>
+  <path d="M10 30 H140 A237 237 0 0 1 140 470 H10"/><path d="M930 30 H800 A237 237 0 0 0 800 470 H930"/>
+  <line x1="40" y1="215" x2="40" y2="285"/><line x1="900" y1="215" x2="900" y2="285"/></g>
+  <circle cx="52" cy="250" r="11" class="rim" id="rimL"/><circle cx="888" cy="250" r="11" class="rim" id="rimR"/>
+  ${LV.myOn.map((id,i)=>dot(i,a,P(id).n[0])).join('')}${LV.opOn.map((id,i)=>dot(i+5,b,P(id).n[0])).join('')}
+  <g class="pd" id="ball"><circle r="9" fill="#ff8a1f" stroke="#5a2600" stroke-width="2"/></g></svg>`;
+}
+function mv(el,x,y){const e=document.getElementById(el);if(e)e.style.transform=`translate(${x}px,${y}px)`}
+function dur(ms){document.querySelectorAll('#lvCourt .pd').forEach(e=>e.style.transitionDuration=ms+'ms')}
+function later(fn,ms){if(!LV)return;const tk=LV.tok;const id=setTimeout(()=>{if(LV&&LV.tok===tk)fn()},ms);LV.tids.push(id)}
+function fill5(st,bn){const a=st.slice(0,5);for(const id of bn)if(a.length<5)a.push(id);return a}
+function liveRun(r,label,done){
+  LV={r,done,i:0,q:0,sa:0,sb:0,tok:1,tids:[],sp:S.lvSp||2,myOn:fill5(r.me.st,r.me.bn),opOn:fill5(r.op.st,r.op.bn)};
+  LV.plays=genPlays(r,LV.myOn,LV.opOn);
+  $('#lvLbl').textContent=label;
+  $('#lvA').innerHTML=`${tb(S.my)}<span>${esc(short(T(S.my).name))}</span>`;$('#lvB').innerHTML=`<span>${esc(short(T(r.opp).name))}</span>${tb(r.opp)}`;
+  $('#lvCourt').innerHTML=courtSVG();$('#lvLog').innerHTML='';
+  document.querySelectorAll('[data-sp]').forEach(b=>{b.classList.toggle('on',+b.dataset.sp===LV.sp);b.onclick=()=>{LV&&(LV.sp=+b.dataset.sp);S.lvSp=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b))}});
+  $('#lvSkip').onclick=liveSkip;
+  dur(0);LV.myOn.forEach((id,i)=>mv('pv'+i,330-i*20,90+i*80));LV.opOn.forEach((id,i)=>mv('pv'+(i+5),610+i*20,90+i*80));mv('ball',470,250);
+  lvScore(0,720);lvCom('🏀 점프볼! 경기 시작');
+  $('#live').classList.add('on');
+  later(liveStep,700);
+}
+function lvScore(q,c){$('#lvSA').textContent=LV.sa;$('#lvSB').textContent=LV.sb;$('#lvQ').textContent=`${q+1}Q ${Math.floor(c/60)}:${String(c%60).padStart(2,'0')}`}
+function lvCom(t,log){$('#lvCom').innerHTML=t;if(log!==false){const d=document.createElement('div');d.innerHTML=t;const lg=$('#lvLog');lg.insertBefore(d,lg.firstChild);while(lg.children.length>30)lg.removeChild(lg.lastChild)}}
+function liveStep(){
+  if(!LV)return;const p=LV.plays[LV.i];
+  if(!p)return liveEnd();
+  if(p.q!==LV.q){lvCom(`⏸ ${LV.q+1}쿼터 종료 · ${LV.sa}-${LV.sb}`);LV.q=p.q;later(liveStep,1000/LV.sp);return}
+  poss(p,()=>{LV.i++;liveStep()});
+}
+function poss(p,cb){
+  const ms=Math.round(520/LV.sp),side=p.t===0?'r':'l',rim=RIMS[side],mir=([x,y])=>side==='r'?[x,y]:[940-x,y];
+  const offIds=p.t===0?LV.myOn:LV.opOn,base=p.t===0?0:5,dbase=p.t===0?5:0;
+  let si=offIds.indexOf(p.who);
+  if(si<0){si=ri(1,4);const old=offIds[si];offIds[si]=p.who;const t=document.getElementById('pt'+(base+si));if(t)t.textContent=P(p.who).n[0];
+    if(p.t===0)lvCom(`🔄 교체: ${esc(P(p.who).n)} IN, ${esc(P(old).n)} OUT`)}
+  const spots=SPOTS.map(([x,y])=>mir([x+rnd(-28,28),y+rnd(-28,28)]));
+  if(si!==0&&Math.random()<.5){const t=spots[si];spots[si]=spots[0];spots[0]=t}
+  dur(ms);
+  spots.forEach((sp,i)=>{mv('pv'+(base+i),sp[0],sp[1]);const d=[sp[0]+(rim[0]-sp[0])*.3+rnd(-12,12),sp[1]+(rim[1]-sp[1])*.3+rnd(-12,12)];mv('pv'+(dbase+i),d[0],d[1])});
+  const hd=p.ast!=null&&offIds.includes(p.ast)?offIds.indexOf(p.ast):0;
+  mv('ball',spots[hd][0],spots[hd][1]);
+  lvScore(p.q,p.clock);
+  later(()=>{
+    mv('ball',spots[si][0],spots[si][1]);
+    if(p.k==='2'||p.k==='and1'){const nx=spots[si][0]+(rim[0]-spots[si][0])*.65,ny=spots[si][1]+(rim[1]-spots[si][1])*.65;mv('pv'+(base+si),nx,ny);later(()=>mv('ball',nx,ny),ms*.4)}
+    later(()=>{
+      const n=esc(P(p.who).n),dn=esc(P(p.def).n),an=p.ast!=null?esc(P(p.ast).n):null;
+      if(p.k==='miss'&&Math.random()<.3){const d=document.getElementById('pv'+(dbase+si));mv('ball',spots[si][0]+(rim[0]-spots[si][0])*.3,spots[si][1]);lvCom(pick([`🦅 ${dn} 스틸!`,`🖐 ${dn}의 블록슛!`]))}
+      else{mv('ball',rim[0]+(side==='r'?-8:8),rim[1]);
+        if(p.v){if(p.t===0)LV.sa+=p.v;else LV.sb+=p.v;const rm=document.getElementById(side==='r'?'rimR':'rimL');rm.classList.add('fl');later(()=>rm.classList.remove('fl'),ms)}
+        const who=p.t===0?`<b style="color:var(--org2)">${n}</b>`:`<b>${n}</b>`;
+        lvCom(p.k==='3'?`🏹 ${who}, ${pick(MV3)}… 꽂힙니다!${an?` <span class="muted">(${an} 어시스트)</span>`:''}`:
+          p.k==='2'?`🏀 ${who}의 ${pick(MV2)}!${an?` <span class="muted">(${an} 어시스트)</span>`:''}`:
+          p.k==='and1'?`💥 ${who} 앤드원! 파울 얻고 자유투까지`:p.k==='ft'?`🎯 ${who} 자유투 성공`:
+          pick([`${who}의 슛이 림을 돌아 나옵니다`,`${who}의 3점 시도, 빗나갑니다`,`${who} 레이업 실패, 리바운드 ${dn}`]))}
+      lvScore(p.q,p.clock);
+      later(cb,ms*.9);
+    },ms);
+  },ms);
+}
+function liveEnd(){
+  if(!LV)return;const r=LV.r;LV.sa=r.sc;LV.sb=r.os;
+  if(r.clutchAt){lvScore(3,ri(4,9));lvCom(`⏱ 종료 직전 <b style="color:var(--red)">${r.sc}-${r.os}</b>, 1점 차! 작전 타임!`);later(()=>LV.done(),900);return}
+  lvScore(3,0);lvCom(`🏁 경기 종료! <b style="color:${r.win?'var(--green)':'var(--red)'}">${r.sc}-${r.os} ${r.win?'승리':'패배'}</b>`);
+  later(()=>LV.done(),1300/LV.sp);
+}
+function liveSkip(){if(!LV)return;LV.tids.forEach(clearTimeout);LV.tids=[];LV.tok++;LV.i=LV.plays.length;liveEnd()}
+function liveShot(r,o,ok,done){
+  if(!LV){done();return}
+  LV.tids.forEach(clearTimeout);LV.tids=[];LV.tok++;LV.sp=1;
+  const p={t:0,q:3,clock:1,v:ok?o.pts:0,k:ok?(o.pts===3?'3':'2'):'miss',who:o.who.id,ast:o.ast?o.ast.id:null,def:LV.opOn[0]};
+  LV.sa=r.sc-(ok?o.pts:0);
+  poss(p,()=>{lvScore(3,0);lvCom(ok?`🚨 버저비터!!! <b style="color:var(--green)">${r.sc}-${r.os} 역전승!</b>`:`🏁 마지막 슛 실패… <b style="color:var(--red)">${r.sc}-${r.os}</b>`);later(done,1800)});
+}
+function liveHide(){if(LV){LV.tids.forEach(clearTimeout);LV.tok++}LV=null;$('#live').classList.remove('on')}
+
+/* ================= playoffs ================= */
+const PR=['1라운드','2라운드','컨퍼런스 결승','NBA 파이널'];
+function simSeries(A,B){let wa=0,wb=0,g=0;const ra=rate(A,'balance').R,rb=rate(B,'balance').R;
+  while(wa<4&&wb<4){const hA=[0,1,4,6].includes(g);if(Math.random()<1/(1+Math.exp(-(ra-rb+(hA?1.5:-1.5))/11)))wa++;else wb++;g++}
+  return{A,B,wa,wb,w:wa>wb?A:B}}
+function seasonEnd(){
+  busy=true;const seeds=standings().slice(0,16).map(t=>t.id),inPo=seeds.includes(S.my);
+  S.po={seeds,br:[0,15,7,8,3,12,4,11,1,14,6,9,2,13,5,10].map(i=>seeds[i]),ri:0,rounds:[],pst:{},won:0,out:!inPo,result:inPo?'':'플레이오프 진출 실패',cur:null};
+  for(const id of S.R[S.my]){P(id).cond=Math.max(P(id).cond,95)}
+  setFlow('poRound');
+}
+FLOWS.poRound=()=>{
+  const po=S.po;
+  while(true){
+    if(po.ri>=4){finishSeason();return}
+    if(!po.cur){const ser=[];let mine=null;
+      for(let i=0;i<po.br.length;i+=2){const A=po.br[i],B=po.br[i+1];
+        if(!po.out&&(A===S.my||B===S.my)){const opp=A===S.my?B:A;mine={opp,hf:po.seeds.indexOf(S.my)<po.seeds.indexOf(opp),wa:0,wb:0,g:0,mom:0,fat:0,last:null,games:[],ev:null};ser.push(null)}
+        else ser.push(simSeries(A,B))}
+      po.cur={nm:PR[po.ri],ser,mine};save()}
+    const c=po.cur;
+    if(c.mine&&!c.mine.done){FLOWS.poPrep();return}
+    const ser=c.ser.map((x,i)=>x||{A:po.br[i*2],B:po.br[i*2+1],wa:po.br[i*2]===S.my?c.mine.wa:c.mine.wb,wb:po.br[i*2]===S.my?c.mine.wb:c.mine.wa,w:c.mine.wa===4?S.my:c.mine.opp,mine:true});
+    po.rounds.push({nm:c.nm,ser});po.br=ser.map(x=>x.w);po.ri++;po.cur=null;save();
+    if(c.mine&&!po.out&&po.ri<4){
+      modal('',`<div class="sum"><p class="small muted">${S.year} 플레이오프</p><div class="big">${c.nm} 결과</div>
+        ${ser.map(x=>`<div class="tour"><div class="ti">${x.mine?'⭐':'🏀'}</div><div><b>${tb(x.w)}${esc(short(T(x.w).name))}</b><small>vs ${esc(short(T(x.w===x.A?x.B:x.A).name))}</small></div><div class="tr">${Math.max(x.wa,x.wb)}-${Math.min(x.wa,x.wb)}</div></div>`).join('')}</div>`,
+        [{t:`${PR[po.ri]}로 ▶`,cls:'pri',fn:()=>FLOWS.poRound()}]);return}
+  }
+};
+function poEvents(m,fin,home){
+  const k=fin?1.6:1,me=rate(S.my,'balance'),op=rate(m.opp,'balance'),evs=[],lu=lineup(S.my).st,mineIds=[...lu,...lineup(S.my).bn].filter(id=>!P(id).inj);
+  const opAce=S.R[m.opp].slice().sort(byOvr)[0],nm=id=>esc(P(id).n),opn=esc(short(T(m.opp).name));
+  if(m.mom)evs.push({ic:m.mom>0?'📈':'📉',t:'시리즈 흐름',d:m.mom>0?`${Math.abs(m.mom)}연승의 기세가 이어지고 있다.`:`${Math.abs(m.mom)}연패… 분위기가 가라앉았다.`,adj:m.mom*1.2*k});
+  evs.push(home?{ic:'📣',t:fin?'파이널 홈 관중':'홈 관중 열기',d:'경기장이 들썩인다. 홈 코트의 힘!',adj:1.2*k}:{ic:'😤',t:'적지 분위기',d:`${opn} 팬들의 야유가 쏟아진다.`,adj:-1*k});
+  if(m.g>=3&&m.fat>0)evs.push({ic:'🥵',t:'체력 저하',d:`시리즈 ${m.g}경기째, 주전들의 다리가 무겁다.`,adj:-m.fat,ch:[{t:'벤치 비중 늘리기',adj:m.fat*.6,fx:'deep'},{t:'주전으로 밀어붙인다',adj:0,fx:'push'}]});
+  if(m.wb===3)evs.push({ic:'⚠️',t:'벼랑 끝',d:'지면 시즌이 끝난다.',ch:[{t:'라커룸 연설: 투지',adj:1.5,sd:2},{t:'평소대로',adj:0}]});
+  if(m.wa===3)evs.push({ic:'🎯',t:fin?'우승 확정 기회':'시리즈 확정 기회',d:`${opn}도 필사적이다.`,adj:-1.2*k});
+  if(m.g===6)evs.push({ic:'🎲',t:'운명의 7차전',d:'모든 것이 이 한 경기에 달렸다. 무슨 일이든 일어날 수 있다.',sd:4});
+  const pool=[
+    ()=>{const id=pick(lu.filter(x=>!P(x).inj));return id?{ic:'🚑',t:'부상 변수',d:`${nm(id)}이(가) 발목 통증으로 출전이 불투명하다.`,pid:id,ch:[{t:'출전 강행',adj:0,fx:'play'},{t:'휴식시킨다',adj:0,fx:'rest'}]}:null},
+    ()=>({ic:'🩼',t:'상대 에이스 부상',d:`${opn}의 ${nm(opAce)}이(가) 햄스트링 부상으로 결장한다!`,adj:3.5*k}),
+    ()=>{const id=pick(mineIds.slice(0,7));return{ic:'🔥',t:'핫 핸드',d:`${nm(id)}의 슛감이 미쳤다는 평가.`,adj:1.3*k,hot:id}},
+    ()=>{const id=lu[0];return id?{ic:'🥶',t:'에이스 슬럼프',d:`${nm(id)}이(가) 최근 슛 난조에 빠졌다.`,cold:id,ch:[{t:'계속 믿는다',fx:'trust'},{t:'출전 시간 줄인다',adj:-.6,fx:'bench'}]}:null},
+    ()=>Math.random()<.5?{ic:'🧑‍⚖️',t:'엄격한 심판진',d:'휘슬이 자주 분다 — 골밑 공략 팀이 유리.',adj:clamp((me.ins-op.ins)*.15,-2.5,2.5)*k}:{ic:'🧑‍⚖️',t:'관대한 심판진',d:'몸싸움을 잘 안 분다 — 수비가 강한 팀이 유리.',adj:clamp((me.def-op.def)*.18,-2.5,2.5)*k},
+    ()=>({ic:'📰',t:'미디어 논란',d:`${opn} 선수가 인터뷰에서 우리 팀을 도발했다.`,ch:[{t:'정면 반박',fx:'gamble'},{t:'무시한다',adj:0}]}),
+    ()=>({ic:'🧠',t:'상대의 변칙 수비',d:`${opn} 감독이 박스앤원 수비를 꺼내 들었다.`,adj:-2*k,ch:[{t:'에이스 아이솔레이션 늘리기',adj:1.4*k,sd:2},{t:'볼 무브먼트로 공략',adj:1*k}]}),
+    ()=>{const id=pick(lineup(S.my).bn.filter(x=>!P(x).inj));return id?{ic:'⚡',t:'X팩터',d:`벤치의 ${nm(id)}이(가) 연습에서 엄청난 컨디션을 보였다.`,ch:[{t:'출전 시간 늘린다',adj:1,sd:1.5,hot:id},{t:'기존 로테이션 유지',adj:0}]}:null},
+    ()=>({ic:'🏀',t:'스몰볼 카드',d:'빅맨 대신 슈터 5명을 세워볼까?',ch:[{t:'스몰볼 가동',adj:clamp((me.sht-op.ins)*.12,-3,3),sd:3},{t:'정통 라인업',adj:0}]}),
+    ()=>({ic:'✈️',t:'원정 피로',d:'연이은 장거리 이동으로 선수들이 지쳤다.',adj:-1*k}),
+    ()=>({ic:'👑',t:'레전드 응원',d:'구단 레전드가 라커룸을 찾아 격려했다.',adj:1*k}),
+    ()=>({ic:'🤕',t:'상대 주전 컨디션 난조',d:`${opn} 선수 몇 명이 감기 몸살이라는 소식.`,adj:1.5*k}),
+  ];
+  const n=fin?ri(2,3):(Math.random()<.7?1:0);
+  for(const f of shuffle(pool.slice()).slice(0,n+2)){if(evs.filter(e=>e.r).length>=n)break;const e=f();if(e){e.r=1;evs.push(e)}}
+  return evs;
+}
+FLOWS.poPrep=()=>{
+  const po=S.po,c=po.cur,m=c.mine,fin=po.ri===3,home=[0,1,4,6].includes(m.g)?m.hf:!m.hf;
+  if(!m.ev){m.ev=poEvents(m,fin,home);save()}
+  const opn=T(m.opp).name;
+  const evH=m.ev.map((e,i)=>`<div class="evc${fin?' fin':''}"><b>${e.ic} ${e.t}</b><p>${e.d}${e.adj&&!e.ch?` <span style="color:${e.adj>0?'var(--green)':'var(--red)'}">(${e.adj>0?'+':''}${f1(e.adj)})</span>`:''}${e.sd?' <span style="color:var(--gold)">(변수 ↑)</span>':''}</p>
+     ${e.ch?`<div class="eb">${e.ch.map((x,j)=>`<button class="btn sm${e.pick===j?' on':''}" data-ev="${i}:${j}">${x.t}</button>`).join('')}</div>`:''}</div>`).join('');
+  const ready=m.ev.every(e=>!e.ch||e.pick!=null);
+  modal('',`<div class="sum"><p class="small muted">${S.year} 플레이오프 · ${c.nm}</p><div class="big">${m.g+1}차전<br><em>${m.wa} : ${m.wb}</em></div>
+    <div class="kv"><span>상대</span><b>${tb(m.opp)}${esc(opn)}</b></div><div class="kv"><span>장소</span><b>${home?'🏠 홈':'✈️ 원정'}</b></div>
+    <h4>${fin?'🏆 파이널 변수':'경기 변수'}</h4>${evH||'<p class="small muted">특별한 변수 없음</p>'}
+    <h4>🎯 작전</h4><div class="chips">${Object.entries(STRATS).map(([k,s])=>`<button class="chip${S.strat===k?' on':''}" data-pst="${k}">${s.ic} ${s.n}</button>`).join('')}</div>
+    <p class="hint">${m.last&&m.last===S.strat?`⚠️ 지난 경기와 같은 작전이에요. 상대가 대비해서 불리해져요(${fin?'-3':'-2'}).`:`상대 성향: ${STYLES[rate(m.opp,'balance').style]}`}</p></div>`,
+    [{t:ready?'🏀 경기 시작':'변수에 대한 결정을 모두 내려주세요',cls:ready?'pri':'',fn:()=>{if(ready)poPlay(false);else FLOWS.poPrep()}},
+     {t:'⏩ 이 시리즈 자동 진행',fn:()=>poAuto()}],
+    root=>{root.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const [i,j]=b.dataset.ev.split(':').map(Number);m.ev[i].pick=j;save();FLOWS.poPrep()});
+      root.querySelectorAll('[data-pst]').forEach(b=>b.onclick=()=>{S.strat=b.dataset.pst;save();FLOWS.poPrep()})});
+};
+function poOpt(m,fin){
+  const o={adj:0,sd:fin?2:0,notes:[],out:[],fin,cp:fin?.85:.6,cth:fin?6:4.5};
+  for(const e of m.ev){const c=e.ch?e.ch[e.pick!=null?e.pick:0]:null;
+    o.adj+=(e.adj||0)+(c&&c.adj||0);o.sd+=(e.sd||0)+(c&&c.sd||0);
+    if(e.hot)o.hot=e.hot;if(c&&c.hot)o.hot=c.hot;if(e.cold)o.cold=e.cold;
+    if(c&&c.fx==='rest'){o.out.push(e.pid);o.notes.push(`🚑 ${P(e.pid).n} 결장`)}
+    if(c&&c.fx==='play'){P(e.pid).cond=60;o.aggr=e.pid;o.notes.push(`🚑 ${P(e.pid).n} 부상 투혼`)}
+    if(c&&c.fx==='gamble'){const g=Math.random()<.5?2.5:-2.5;o.adj+=g;o.notes.push(g>0?'📰 반박이 선수단에 불을 붙였다!':'📰 설전이 오히려 상대를 자극했다…')}
+    if(c&&c.fx==='trust'){const g=Math.random()<.5;o.adj+=g?1.5:-1.5;if(g){delete o.cold;o.hot=e.cold;o.notes.push(`🥶→🔥 믿음에 보답한 ${P(e.cold).n}!`)}else o.notes.push(`🥶 ${P(e.cold).n}의 슬럼프가 계속됐다`)}
+    if(c&&c.fx==='bench')o.cold=null;
+    if(c&&c.fx==='deep')o.deep=1;if(c&&c.fx==='push')o.push=1;
+    if(!e.ch&&e.adj&&Math.abs(e.adj)>=1)o.notes.push(`${e.ic} ${e.t} (${e.adj>0?'+':''}${f1(e.adj)})`)}
+  if(m.last&&m.last===S.strat){o.adj-=fin?3:2;o.notes.push('🧠 상대가 우리 작전을 읽고 대비했다')}
+  return o;
+}
+function poPlay(auto,cb){
+  const po=S.po,c=po.cur,m=c.mine,fin=po.ri===3,home=[0,1,4,6].includes(m.g)?m.hf:!m.hf;
+  if(!m.ev)m.ev=poEvents(m,fin,home);
+  const o=poOpt(m,fin);o.out.forEach(id=>P(id).inj=Math.max(P(id).inj,1));
+  for(const id of S.R[S.my])P(id).cond=clamp(Math.max(P(id).cond,90)-m.fat*3,40,100);
+  busy=true;
+  simGame(m.opp,home,S.strat,!auto,r=>{
+    const end=()=>{poAfter(r,o);if(auto){cb&&cb(r);return}showPoResult(r,()=>{if(m.done)poSeriesEnd();else FLOWS.poPrep()})};
+    if(auto){if(r.clutchAt){const op=clutchOpts(r).sort((a,b)=>b.pr-a.pr)[0],ok=Math.random()<op.pr;if(ok){r.sc+=op.pts;r.qa[3]+=op.pts;r.margin=r.sc-r.os;r.win=true;if(r.box[op.who.id])r.box[op.who.id].pts+=op.pts}}end()}
+    else watch(r,`${S.year} 플레이오프 · ${c.nm} ${m.g+1}차전`,end);
+  },o);
+}
+function poAfter(r,o){
+  const po=S.po,c=po.cur,m=c.mine,fin=po.ri===3;
+  o.out.forEach(id=>P(id).inj=Math.max(0,P(id).inj-1));
+  r.inj=[];
+  if(o.aggr&&Math.random()<.3){P(o.aggr).inj=ri(2,5);r.inj.push(`🚑 ${P(o.aggr).n} 부상 악화! ${P(o.aggr).inj}경기 결장`)}
+  for(const id in r.box){const b=r.box[id];const x=po.pst[id]=po.pst[id]||{gp:0,pts:0,reb:0,ast:0};x.gp++;x.pts+=b.pts;x.reb+=b.reb;x.ast+=b.ast}
+  if(r.win){m.wa++;m.mom=Math.max(0,m.mom)+1}else{m.wb++;m.mom=Math.min(0,m.mom)-1}m.mom=clamp(m.mom,-3,3);
+  m.fat=Math.max(0,m.fat+(fin?1.1:.8)-(o.deep?.9:0)+(o.push?.6:0));
+  m.last=r.strat;m.games.push({win:r.win,sc:r.sc,os:r.os,top:topLine(r)});m.g++;m.ev=null;r.g=m.g;
+  const tl=topLine(r);if(tl&&tl.pts>=30)post(`${c.nm} ${m.g}차전, ${tl.n} ${tl.pts}점! 시리즈 ${m.wa}-${m.wb}`,'@NBA_소식');
+  if(m.wa===4||m.wb===4){m.done=true;if(m.wa===4){po.won++;po.result=fin?'🏆 우승':`${c.nm} 통과`}else{po.out=true;po.result=`${c.nm} 탈락`}}
+  save();
+}
+function showPoResult(r,next){
+  const m=S.po.cur.mine,ids=Object.keys(r.box).map(Number).sort((a,b)=>r.box[b].pts-r.box[a].pts),tl=ids[0];
+  modal(`${S.po.cur.nm} ${r.g}차전`,`
+   <div class="score"><span>${tb(S.my,1)}<br><small>${r.home?'홈':'원정'}</small></span><b style="color:${r.win?'var(--green)':'var(--ink)'}">${r.sc}</b><b class="muted">:</b><b>${r.os}</b><span>${tb(r.opp,1)}</span></div>
+   <div class="res ${r.win?'W':'L'}">${r.win?'승리':'패배'} · 시리즈 ${m.wa}-${m.wb}</div>
+   <table class="qt"><tr><th></th><th>1Q</th><th>2Q</th><th>3Q</th><th>4Q</th><th>합계</th></tr>
+    <tr><td>${esc(short(T(S.my).name))}</td>${r.qa.map(x=>`<td>${x}</td>`).join('')}<td>${r.sc}</td></tr><tr><td>${esc(short(T(r.opp).name))}</td>${r.qb.map(x=>`<td>${x}</td>`).join('')}<td>${r.os}</td></tr></table>
+   ${r.notes.map(n=>`<div class="note ${/✅|버저비터|🔥|불을|보답/.test(n)?'good':/⚠️|빗나|🚑|🧠|자극|계속됐/.test(n)?'bad':''}">${n}</div>`).join('')}
+   ${r.inj.map(n=>`<div class="note bad">${n}</div>`).join('')}
+   <h4>박스스코어</h4><table class="box"><tr><th>선수</th><th>분</th><th>득점</th><th>리바</th><th>어시</th></tr>
+   ${ids.map(id=>{const b=r.box[id];return`<tr class="${id===tl?'tp':''}"><td>${esc(P(id).n)}</td><td>${b.min}</td><td>${b.pts}</td><td>${b.reb}</td><td>${b.ast}</td></tr>`}).join('')}</table>`,
+   [{t:m.done?'시리즈 결과':'다음 경기 준비',cls:'pri',fn:next}]);
+}
+function poAuto(){
+  const m=S.po.cur.mine;let n=0;
+  const step=()=>{if(m.done){poSeriesEnd();return}if(n++>8){poSeriesEnd();return}m.ev=m.ev||poEvents(m,S.po.ri===3,true);poPlay(true,()=>step())};
+  step();
+}
+function poSeriesEnd(){
+  const po=S.po,c=po.cur,m=c.mine,won=m.wa===4,fin=po.ri===3;
+  modal('',`<div class="sum"><p class="small muted">${S.year} 플레이오프 · ${c.nm}</p><div class="big">${fin&&won?'<em>NBA 챔피언!</em> 💍':`${c.nm}<br><em>${m.wa} : ${m.wb}</em> ${won?'승리!':'탈락'}`}</div>
+    <div class="kv"><span>상대</span><b>${tb(m.opp)}${esc(T(m.opp).name)}</b></div>
+    ${m.games.map((g,i)=>`<div class="tour"><div class="ti">${g.win?'✅':'❌'}</div><div><b>${i+1}차전</b><small>${g.top?`${esc(g.top.n)} ${g.top.pts}점 ${g.top.reb}리바 ${g.top.ast}어시`:''}</small></div><div class="tr">${g.sc}-${g.os}</div></div>`).join('')}</div>`,
+    [{t:won&&!fin?'다음으로':'시즌 결산',cls:'pri',fn:()=>FLOWS.poRound()}]);
+}
+function finishSeason(){
+  const po=S.po,my=S.my,champ=po.br[0],me=T(my),w=me.w,l=me.l,rank=rankOf(my),pst=po.pst,inPo=po.seeds.includes(my);
+  const aw=[];
+  const cand=[];for(const t of S.teams)for(const id of S.R[t.id]){const p=P(id);if(ovr(p)>=78)cand.push({id,t:t.id,s:ovr(p)+(t.w/(t.w+t.l||1)-.5)*22+gauss(0,1.5)})}
+  cand.sort((a,b)=>b.s-a.s);const mvp=cand[0];if(mvp&&mvp.t===my)aw.push('mvp');
+  let fmvp=null;if(champ===my){aw.push('ring');const ids=Object.keys(pst).map(Number).filter(id=>S.R[my].includes(id)).sort((a,b)=>pst[b].pts/pst[b].gp-pst[a].pts/pst[a].gp);fmvp=ids[0];aw.push('fmvp')}
+  else{fmvp=S.R[champ].slice().sort(byOvr)[0]}
+  if(inPo)aw.push('po');if(rank===1)aw.push('best');if(w-S.exp>=12&&w>=45)aw.push('coy');
+  const rook=[];for(const t of S.teams)for(const id of S.R[t.id]){const p=P(id);if(p.rookie===S.year)rook.push({id,t:t.id,s:ovr(p)+gauss(0,2)})}
+  rook.sort((a,b)=>b.s-a.s);if(rook[0]&&rook[0].t===my)aw.push('roy');
+  for(const k of aw)S.tro[k]=(S.tro[k]||0)+1;
+  const delta=Math.round((w-S.exp)+(inPo?5:-5)+po.won*5+(champ===my?15:0));
+  S.owner=clamp(S.owner+delta,0,100);
+  const result=po.result||'플레이오프 진출 실패';
+  for(const id of S.R[my])P(id).inj=0;
+  S.hist.push({year:S.year,w,l,rank,po:result,aw:aw.filter(k=>k!=='po'),exp:S.exp,best:topPlayerName()});
+  if(champ===my)post(`🏆 ${me.name}, ${S.year} NBA 챔피언!!! 우승 반지를 꼈다 💍`,'@NBA_소식');
+  else post(`${S.year} NBA 우승은 ${T(champ).name}. ${short(me.name)}는 ${result}.`,'@NBA_소식');
+  setFlow('sum',{champ,result,aw,mvp:mvp?{id:mvp.id,t:mvp.t}:null,fmvp,delta,w,l,rank});
+}
+
 /* ================= UI ================= */
 function bar(label,v,color){return`<div class="bar"><span>${label}</span><i><u style="width:${clamp(v,0,100)}%;background:${color}"></u></i><em>${Math.round(v)}</em></div>`}
 function render(){
@@ -780,6 +1060,7 @@ function homeHTML(){
    <div class="chips">${Object.entries(TRAINS).map(([k,n])=>`<button class="chip${S.train===k?' on':''}" data-tr="${k}">${n}</button>`).join('')}</div>
    <p class="hint">집중 육성 선수(로스터에서 최대 2명 지정)는 훈련 효과 2.2배. 젊고 잠재력이 높을수록 빨리 성장해요. ${S.dev.length?'현재: '+S.dev.map(id=>esc(P(id).n)).join(', '):''}</p></div>
   <button class="btn pri" id="play" style="font-size:19px;padding:18px">▶ ${S.week}번째 경기 시작</button>
+  <label class="tgl" style="justify-content:center;margin-top:10px;font-size:15px"><input type="checkbox" id="liveOn" ${S.liveOn!==false?'checked':''}>🏟 경기 중계 화면 보기 (선수 움직임)</label>
   <button class="btn" id="auto" style="margin-top:10px">⏩ 자동 진행 <small class="muted">· 한 경기씩, 언제든 멈추기</small></button>
   <div class="card" style="margin-top:14px"><h3><span>최근 경기</span></h3><div class="glist">${S.games.slice(-5).reverse().map(g=>`<div class="g"><div class="wl ${g.win?'W':'L'}">${g.win?'W':'L'}</div><div><div>G${g.g} ${g.home?'vs':'@'} ${esc(short(T(g.opp).name))} <span class="muted">${g.sc}-${g.os}</span> ${STRATS[g.strat].ic}</div><div class="ln">${g.top?`${esc(g.top.n)} ${g.top.pts}점 ${g.top.reb}리바 ${g.top.ast}어시`:''}</div></div><div></div></div>`).join('')||'<p class="small muted">아직 경기가 없어요.</p>'}</div></div>
   <div class="card"><h3><span>💬 반응</span></h3><div class="feed">${S.feed.slice(0,3).map(x=>`<div class="post"><div class="ph"><b>${esc(x.who)}</b><span>${x.y}</span></div><p>${esc(x.txt)}</p></div>`).join('')||'<p class="small muted">아직 반응이 없어요.</p>'}</div></div>`;
@@ -864,7 +1145,7 @@ function bindStart(){
 }
 function bind(){
   const on=(sel,fn)=>{const e=$(sel);if(e)e.onclick=fn};
-  on('#play',playOne);on('#auto',autoRun);on('#resume',()=>{busy=true;FLOWS[S.flow.step]()});
+  on('#play',playOne);const lo=$('#liveOn');if(lo)lo.onchange=()=>{S.liveOn=lo.checked;save()};on('#auto',autoRun);on('#resume',()=>{busy=true;FLOWS[S.flow.step]()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{S.strat=b.dataset.st;save();const y=scrollY;render();scrollTo(0,y)});
   document.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{S.train=b.dataset.tr;save();const y=scrollY;render();scrollTo(0,y)});
   document.querySelectorAll('[data-pl]').forEach(b=>b.onclick=()=>playerModal(+b.dataset.pl));
