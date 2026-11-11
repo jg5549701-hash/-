@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>벤치에서 우승 반지까지</title>
-<meta name="description" content="구단을 맡아 트레이드·훈련·작전으로 한 경기씩 이겨 NBA 우승 반지까지, 농구 단장·감독 시뮬레이션">
+<meta name="description" content="실제 NBA 구단을 맡아 트레이드·훈련·작전으로 한 경기씩 이겨 우승 반지까지, 비공식 농구 단장·감독 시뮬레이션">
 <meta name="theme-color" content="#0b0c10">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -275,11 +275,41 @@ const money=v=>'$'+(v>=10?v.toFixed(1):v.toFixed(2))+'M';
 const josa=(w,a,b)=>{const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?a:b};
 
 /* ================= data ================= */
-const GAMES=82,DEADLINE=50,ALLSTAR=41,CAP=90,MINSAL=2,ROSTER_MIN=12,ROSTER_MAX=15;
-const TEAM_NAMES=['해안시티 샤크스','노스필드 울프팩','레드캐니언 피닉스','아이언베이 타이탄즈','썬밸리 코멧츠','블루레이크 퀘이크','스톤브릿지 바이슨즈','골든포트 스톰',
- '실버힐 그리폰즈','이스트게이트 블레이즈','윈터스 맘모스','파인우드 사이클론즈','하버타운 바이퍼스','크라운시티 나이츠','미스트밸리 엠버스','듄스필드 스콜피온즈',
- '노스베이 허리케인즈','레이크우드 아울스','샌드힐 자칼스','리버사이드 스팅레이즈','오로라 블리자드','캐슬록 가디언즈','에메랄드시티 드래곤즈','헤이븐 팔라딘즈',
- '선셋베이 웨이브스','그래나이트 골렘즈','템페스트시티 썬더버즈','오크밸리 레드우즈','마리나 머큐리','하이랜드 하이랜더스'];
+const GAMES=82,DEADLINE=50,ALLSTAR=41,CAP=140,MINSAL=2,ROSTER_MIN=12,ROSTER_MAX=15;
+const REAL=[
+['애틀랜타 호크스','트레이 영|PG|28|86|pm;제일런 존슨|SF|24|84|ar;다이슨 대니얼스|SG|23|80|3d;크리스탑스 포르징기스|C|31|81|bg;오니카 오콩구|C|25|77|rp;니켈 알렉산더워커|SG|28|75|3d;자카리 리사셰|SF|21|74|sh;루크 케너드|SG|30|70|sh'],
+['보스턴 셀틱스','제이슨 테이텀|SF|28|90|sc;제일런 브라운|SG|30|86|sl;데릭 화이트|SG|32|81|3d;앤퍼니 사이먼스|SG|27|78|sc;페이튼 프리처드|PG|28|77|sh;샘 하우저|SF|28|72|sh;니미아스 케타|C|27|71|rp;조던 월시|SG|22|68|3d'],
+['브루클린 네츠','마이클 포터 주니어|SF|28|80|sh;캠 토머스|SG|25|77|sc;닉 클랙스턴|C|27|76|rp;노아 클라우니|SF|22|70|3d;에고르 데민|PG|20|70|pm;지에어 윌리엄스|SF|25|70|3d;데이런 샤프|C|24|69|rp;테렌스 맨|SG|30|69|3d'],
+['샬럿 호네츠','라멜로 볼|PG|25|85|pm;브랜든 밀러|SF|24|82|sc;마일스 브리지스|PF|28|78|ar;콘 크뉴플|SG|21|77|sh;콜린 섹스턴|SG|27|75|sc;그랜트 윌리엄스|PF|27|71|3d;무사 디아바테|C|25|70|rp;조시 그린|SG|26|69|3d'],
+['시카고 불스','조시 기디|PG|24|81|pm;코비 화이트|SG|26|79|sc;니콜라 부세비치|C|36|76|bg;마타스 부젤리스|PF|22|75|ar;아요 도순무|SG|27|73|3d;패트릭 윌리엄스|PF|25|71|3d;케빈 허터|SG|28|71|sh;잭 콜린스|C|28|69|bg'],
+['클리블랜드 캐벌리어스','도너번 미첼|SG|30|89|sc;에반 모블리|PF|25|87|rp;다리우스 갈런드|PG|26|83|pm;재럿 앨런|C|28|81|rp;디안드레 헌터|SF|29|76|3d;맥스 스트러스|SF|30|74|sh;론조 볼|PG|29|73|pm;샘 메릴|SG|26|70|sh'],
+['댈러스 매버릭스','앤서니 데이비스|PF|33|88|bg;카이리 어빙|PG|34|86|sc;쿠퍼 플래그|SF|20|82|ar;데릭 라이블리|C|22|77|rp;P.J. 워싱턴|PF|28|76|3d;대니얼 개퍼드|C|28|76|rp;클레이 톰프슨|SG|36|74|sh;단테 엑섬|SG|31|70|3d'],
+['덴버 너게츠','니콜라 요키치|C|31|96|bg;자말 머레이|PG|29|86|sc;애런 고든|PF|31|79|ar;크리스천 브라운|SG|25|78|3d;캠 존슨|SF|30|77|sh;요나스 발렌시우나스|C|34|73|bg;브루스 브라운|SG|30|70|3d;페이튼 왓슨|SF|24|70|3d'],
+['디트로이트 피스톤스','케이드 커닝햄|PG|25|89|pm;제일런 듀렌|C|23|80|rp;아우사 톰프슨|SF|23|78|3d;제이든 아이비|SG|24|76|sl;토바이어스 해리스|PF|34|74|ar;던컨 로빈슨|SF|32|72|sh;아이재아 스튜어트|C|25|72|rp;론 홀랜드|SF|21|70|sl'],
+['골든스테이트 워리어스','스테픈 커리|PG|38|89|sh;지미 버틀러|SF|37|84|sl;드레이먼드 그린|PF|36|77|rp;조너선 쿠밍가|PF|24|77|sl;브랜딘 포지엠스키|SG|23|75|ar;버디 힐드|SG|33|72|sh;알 호퍼드|C|40|70|bg;모제스 무디|SG|24|70|3d'],
+['휴스턴 로키츠','케빈 듀랜트|SF|38|88|sc;알페렌 셍귄|C|24|86|bg;아멘 톰프슨|SF|23|82|3d;프레드 밴블릿|PG|32|79|pm;자바리 스미스 주니어|PF|23|77|3d;리드 셰퍼드|PG|22|73|sh;도리안 피니스미스|PF|33|71|3d;스티븐 애덤스|C|33|70|rp'],
+['인디애나 페이서스','타이리스 할리버튼|PG|26|87|pm;파스칼 시아캄|PF|32|84|ar;앤드루 넴바드|SG|26|78|3d;에런 네스미스|SF|26|75|3d;베네딕트 매서린|SG|24|75|sc;오비 토핀|PF|28|71|ar;T.J. 맥코넬|PG|34|71|pm;아이재아 잭슨|C|24|70|rp'],
+['LA 클리퍼스','카와이 레너드|SF|35|87|sc;제임스 하든|PG|37|86|pm;이비차 주바츠|C|29|81|rp;존 콜린스|PF|29|77|ar;브래들리 빌|SG|33|76|sc;데릭 존스 주니어|SF|29|72|3d;브룩 로페즈|C|38|71|rp;크리스 폴|PG|41|70|pm'],
+['LA 레이커스','루카 돈치치|PG|27|94|pm;르브론 제임스|SF|42|85|ar;오스틴 리브스|SG|28|82|sc;디안드레 에이튼|C|28|76|bg;하치무라 루이|PF|28|75|ar;마커스 스마트|PG|32|72|3d;제이크 라라비아|SF|24|70|3d;게이브 빈센트|PG|30|68|sh'],
+['멤피스 그리즐리스','자 모란트|PG|27|85|sl;재런 잭슨 주니어|PF|27|84|rp;잭 이디|C|24|75|rp;산티 알다마|PF|25|74|ar;타이 제롬|PG|29|74|sc;켄테이비어스 콜드웰포프|SG|33|72|3d;자일런 웰스|SF|23|72|3d;브랜든 클라크|PF|30|70|ar'],
+['마이애미 히트','뱀 아데바요|C|29|84|rp;타일러 히로|SG|27|83|sc;노먼 파월|SG|33|77|sc;앤드루 위긴스|SF|31|76|3d;켈렐 웨어|C|22|75|rp;데이비언 미첼|PG|28|72|3d;하이메 하케스 주니어|SF|26|71|ar;니콜라 요비치|SF|23|70|sh'],
+['밀워키 벅스','야니스 아데토쿤보|PF|32|94|sl;마일스 터너|C|30|78|rp;케빈 포터 주니어|PG|26|75|sc;카일 쿠즈마|PF|31|74|sc;바비 포티스|PF|31|74|bg;게리 트렌트 주니어|SG|28|72|sh;AJ 그린|SG|26|70|sh;라이언 롤린스|PG|24|70|pm'],
+['미네소타 팀버울브스','앤서니 에드워즈|SG|25|90|sc;줄리어스 랜들|PF|31|81|bg;루디 고베어|C|34|80|rp;제이든 맥대니얼스|SF|26|77|3d;나즈 리드|C|27|77|bg;돈테 디빈첸조|SG|29|74|sh;마이크 콘리|PG|39|70|pm;테렌스 섀넌 주니어|SG|22|69|sl'],
+['뉴올리언스 펠리컨스','자이언 윌리엄슨|PF|26|85|sl;트레이 머피 3세|SF|26|80|sh;허버트 존스|SF|28|77|3d;디존테 머레이|PG|30|77|pm;조던 풀|SG|27|75|sc;데릭 퀸|C|21|72|bg;이브 미시|C|22|72|rp;새디크 베이|SF|27|71|sh'],
+['뉴욕 닉스','제일런 브런슨|PG|30|90|sc;칼앤서니 타운스|C|31|87|bg;미칼 브리지스|SF|30|80|3d;OG 아누노비|SF|29|80|3d;조시 하트|SG|31|77|ar;미첼 로빈슨|C|28|75|rp;조던 클락슨|SG|34|71|sc;랜드리 샤멧|SG|29|68|sh'],
+['오클라호마시티 썬더','샤이 길저스알렉산더|PG|28|96|sc;제일런 윌리엄스|SF|25|87|ar;쳇 홈그렌|C|24|85|rp;이자이아 하텐슈타인|C|28|78|bg;알렉스 카루소|SG|32|76|3d;루겐츠 도트|SG|27|75|3d;케이슨 월리스|SG|22|74|3d;아이재아 조|SG|27|72|sh'],
+['올랜도 매직','파올로 반케로|PF|24|88|sc;프란츠 바그너|SF|25|85|ar;데스먼드 베인|SG|28|82|sh;제일런 석스|PG|29|78|3d;웬델 카터 주니어|C|27|76|rp;앤서니 블랙|PG|23|72|3d;조너선 아이작|PF|29|71|rp;고가 비타제|C|24|69|rp'],
+['필라델피아 세븐티식서스','조엘 엠비드|C|32|88|bg;타이리스 맥시|PG|26|88|sc;폴 조지|SF|36|80|ar;VJ 에지컴|SG|21|76|sl;재러드 매케인|SG|22|75|sh;퀜틴 그라임스|SG|26|75|sc;켈리 우브레 주니어|SF|30|74|sl;앤드레 드러먼드|C|33|70|rp'],
+['피닉스 선즈','데빈 부커|SG|30|89|sc;제일런 그린|SG|24|79|sc;마크 윌리엄스|C|24|76|rp;딜런 브룩스|SF|30|75|3d;그레이슨 앨런|SG|31|73|sh;라이언 던|SF|23|70|3d;로이스 오닐|PF|33|70|3d;콜린 길레스피|PG|27|70|pm'],
+['포틀랜드 트레일블레이저스','데미안 릴러드|PG|36|83|sc;데니 아브디야|SF|25|81|ar;즈루 홀리데이|PG|36|78|3d;셰이든 샤프|SG|23|77|sl;도노반 클링건|C|22|77|rp;투마니 카마라|SF|26|75|3d;제라미 그랜트|PF|32|75|sc;스쿳 헨더슨|PG|22|73|pm'],
+['새크라멘토 킹스','도만타스 사보니스|C|30|87|bg;잭 라빈|SG|31|82|sc;더마 드로잔|SF|37|80|sc;키건 머레이|PF|26|76|3d;말릭 몽크|SG|28|75|sc;데니스 슈뢰더|PG|33|73|pm;러셀 웨스트브룩|PG|38|71|sl'],
+['샌안토니오 스퍼스','빅토르 웸반야마|C|23|92|rp;디애런 팍스|PG|29|84|sl;스테폰 캐슬|SG|22|79|sl;데빈 바셀|SG|26|78|3d;딜런 하퍼|PG|21|76|pm;켈던 존슨|SF|27|75|sl;해리슨 반스|SF|34|72|3d;제러미 소핸|PF|23|72|ar'],
+['토론토 랩터스','스코티 반스|PF|25|86|ar;브랜던 잉그램|SF|29|81|sc;이매뉴얼 퀴클리|PG|27|78|pm;RJ 배럿|SF|26|78|sl;야콥 푀틀|C|31|77|rp;그레이디 딕|SG|23|72|sh;자말 셰드|PG|24|70|pm'],
+['유타 재즈','라우리 마카넨|PF|29|84|sh;워커 케슬러|C|25|78|rp;키온테 조지|PG|23|76|sc;에이스 베일리|SF|20|74|sc;아이재아 콜리어|PG|22|72|pm;테일러 헨드릭스|PF|23|70|ar;유수프 너키치|C|32|70|bg;브라이스 센사보|SG|25|69|3d'],
+['워싱턴 위저즈','알렉스 사르|C|21|76|rp;CJ 맥컬럼|SG|35|76|sc;빌랄 쿨리발리|SF|22|75|3d;크리스 미들턴|SF|35|73|ar;트레 존슨|SG|20|71|sh;밥 캐링턴|PG|21|70|pm;카이숀 조지|SF|22|70|3d;코리 키스퍼트|SF|27|70|sh']];
+const ARCH={sc:{sht:5,pla:0,ins:3,def:-5,reb:-5},sh:{sht:9,pla:-3,ins:-6,def:-2,reb:-3},pm:{sht:2,pla:9,ins:-4,def:-3,reb:-4},sl:{sht:-4,pla:1,ins:7,def:-1,reb:0},
+ '3d':{sht:4,pla:-5,ins:-5,def:7,reb:0},bg:{sht:0,pla:0,ins:6,def:0,reb:5},rp:{sht:-12,pla:-8,ins:2,def:9,reb:7},ar:{sht:0,pla:0,ins:0,def:0,reb:0}};
+const TEAM_NAMES=REAL.map(x=>x[0]);
 const FIRST=['마커스','다리우스','제일런','트레이','카이','안드레','말릭','이사야','데빈','오마르','루카스','테렌스','자비어','니코','엘리야','브랜든','코디','라샤드','지훈','도윤','타일러','케빈','조던','레지','알렉스','카메론','디안젤로','미카','토마스','빅터','세르히오','하킴'];
 const LAST=['리드','콜','브룩스','헤이스','몬로','카터','그레이','밴스','풀러','오코로','실바','페트로프','나카무라','블레이크','아데예미','토레스','맥브라이드','한','윌킨스','포터','존스','에반스','디알로','가르시아','욘손','미첼','벨','하딩'];
 const rname=()=>pick(FIRST)+' '+pick(LAST);
@@ -296,7 +326,7 @@ const HANDLES=['@hoops_daily','@코트위의시인','@농구중독자','@스카�
 const AWARDS={ring:{n:'NBA 우승',ic:'💍'},fmvp:{n:'파이널 MVP 배출',ic:'🏆'},mvp:{n:'정규시즌 MVP 배출',ic:'👑'},coy:{n:'올해의 감독',ic:'🧠'},roy:{n:'신인왕 배출',ic:'🌱'},po:{n:'플레이오프 진출',ic:'🎟'},best:{n:'정규시즌 1위',ic:'🥇'}};
 
 /* ================= state ================= */
-const KEY='ring-gm-v1';
+const KEY='ring-gm-v2';
 let S=null,tab='home',busy=false,ui={tTeam:null,give:[],get:[]};
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
@@ -308,7 +338,7 @@ const ovr=p=>{const w=PW[p.pos];let s=0;for(const k in w)s+=w[k]*p[k];return s};
 const offS=p=>p.sht*.35+p.pla*.25+p.ins*.4;
 const defS=p=>p.def*.65+p.reb*.35;
 const byOvr=(a,b)=>ovr(P(b))-ovr(P(a));
-function salaryFor(o){return Math.max(1.2,1.2+Math.pow(Math.max(0,o-62),2)*.065)}
+function salaryFor(o){return clamp(1.2+Math.pow(Math.max(0,o-62),2)*.06,1.2,55)}
 function payroll(tid){return S.R[tid].reduce((s,id)=>s+P(id).sal,0)}
 function blankSt(){return{gp:0,min:0,pts:0,reb:0,ast:0,stl:0,blk:0}}
 function post(txt,who){S.feed.unshift({y:S.year,g:S.week,who:who||pick(HANDLES),txt,lk:ri(5,60)});S.feed=S.feed.slice(0,80)}
@@ -321,6 +351,19 @@ function genPlayer(pos,target,age){
   p.sal=Math.round(salaryFor(o)*rnd(.85,1.15)*10)/10;p.yrs=ri(1,4);
   S.P[p.id]=p;return p;
 }
+function genReal(name,pos,age,target,arch){
+  const p={id:S.nid++,n:name,pos,age,inj:0,cond:100,st:blankSt(),real:1},A=ARCH[arch]||ARCH.ar;
+  for(const k in ATT){const w=PW[pos][k];p[k]=clamp(target+(w>=.25?4:w>=.1?0:-10)+A[k]+gauss(0,1.5),25,99)}
+  for(let it=0;it<3;it++){const dd=target-ovr(p);for(const k in ATT)p[k]=clamp(p[k]+dd,25,99)}
+  const o=ovr(p);p.pot=Math.round(age<=21?o+rnd(4,10):age<=24?o+rnd(1,5):o);
+  p.sal=Math.round(salaryFor(o)*rnd(.9,1.1)*10)/10;p.yrs=ri(1,4);S.P[p.id]=p;return p;
+}
+function realRoster(tid){
+  const ids=REAL[tid][1].split(';').map(x=>{const [n,pos,age,o,a]=x.split('|');return genReal(n,pos,+age,+o,a).id});
+  const have=ids.map(id=>P(id).pos),need=['PG','SG','SF','PF','C'].filter(x=>!have.includes(x));
+  while(ids.length<13){const pos=need.shift()||pick(POSL);const p=genPlayer(pos,rnd(61,67),ri(22,31));p.sal=Math.min(p.sal,2);ids.push(p.id)}
+  S.R[tid]=ids;
+}
 function genRoster(tid,base){
   const tpl=['PG','SG','SF','PF','C','PG','SG','SF','PF','C','SF','PG','C'];
   const ids=tpl.map((pos,i)=>{const tg=i<5?base+gauss(0,3):i<9?base-rnd(5,10):base-rnd(10,18);const age=i<5?ri(23,32):ri(20,33);return genPlayer(pos,tg,age).id});
@@ -330,7 +373,7 @@ function genRoster(tid,base){
 function newGame(){
   S={v:1,year:2026,week:1,my:null,stage:'pick',flow:null,nid:1,P:{},R:{},teams:TEAM_NAMES.map((n,i)=>({id:i,name:n,w:0,l:0})),
     starters:[],strat:'balance',train:'sht',dev:[],chem:60,owner:60,exp:41,games:[],hist:[],tro:{},feed:[],next:null,po:null,offers:0};
-  S.teams.forEach(t=>genRoster(t.id,rnd(68,80)));
+  S.teams.forEach(t=>realRoster(t.id));
   save();
 }
 
@@ -393,7 +436,7 @@ function finishGame(r){
   // box score
   const mins=r.me.mins,ids=Object.keys(mins).map(Number),box={};
   let wp=0,wr=0,wa=0;const W={};
-  ids.forEach(id=>{const p=P(id),m=mins[id];W[id]={p:m*Math.pow(offS(p)/65,4)*rnd(.6,1.4),r:m*Math.pow(p.reb/60,2)*rnd(.7,1.3),a:m*Math.pow(p.pla/60,3)*rnd(.6,1.4)};wp+=W[id].p;wr+=W[id].r;wa+=W[id].a});
+  ids.forEach(id=>{const p=P(id),m=mins[id];W[id]={p:m*Math.pow(offS(p)/65,2.4)*rnd(.7,1.3),r:m*Math.pow(p.reb/60,2)*rnd(.7,1.3),a:m*Math.pow(p.pla/60,3)*rnd(.6,1.4)};wp+=W[id].p;wr+=W[id].r;wa+=W[id].a});
   const treb=Math.round(43+(r.me.reb-r.op.reb)*.3+gauss(0,4)),tast=Math.round(25+gauss(0,4));
   ids.forEach(id=>{const p=P(id),m=Math.round(mins[id]+gauss(0,2));box[id]={min:Math.max(1,m),pts:Math.round(r.sc*W[id].p/wp),reb:Math.round(treb*W[id].r/wr),ast:Math.round(tast*W[id].a/wa),stl:poisson(m/36*(p.def-40)/40),blk:poisson(m/36*Math.max(0,p.ins+p.def-110)/45)}});
   let diff=r.sc-ids.reduce((s,id)=>s+box[id].pts,0);const top=[...ids].sort((a,b)=>box[b].pts-box[a].pts);
@@ -788,10 +831,10 @@ function clubHTML(){
 function startHTML(){
   if(!S)newGame();
   const list=[...S.teams].sort((a,b)=>teamOvr(a.id)-teamOvr(b.id));
-  return`<div class="hero"><div class="ball">🏀</div><h1>벤치에서<br><em>우승 반지까지</em></h1><p>감독석(벤치)에 앉아 트레이드·훈련·작전으로<br>한 경기씩 이겨 NBA 우승 반지를 끼세요.</p></div>
+  return`<div class="hero"><div class="ball">🏀</div><h1>벤치에서<br><em>우승 반지까지</em></h1><p>실제 NBA 30개 구단 중 하나를 맡아<br>트레이드·훈련·작전으로 한 경기씩 이겨 우승 반지를 끼세요.</p></div>
    <div class="card"><h3><span>맡을 구단 고르기</span><span class="small" style="font-weight:400">약할수록 어려움</span></h3><div class="plist">
-   ${list.map((t,i)=>`<button class="teamrow" data-pick="${t.id}"><div><b>${esc(t.name)}</b><small>${i<8?'🔥 하위권 · 리빌딩':i<20?'중위권':'⭐ 우승 후보'} · 연봉 ${money(payroll(t.id))} · 에이스 ${esc(P(S.R[t.id].slice().sort(byOvr)[0]).n)}</small></div><div class="r">${Math.round(teamOvr(t.id))}</div></button>`).join('')}</div>
-   <button class="btn" id="reroll" style="margin-top:12px">🎲 리그 새로 만들기</button></div>
+   ${list.map((t,i)=>`<button class="teamrow" data-pick="${t.id}"><div><b>${esc(t.name)}</b><small>${i<8?'🔥 하위권':i<20?'중위권':'⭐ 우승 후보'} · 연봉 ${money(payroll(t.id))} · 에이스 ${esc(P(S.R[t.id].slice().sort(byOvr)[0]).n)}</small></div><div class="r">${Math.round(teamOvr(t.id))}</div></button>`).join('')}</div>
+</div><div class="card small muted" style="line-height:1.7">ℹ️ 비공식 팬 게임이에요. NBA·각 구단과 관계없어요. 선수 소속은 2025-26 시즌 개막 기준이고, 능력치·연봉은 게임용 추정치예요. 로스터의 무명 벤치 선수와 드래프트 유망주·FA 일부는 가상 인물이에요.</div>
    <div class="card small muted" style="line-height:1.8">• 한 번 누를 때마다 <b>한 경기</b>. 82경기 정규시즌, 상위 16팀 플레이오프(7전 4선승).<br>• 경기 전 상대 성향을 보고 <b>작전</b>을 고르세요. 상성이 맞으면 보너스.<br>• <b>팀 훈련</b>과 <b>집중 육성</b>으로 선수를 키우고, 선발 라인업을 정하세요.<br>• <b>트레이드</b>(마감 G${DEADLINE})로 전력을 보강하세요. 상대 단장이 가치를 따집니다.<br>• 비시즌: 드래프트 → 재계약 → FA. 구단주 신뢰가 바닥나면 경질!</div>`;
 }
 function bindStart(){
