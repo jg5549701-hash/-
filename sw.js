@@ -1,5 +1,5 @@
 // 휴식 통장 service worker — 앱을 수정하면 VERSION을 올려주세요.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP_CACHE = 'rest-bank-app-' + VERSION;
 const FONT_CACHE = 'rest-bank-fonts';
 const APP_SHELL = [
@@ -41,6 +41,8 @@ self.addEventListener('fetch', e => {
   }
 
   if (url.origin !== location.origin) return;
+  // 하위 폴더의 다른 앱(예: basketball/)은 이 서비스 워커가 다루지 않음
+  if (url.pathname.includes('/basketball/')) return;
 
   // 페이지 이동: 네트워크 우선(최신 버전), 오프라인이면 캐시
   if (req.mode === 'navigate') {
