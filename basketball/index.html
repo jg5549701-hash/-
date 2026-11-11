@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>벤치에서 MVP까지</title>
-<meta name="description" content="고교 졸업반에서 대학·드래프트·G리그를 거쳐 리그 MVP까지, 농구 커리어 시뮬레이션">
+<meta name="description" content="NBA 벤치 끝자리 신인에서 한 경기씩 쌓아 리그 MVP까지, 농구 커리어 시뮬레이션">
 <meta name="theme-color" content="#0b0c10">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -300,7 +300,7 @@ const CT_DESC={
  rookie:'4년 루키 스케일. 2년 보장 + 3·4년차 팀 옵션.',
  std:'1군 로스터 정식 계약. 출전 경쟁은 뎁스 차트로 결정.',
  twoway:`1군과 G리그 계열팀을 오가는 계약. 1군 출전은 시즌 최대 ${TWOWAY_GAMES}경기, NBA 플레이오프 출전 불가.`,
- ex10:'트레이닝 캠프 초청 계약. 캠프에서 살아남으면 정규/투웨이 전환, 탈락하면 G리그 계열팀으로(보너스 지급).',
+ ex10:'트레이닝 캠프 초청 계약. 캠프에서 살아남으면 정규 계약, 탈락하면 방출되어 FA 시장으로.',
  g:'G리그 소속. 활약하면 1군 팀들에게서 10일 계약 콜업 제안이 온다.',
  tenday:'4경기짜리 단기 1군 계약. 인상을 남기면 시즌 잔여 계약.',
  eu:'유럽 리그 1년 계약. 연봉은 좋지만 NBA 스카우트 눈에서 멀어진다.'};
@@ -313,7 +313,7 @@ const AWARDS={
  eumvp:{n:'유럽리그 MVP',ic:'🌍',v:3},euchamp:{n:'유럽리그 우승',ic:'🏰',v:2},
  hsmvp:{n:'고교 대회 MVP',ic:'🏫',v:1},hsall:{n:'고교 베스트5',ic:'📣',v:1},natcap:{n:'국가대표 발탁',ic:'🎽',v:2},natmedal:{n:'국제대회 메달',ic:'🌏',v:4}};
 const AW_PRO=['mvp','ring','fmvp','all1','all2','allstar','scoring','dpoy','roy','sixth','mip'];
-const AW_ETC=['natmedal','natcap','hsmvp','hsall','cpoy','caa','cconf','cfrosh','cchamp','gmvp','gall','groy','gring','eumvp','euchamp'];
+const AW_ETC=['natmedal','natcap','eumvp','euchamp'];
 const AW_LV={mvp:'pro',ring:'pro',fmvp:'pro',all1:'pro',all2:'pro',allstar:'pro',scoring:'pro',dpoy:'pro',roy:'pro',sixth:'pro',mip:'pro',
  gmvp:'g',gall:'g',groy:'g',gring:'g',cpoy:'col',caa:'col',cconf:'col',cfrosh:'col',cchamp:'col',eumvp:'eu',euchamp:'eu',hsmvp:'hs',hsall:'hs',natcap:'nat',natmedal:'nat'};
 
@@ -350,7 +350,7 @@ function makeLeagues(){return{
 const STARTS={
  lottery:{n:'로터리 픽',s:'1라운드 3~8순위 · 루키 계약',lift:10,age:20,pot:[88,97],pick:[3,8]},
  late:{n:'1라운드 후반',s:'18~28순위 · 루키 계약',lift:5,age:21,pot:[83,95],pick:[18,28]},
- two:{n:'2라운드',s:'투웨이 계약',lift:1,age:21,pot:[80,93],pick:[38,58]},
+ two:{n:'2라운드',s:'2년 정규 계약(부분 보장)',lift:1,age:21,pot:[80,93],pick:[38,58]},
  ex10:{n:'미지명',s:'Exhibit 10 캠프 초청',lift:-1,age:22,pot:[78,92],pick:null}};
 function newGame(name,pos,st){
   const P=POS[pos],o=STARTS[st],a={};
@@ -366,7 +366,7 @@ function newGame(name,pos,st){
   const team=pick(pool).id,p=S.p,pk=o.pick?ri(o.pick[0],o.pick[1]):null;
   p.draft={year:2026,pick:pk,team:pk?team:null};
   p.c=st==='lottery'||st==='late'?{type:'rookie',team,years:4,salary:Math.round((1+(31-pk)*.3)*100)/100,guar:true,yearNo:1,pick:pk}
-    :st==='two'?{type:'twoway',team,years:2,salary:.6}:{type:'ex10',team,years:1,salary:1.1};
+    :st==='two'?{type:'std',team,years:2,salary:1.1,guar:false}:{type:'ex10',team,years:1,salary:1.1};
   post(pk?`[2026 NBA 드래프트] ${pickText(pk)} — ${T('pro',team).name}, ${POS[pos].n} ${name} 지명`:`${T('pro',team).name}, 미지명 ${POS[pos].n} ${name}와 Exhibit 10 계약`,'@드래프트덕후');
   busy=false;tab='home';setFlow('intro');
 }
@@ -523,8 +523,7 @@ function nextGame(){
   const p=S.p,c=p.c;let lv;
   if(S.kind==='col')lv='col';
   else if(c.type==='g')lv='g';else if(c.type==='eu')lv='eu';
-  else if(c.type==='twoway'){const r=proRoleFor(c.team,p.trust);lv=(c.active>0&&(ROLE_ORDER.indexOf(r)>=1||Math.random()<.35))?'pro':'g'}
-  else{lv='pro';if(p.age<=23&&c.type!=='tenday'&&proRoleFor(c.team,p.trust)==='bench'&&Math.random()<.3)lv='g'}
+  else lv='pro';
   const n=S.L[lv].length;let opp;do opp=ri(0,n-1);while(opp===c.team);
   return{lv,opp,home:Math.random()<.5};
 }
@@ -552,7 +551,7 @@ function finalize(r,act,auto,cb){
   const p=S.p,c=p.c,q=[];finishScore(r);
   const lv=r.lv;
   simLeague(lv,{a:c.team,b:r.opp,aWin:r.win});
-  if(S.kind==='pro')for(const o of['pro','g','eu'])if(o!==lv)simLeague(o);
+  if(S.kind==='pro')for(const o of['pro','eu'])if(o!==lv)simLeague(o);
   const L=r.L,st=S.cur[lv];
   if(L){
     if(L.min>0){st.gp++;for(const k of['min','pts','reb','ast','stl','blk','tov','fgm','fga','tpm','tpa','ftm','fta','gs'])st[k]+=L[k]}
@@ -1163,7 +1162,7 @@ FLOWS.camp=()=>{
   const d=D(),p=S.p,t=T('pro',p.c.team);
   modal(`🏕 트레이닝 캠프 ${d.day}/3일차`,`<p><b>${esc(t.name)}</b> · ${CT[p.c.type]} · 캠프 평가 <b>${f1(d.score)}</b></p>
    <p class="small muted">${p.pos} 뎁스: ${depthSummary(p.c.team)} · 내 OVR ${Math.round(OVR())} · 예상 역할 ${ROLES[proRoleFor(p.c.team,p.trust)]}</p>
-   ${p.c.type==='ex10'?'<div class="note hot">Exhibit 10 계약: 캠프 결과로 정규/투웨이 전환 여부가 결정된다!</div>':''}
+   ${p.c.type==='ex10'?'<div class="note hot">Exhibit 10 계약: 캠프 결과로 정규 계약이냐 방출이냐가 결정된다!</div>':''}
    ${d.log.map(x=>`<div class="note">${x}</div>`).join('')}<h4>오늘 무엇에 집중할까?</h4>`,
    [{t:'🔥 스크리미지에서 득점 어필',k:'score'},{t:'🛡 수비·허슬 플레이 어필',k:'hustle'},{t:'📖 플레이북 완벽 숙지',k:'book'},{t:'🧊 컨디션 관리',k:'rest'}].map(o=>({t:o.t,fn:()=>{
      const a=p.a,str=t.str;let v,msg;
@@ -1180,12 +1179,12 @@ FLOWS.camp_result=()=>{
     p.trust=clamp(p.trust*.5+(45+d.score*1.5)*.5,25,75);
     if(p.c.type==='ex10'){const need=OVR()+d.score*.5-t.str;
       if(need>=-8){p.c={type:'std',team:p.c.team,years:1,salary:1.2,guar:false};d.out='std'}
-      else if(need>=-13&&p.proYears<=4){p.c={type:'twoway',team:p.c.team,years:1,salary:.6};d.out='twoway'}
-      else{p.c={type:'g',team:p.c.team,years:1,salary:.04};p.money+=.05;d.out='waived'}}
+      else{p.money+=.05;d.out='waived'}}
     else d.out='ok';save();
   }
   const msg={std:`🎉 캠프에서 살아남았다! <b>${esc(t.name)}</b>와 <b>정규 계약</b>으로 전환!`,twoway:'캠프 결과 <b>투웨이 계약</b>으로 전환됐다. 1군과 G리그를 오가며 기회를 노리자.',
-    waived:`최종 로스터에 들지 못하고 방출됐다… Exhibit 10 보너스 $50K를 받고 <b>${esc(T('g',p.c.team).name)}</b>(G리그)로 간다.`,ok:'캠프를 마쳤다.'}[d.out];
+    waived:'최종 로스터에 들지 못하고 방출됐다… Exhibit 10 보너스 $50K를 받았다. 다른 팀을 찾아 FA 시장으로 나간다.',ok:'캠프를 마쳤다.'}[d.out];
+  if(d.out==='waived'){modal('🏕 캠프 종료 · 방출',`<p>${msg}</p><p>캠프 평가 ${f1(d.score)}</p>`,[{t:'FA 시장으로',cls:'pri',fn:()=>setFlow('fa',{offers:makeFA(),waited:false})}]);return}
   const lv=mainLv();
   modal('🏕 캠프 종료',`<p>${msg}</p><p>캠프 평가 ${f1(d.score)} → 감독 신뢰 <b>${Math.round(p.trust)}</b></p><p>시즌 시작 역할: <span class="tag role role-${roleAt(lv)}">${ROLES[roleAt(lv)]}</span> <span class="lv lv-${lv}">${LVN[lv]}</span></p>`,
    [{t:'시즌 개막',cls:'pri',fn:()=>{S.flow=null;startProSeason()}}]);
@@ -1305,15 +1304,13 @@ function makeFA(undrafted){
     const need=mv-t.str+gauss(0,2)+loyal;let o=null;
     if(!undrafted&&need>=-2)o={type:'std',years:yrsFor(p.age),salary:salaryFor(mv,p.fame)*rnd(.85,1.15)*ag.sal,guar:true};
     else if(!undrafted&&need>=-7&&Math.random()<.6)o={type:'std',years:ri(1,2),salary:rnd(1.1,2.5)*ag.sal,guar:Math.random()<.5};
-    else if(need>=-12&&p.proYears<=4&&p.age<=26&&Math.random()<.5)o={type:'twoway',years:ri(1,2),salary:.6};
     else if(need>=-16&&Math.random()<.45)o={type:'ex10',years:1,salary:1.1};
     if(o){o.lv='pro';o.team=t.id;o.re=loyal>0;o.neg=0;out.push(o)}
   }
   const rank={std:3,twoway:2,ex10:1};
   out.sort((a,b)=>(b.re-a.re)||(rank[b.type]-rank[a.type])||(b.salary-a.salary));
   const list=out.slice(0,3+ag.extra);
-  if(p.age<33)list.push({lv:'g',type:'g',team:ri(0,29),years:1,salary:.04,neg:0});
-  if(mv>=58&&p.age<36)list.push({lv:'eu',type:'eu',team:ri(0,EU_NAMES.length-1),years:1,salary:clamp((mv-55)*.3,.4,7)*rnd(.9,1.2)*ag.sal,neg:0});
+  if((mv>=52||!list.length)&&p.age<36)list.push({lv:'eu',type:'eu',team:ri(0,EU_NAMES.length-1),years:1,salary:clamp((mv-52)*.3,.4,7)*rnd(.9,1.2)*ag.sal,neg:0});
   list.forEach(o=>o.id=Math.random().toString(36).slice(2,8));
   return list;
 }
@@ -1426,12 +1423,12 @@ function homeHTML(){
     <div class="badges">${role?`<span class="tag role role-${role}">${ROLES[role]}</span>`:''}${p.injury?`<span class="tag inj">부상 ${p.injury}경기</span>`:''}${p.susp?`<span class="tag inj">출전정지 ${p.susp}</span>`:''}${p.boost?'<span class="tag" style="color:var(--green)">다음 경기 선발</span>':''}
     <span class="tag ct">${ctBadge()}</span><span class="tag">💰 ${money(p.money)}</span><span class="tag">잠재력 ${'★'.repeat(potStars())}</span>${p.c.type==='col'?`<span class="tag" style="color:${p.gpa<2?'var(--red)':'var(--dim)'}">학점 ${p.gpa.toFixed(2)}</span>`:''}${p.tradeReq?'<span class="tag" style="color:var(--gold)">트레이드 요청 중</span>':''}</div>
     <div class="bars">${bar('컨디션',p.cond,p.cond<40?'var(--red)':p.cond<65?'var(--gold)':'var(--green)')}${bar('감독 신뢰',p.trust,'var(--blue)')}${bar('인기도',p.fame,'var(--purple)')}</div>
-    ${road()}<div class="goal">${goalText()}</div></div>`;
+    <div class="goal">${goalText()}</div></div>`;
   if(S.stage==='flow'){h+=`<div class="card"><p class="small muted" style="margin-bottom:10px">진행 중인 결정이 있어요.</p><button class="btn pri" id="resumeFlow">계속하기 ▶</button></div>`;return h}
   const c=S.cur[lv],avg=k=>c.gp?f1(c[k]/c.gp):'-',rank=standings(lv).findIndex(x=>x.id===p.c.team)+1;
   h+=`<div class="card"><h3><span>${S.year} ${LVN[lv]} 시즌</span><span>${t.w}승 ${t.l}패 · ${rank}위</span></h3>
    <div class="strip"><div><b>${avg('pts')}</b><span>득점</span></div><div><b>${avg('reb')}</b><span>리바운드</span></div><div><b>${avg('ast')}</b><span>어시스트</span></div><div><b>${avg('min')}</b><span>출전시간</span></div></div>
-   <div class="next"><span>다음 경기 <span class="lv lv-${lv}">${LVN[lv]}${S.next.lv==='g'&&p.c.type!=='g'?' 파견':''}</span> ${S.next.home?'vs':'@'} <b style="color:var(--ink)">${esc(T(lv,S.next.opp).name)}</b></span><span>상대 ${Math.round(T(lv,S.next.opp).str)} / 우리 ${Math.round(t.str)}</span></div>
+   <div class="next"><span>다음 경기 <span class="lv lv-${lv}">${LVN[lv]}</span> ${S.next.home?'vs':'@'} <b style="color:var(--ink)">${esc(T(lv,S.next.opp).name)}</b></span><span>상대 ${Math.round(T(lv,S.next.opp).str)} / 우리 ${Math.round(t.str)}</span></div>
    ${S.kind==='pro'&&['std','rookie'].includes(p.c.type)&&S.week<=TRADE_DL?`<div class="hint">올스타 발표 ${ALLSTAR_WEEK}번째 경기 · 트레이드 마감 ${TRADE_DL}번째 경기</div>`:''}</div>`;
   const w=POS[p.pos].w,sty=p.c.type==='col'?STYLES[T('col',p.c.team).style].k:[];
   h+=`<div class="card"><h3><span>경기 전 준비 <small class="muted" style="font-weight:400">· 고르면 바로 한 경기</small></span>
@@ -1444,14 +1441,12 @@ function homeHTML(){
       <div class="acts"><button class="tbtn" data-act="rest">🛌 휴식<small>컨디션 +22</small></button>
       <button class="tbtn" data-act="media">${p.c.type==='col'?'📱 NIL':'📺 미디어'}<small>인기·수입↑</small></button>
       <button class="tbtn" data-act="talk">🗣 감독 면담<small>최근 활약 반영</small></button>
-      ${p.c.type==='col'?'<button class="tbtn" data-act="study">📚 공부<small>학점 +0.25</small></button>':`<button class="tbtn" data-agent="1">📞 에이전트<small>${p.c.type==='g'?'콜업 타진':['std','rookie'].includes(p.c.type)?'트레이드 요청':'-'}</small></button>`}
+      ${p.c.type==='col'?'<button class="tbtn" data-act="study">📚 공부<small>학점 +0.25</small></button>':['std','rookie'].includes(p.c.type)?`<button class="tbtn" data-agent="1">📞 트레이드<small>${p.tradeReq?'요청 중':'요청하기'}</small></button>`:''}
 </div>
       <button class="btn pri" data-auto="1" style="margin-top:12px">▶ 자동 진행 <small>· 한 경기씩, 언제든 멈추기</small></button>
       <p class="hint">진한 테두리 = ${POS[p.pos].n} OVR 반영 능력치${sty.length?', 파란 테두리 = 대학 스타일 보너스(+20%)':''}. 고강도는 성장 1.7배지만 컨디션 소모·부상 위험이 큽니다.${S.kind==='pro'?' NBA 출전 시간은 팀 뎁스 차트(팀 탭)에서 같은 포지션 선수들과의 경쟁으로 정해져요.':''}</p>`;
   }
   h+='</div>';
-  if(S.kind==='pro')h+=`<div class="card"><h3><span>지원 스태프 <small class="muted" style="font-weight:400">· 이번 시즌</small></span></h3><div class="staff">${Object.entries(STAFF).map(([k,s])=>`<button class="tbtn${p.svc[k]?' own':''}" data-hire="${k}" ${p.svc[k]||p.money<s.cost?'disabled':''}>
-    <div class="r1"><span>${s.n}</span><em>${p.svc[k]?'고용 중':money(s.cost)}</em></div><small class="muted">${s.d}</small></button>`).join('')}</div></div>`;
   h+=focusHTML()+extrasHTML();
   h+=`<div class="card"><h3><span>최근 경기</span><span class="small" style="font-weight:400">${S.games.length?'':'아직 없음'}</span></h3><div class="glist">${gamesHTML(S.games.slice(-5).reverse())}</div></div>`;
   return h;
@@ -1514,7 +1509,7 @@ function startHTML(){
   <div class="posdesc" id="pd">${POS[selPos].d}</div>
   <label class="lb">입단 방식</label><div class="diff">${Object.entries(STARTS).map(([k,o])=>`<button data-diff="${k}" class="${k===selDiff?'on':''}">${o.n}<small>${o.s}</small></button>`).join('')}</div>
   <button class="btn pri" id="go">NBA 커리어 시작</button></div>
-  <div class="card small muted" style="line-height:1.8">• 한 번 누를 때마다 <b>한 경기</b>. 정규시즌 82경기, 상위 16팀 플레이오프.<br>• 경기 전 준비(훈련·휴식·영상 분석·감독 면담 등)를 고르면 바로 경기가 진행돼요.<br>• 출전 시간은 팀 뎁스 차트에서 같은 포지션 선수들과 경쟁해 정해져요.<br>• 계약: 루키 스케일, 정규, <b>투웨이</b>, <b>Exhibit 10</b>, G리그, 10일 계약, 해외.<br>• 트레이드 요청, FA 시장의 여러 구단 제안·연봉 협상, 연장 계약.<br>• 시즌 사이 전환점·국가대표·상점, 팬·기자 반응 피드.</div>`}
+  <div class="card small muted" style="line-height:1.8">• 한 번 누를 때마다 <b>한 경기</b>. 정규시즌 82경기, 상위 16팀 플레이오프.<br>• 경기 전 준비(훈련·휴식·영상 분석·감독 면담 등)를 고르면 바로 경기가 진행돼요.<br>• 출전 시간은 팀 뎁스 차트에서 같은 포지션 선수들과 경쟁해 정해져요.<br>• 계약: 루키 스케일, 정규, Exhibit 10. 자리를 잃으면 해외 리그로.<br>• 트레이드 요청, FA 시장의 여러 구단 제안·연봉 협상, 연장 계약.<br>• 시즌 사이 전환점·국가대표·상점, 팬·기자 반응 피드.</div>`}
 function bindStart(){
   document.querySelectorAll('[data-pos]').forEach(b=>b.onclick=()=>{selPos=b.dataset.pos;document.querySelectorAll('[data-pos]').forEach(x=>x.classList.toggle('on',x===b));$('#pd').textContent=POS[selPos].d});
   document.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>{selDiff=b.dataset.diff;document.querySelectorAll('[data-diff]').forEach(x=>x.classList.toggle('on',x===b))});
