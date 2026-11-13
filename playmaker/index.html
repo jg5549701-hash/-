@@ -22,6 +22,7 @@ button{font-family:inherit;cursor:pointer;color:inherit}
 .statbox b{display:block;font-size:20px;font-weight:900;color:var(--ink)}
 .statbox span{font-size:11px;color:var(--dim)}
 .court{position:fixed;inset:0;background:var(--bg);touch-action:none;-webkit-user-select:none;user-select:none}
+.court.rot{inset:auto;top:0;left:0;transform-origin:0 0}
 .cstage{position:absolute;inset:0;overflow:hidden}
 #gl,#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 #cv{touch-action:none}
@@ -192,7 +193,8 @@ function frame(t){
 function slowMo(){const g=G;if(!g||g.ended)return 1;if(g.drag)return .2;if(g.holder!=null)return .3;
   if(g.flight&&g.flight.kind==='pass'&&g.flight.t/g.flight.dur>.5)return .5;return 1}
 function moveTo(e,tx,ty,sp,dt){const dx=tx-e.x,dy=ty-e.y,l=Math.hypot(dx,dy);if(l<.01)return;const s=Math.min(l,sp*dt);e.x+=dx/l*s;e.y+=dy/l*s}
-function contest(o){let m=9;for(const d of G.df){const v=dist(d,o)+(d.stuck>0?.6:0);if(v<m)m=v}return m}
+function contest(o){const f=unit(o,HOOP);let m=9;for(const d of G.df){const l=dist(d,o)||.01,front=((d.x-o.x)*f.x+(d.y-o.y)*f.y)/l;
+  const v=l+(d.stuck>0?.6:0)+(front<.35?1.3:0);if(v<m)m=v}return m}
 function fx(t,x,y,col,size){G.fx.push({t:0,txt:t,x,y,col:col||'#fff',size:size||1})}
 function step(dt){
   const g=G;g.time+=dt;
@@ -321,8 +323,8 @@ function shotProb(i,aim,aoop){
   if(aoop){const pa=g.lastPass&&g.lastPass.to===i?attr(g.lastPass.from,'pas'):g.mate;base=.68+(pa-55)*.004+(attr(i,'drv')-55)*.003}
   else{const at=attr(i,dR<2.6?'drv':th?'tpt':'sht');
     base=dR<2.6?.54+(at-55)*.006:!th?.4+(at-55)*.005-(dR-2.6)*.01:.34+(at-55)*.0045-Math.max(0,dR-7.6)*.07}
-  let con=cd<.85?-.25:cd<1.4?-.14:cd<2.2?-.05:.06;if(con<0)con*=g.oppF*(aoop?.5:1);
-  return clamp(base+con-aim*.17,.03,.92);
+  let con=cd<.85?-.25:cd<1.4?-.14:cd<2.2?-.04:cd<3?.09:.16;if(con<0)con*=g.oppF*(aoop?.5:1);
+  return clamp(base+con-aim*.17,.03,.9);
 }
 function shoot(i,aim,aoop){
   const g=G,o=g.of[i],pr=shotProb(i,aim,aoop),dR=dist(o,HOOP),th=!aoop&&isThree(o),cd=contest(o);
@@ -429,7 +431,7 @@ function renderCalls(force){
     h.tx=tg.x;h.ty=tg.y;
   });
   cv.addEventListener('pointercancel',()=>{if(G){G.drag=null;G.press=null}});
-  window.addEventListener('resize',()=>{if(R)sizeCourt()});
+  const re=()=>{applyOrient();if(R)sizeCourt()};window.addEventListener('resize',re);window.addEventListener('orientationchange',()=>setTimeout(re,250));
 })();
 function tapPlayer(p){let best=null,bd=.9;for(const o of G.of){const q=scrPt(o);const v=Math.hypot(p.sx-q.x,p.sy-q.y)/q.ppm;if(v<bd){bd=v;best=o.i}}return best}
 function dragTarget(d){
@@ -454,8 +456,8 @@ function scrPt(o,h){const p=proj(o.x,o.y,h==null?1:h),m=26,top=70,bot=R.h-110;
   const off=p.z>1||p.x<m||p.x>R.w-m||p.y<top||p.y>bot;
   return{x:clamp(p.x,m,R.w-m),y:clamp(p.y,top,bot),off,ppm:off?55:pxPerM(o.x,o.y,h==null?1:h)}}
 function ptC(e,prev){
-  const r=$('#cv').getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
-  R.ray.setFromCamera(new THREE.Vector2(sx/r.width*2-1,-(sy/r.height*2-1)),R.cam);
+  let sx,sy;if(ROT){sx=e.clientY;sy=window.innerWidth-e.clientX}else{const r=$('#cv').getBoundingClientRect();sx=e.clientX-r.left;sy=e.clientY-r.top}
+  R.ray.setFromCamera(new THREE.Vector2(sx/R.w*2-1,-(sy/R.h*2-1)),R.cam);
   const hit=new THREE.Vector3();
   if(R.ray.ray.intersectPlane(R.ground,hit))return{x:hit.x+CW/2,y:hit.z+CH/2,sx,sy};
   return prev?{...prev,sx,sy}:{x:CW/2,y:CH/2,sx,sy};
@@ -635,7 +637,7 @@ function initGL(){
   return true;
 }
 function sizeCourt(){
-  if(!R)return;const r=$('#cStage').getBoundingClientRect(),w=Math.max(200,r.width),h=Math.max(200,r.height),dpr=Math.min(2,window.devicePixelRatio||1);
+  if(!R)return;const st=$('#cStage'),w=Math.max(200,st.offsetWidth),h=Math.max(200,st.offsetHeight),dpr=Math.min(2,window.devicePixelRatio||1);
   R.w=w;R.h=h;R.dpr=dpr;R.renderer.setPixelRatio(dpr);R.renderer.setSize(w,h,false);
   const cv=$('#cv');cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
   const a=w/h;R.cam.aspect=a;R.cam.fov=a<1?clamp(2*Math.atan(Math.tan(25*Math.PI/180)/a)*180/Math.PI,46,78):44;R.cam.updateProjectionMatrix();
@@ -706,7 +708,7 @@ function overlay(){
   if(g.drag&&!g.ended&&g.holder!=null){const h=g.of[g.holder],t=dragTarget(g.drag);let col='rgba(255,255,255,.9)',lbl;
     const from=proj(h.x,h.y,1.1),to={x:g.drag.sx,y:g.drag.sy};
     if(t.kind==='shot'){col='#3ecf8e';ringAt(HOOP.x,HOOP.y,3.05,1.2,'rgba(62,207,142,.85)',2,[6,5]);ringAt(HOOP.x,HOOP.y,3.05,.3,'#3ecf8e',3);
-      lbl=`${isThree(h)?'3점 ':''}슛 ${Math.round(shotProb(g.holder,t.aim,false)*100)}%`}
+      lbl=`${contest(h)>=2.2?'오픈! ':''}${isThree(h)?'3점 ':''}슛 ${Math.round(shotProb(g.holder,t.aim,false)*100)}%`}
     else if(t.kind==='pass'){col='#5aa9ff';const o=g.of[t.to],sp=scrPt(o);if(sp.off){c.strokeStyle=col;c.lineWidth=3;c.beginPath();c.arc(sp.x,sp.y,20,0,7);c.stroke()}else ringAt(o.x,o.y,.03,.75,col,3);lbl=`패스 → ${o.num}번`}
     else{lbl='드리블';ground(h,t,col,[8,6]);ringAt(t.x,t.y,.03,.35,col,2)}
     if(t.kind!=='move'){c.strokeStyle=col;c.lineWidth=4;c.beginPath();c.moveTo(from.x,from.y);c.lineTo(to.x,to.y);c.stroke();
@@ -723,6 +725,13 @@ function overlay(){
   for(const f of g.fx){const p=proj(f.x,f.y,2.7+f.t*.9);if(p.z>1)continue;c.globalAlpha=clamp(1.4-f.t,0,1);txt(f.txt,p.x,p.y,(fs+3)*f.size,f.col,900);c.globalAlpha=1}
 }
 function ho_name(g){if(g.holder==null||g.ended)return'';const h=g.of[g.holder];return h.me?'나 (1번 PG)':`${h.num}번 ${h.pos}`}
+
+/* ---------- landscape lock: rotate the game when the phone is upright ---------- */
+let ROT=false;
+function applyOrient(){const c=$('#court'),W=window.innerWidth,H=window.innerHeight;ROT=H>W;
+  if(ROT){c.classList.add('rot');c.style.width=H+'px';c.style.height=W+'px';c.style.transform=`translateX(${W}px) rotate(90deg)`}
+  else{c.classList.remove('rot');c.style.width=c.style.height=c.style.transform=''}}
+applyOrient();
 
 /* ---------- boot ---------- */
 Promise.race([document.fonts?document.fonts.ready:Promise.resolve(),new Promise(r=>setTimeout(r,1500))]).then(()=>{
