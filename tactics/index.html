@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>코치의 작전판</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="상대 수비를 읽고 작전을 부르는 농구 전술 게임">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;700&family=Oswald:wght@500;600&display=swap">
+<style>
+/* Layout: a coach's clipboard — dry-erase half court on the left, the play-call sheet on the right; stacks on phones */
+:root{
+  --bg:#e6e9e3; --surface:#fbfcf9; --board:#fefefc; --frame:#86683f; --frame-text:#fffaf0;
+  --ink:#1c2230; --dim:#5d6674; --line:#d6dad2; --court:#a4acb6;
+  --us:#1d5bd0; --them:#cf3027; --ball:#e06a0f; --good:#1b8a4c; --bad:#cf3027; --hl:rgba(29,91,208,.09);
+  --f-marker:'Gaegu','Nanum Pen Script',cursive;
+  --f-ui:'IBM Plex Sans KR',system-ui,-apple-system,sans-serif;
+  --f-score:'Oswald','IBM Plex Sans KR',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151a; --surface:#192027; --board:#1c242b; --frame:#4a3d2a; --frame-text:#f1e6d2;
+  --ink:#e6eaee; --dim:#97a1ab; --line:#2b343d; --court:#5a6773;
+  --us:#6ea8ff; --them:#ff6e60; --ball:#ff9a3c; --good:#45c483; --bad:#ff6e60; --hl:rgba(110,168,255,.13); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151a; --surface:#192027; --board:#1c242b; --frame:#4a3d2a; --frame-text:#f1e6d2;
+  --ink:#e6eaee; --dim:#97a1ab; --line:#2b343d; --court:#5a6773;
+  --us:#6ea8ff; --them:#ff6e60; --ball:#ff9a3c; --good:#45c483; --bad:#ff6e60; --hl:rgba(110,168,255,.13); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--us);outline-offset:2px}
+.top{max-width:1120px;margin:0 auto 12px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--f-marker);font-weight:700;font-size:30px;line-height:1;letter-spacing:-.01em}
+.brand span{color:var(--them)}
+.top nav{display:flex;gap:8px}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--dim)}
+.ghost:hover{color:var(--ink);border-color:var(--dim)}
+
+.layout{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* clipboard */
+.clip{background:var(--frame);border-radius:18px;padding:30px 12px 12px;position:relative;box-shadow:0 1px 0 rgba(0,0,0,.08)}
+.clip::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:120px;height:26px;border-radius:7px 7px 12px 12px;
+  background:linear-gradient(180deg,#d7dbe0,#9aa1aa);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.scorebar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:0 6px 10px}
+.tm{display:flex;align-items:center;gap:10px;min-width:0}
+.tm.them{justify-content:flex-end}
+.nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--frame-text)}
+.pts{font-family:var(--f-score);font-weight:600;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;background:var(--surface);border-radius:8px;padding:4px 10px;min-width:62px;text-align:center}
+.us .pts{color:var(--us)} .them .pts{color:var(--them)}
+.mid{display:flex;flex-direction:column;align-items:center;font-family:var(--f-score);color:var(--frame-text);line-height:1.15;text-align:center}
+.mid b{font-size:20px;font-weight:600}
+.mid small{font-size:12px;letter-spacing:.06em;opacity:.85;font-variant-numeric:tabular-nums}
+.board{background:var(--board);border-radius:8px;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:auto}
+.banner{position:absolute;left:10px;top:10px;font-family:var(--f-marker);font-weight:700;font-size:20px;color:var(--them);background:var(--board);padding:0 6px;border-radius:4px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:8px 6px 0;font-size:12px;color:var(--frame-text);opacity:.9}
+
+/* call sheet */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--dim);margin:0 0 4px;font-weight:500}
+h2{font-family:var(--f-marker);font-weight:700;font-size:30px;line-height:1.1;margin:0 0 10px;text-wrap:balance}
+h3{font-size:13px;font-weight:700;margin:18px 0 8px;color:var(--dim);letter-spacing:.04em}
+p{margin:0 0 10px;max-width:62ch}
+.ctx{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;margin-bottom:6px}
+.side{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;color:var(--surface)}
+.side.off{background:var(--us)} .side.def{background:var(--them)}
+.read{font-family:var(--f-marker);font-size:24px;font-weight:700;line-height:1.1}
+.hint{color:var(--dim);font-size:13px}
+.obs{font-size:12px;color:var(--dim);background:var(--bg);border-radius:8px;padding:7px 10px;margin:8px 0 12px;font-variant-numeric:tabular-nums}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.card{text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.card:hover{border-color:var(--dim)}
+.card.sel{border-color:var(--us);background:var(--hl)}
+.def-mode .card.sel{border-color:var(--them)}
+.card .n{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:700;font-size:14px}
+.card .d{font-size:12px;color:var(--dim);line-height:1.35}
+.badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.bd{font-size:11px;padding:0 6px;border-radius:4px;background:var(--bg);color:var(--dim);font-weight:500}
+.bd.warn{color:var(--bad)} .bd.up{color:var(--good);font-weight:700} .bd.dn{color:var(--bad);font-weight:700}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:11px 18px;font-weight:700;font-size:15px;background:var(--ink);color:var(--surface)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.sec{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.grow{flex:1}
+.res{font-family:var(--f-marker);font-weight:700;font-size:40px;line-height:1}
+.res.good{color:var(--good)} .res.bad{color:var(--bad)}
+.vs{font-size:14px;margin:8px 0}
+.chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+.chip.up{color:var(--good)} .chip.eq{color:var(--dim)} .chip.dn{color:var(--bad)}
+.why{border-left:3px solid var(--line);padding:2px 0 2px 12px;margin:10px 0;font-size:14px}
+.new{font-size:12px;color:var(--us);font-weight:700}
+.log{list-style:none;margin:0;padding:0;font-size:12.5px;display:flex;flex-direction:column;gap:3px;max-height:180px;overflow:auto}
+.log li{display:grid;grid-template-columns:34px 1fr auto;gap:8px;color:var(--dim);font-variant-numeric:tabular-nums}
+.log b{color:var(--ink);font-weight:500}
+.log .p{font-weight:700} .log .p.u{color:var(--us)} .log .p.t{color:var(--them)}
+.bracket{list-style:none;padding:0;margin:12px 0 14px;display:flex;flex-direction:column;gap:6px}
+.bracket li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;border:1px solid var(--line)}
+.bracket li.cur{border-color:var(--ink);font-weight:700}
+.bracket li.done{color:var(--dim)}
+.bracket small{color:var(--dim);font-weight:400}
+.stars{color:var(--ball);letter-spacing:2px}
+.meter{height:6px;background:var(--bg);border-radius:6px;overflow:hidden;margin:6px 0 2px}
+.meter i{display:block;height:100%;background:var(--us)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tbl td,.tbl th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
+.tbl th{color:var(--dim);font-weight:500;font-size:12px}
+
+/* playbook notebook */
+.sheet-wrap{position:fixed;inset:0;background:rgba(10,14,20,.45);display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:20}
+.sheet{background:var(--surface);border-radius:14px;max-width:760px;width:100%;max-height:100%;overflow:auto;padding:18px}
+.scroll{overflow-x:auto}
+.mx{border-collapse:collapse;font-size:13px;min-width:560px;width:100%}
+.mx th{font-weight:700;font-size:12px;padding:6px;color:var(--dim);text-align:center;white-space:nowrap}
+.mx th.r{text-align:left;color:var(--ink)}
+.mx td{text-align:center;padding:6px;border:1px solid var(--line);font-family:var(--f-marker);font-size:20px;font-weight:700;line-height:1}
+.mx td.u{color:var(--good)} .mx td.d{color:var(--bad)} .mx td.e{color:var(--dim)} .mx td.q{color:var(--line)}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:10px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">코치의 작전판 <span>X</span>·O</div>
+  <nav><button class="ghost" id="noteBtn" type="button">작전 노트</button><button class="ghost" id="homeBtn" type="button">대진표</button></nav>
+</header>
+<main class="layout">
+  <section class="clip" aria-label="작전판">
+    <div class="scorebar">
+      <div class="tm us"><span class="pts" id="sUs">0</span><span class="nm">우리 팀</span></div>
+      <div class="mid"><b id="sPer">—</b><small id="sPos">팁오프 전</small></div>
+      <div class="tm them"><span class="nm" id="sThemName">상대</span><span class="pts" id="sThem">0</span></div>
+    </div>
+    <div class="board"><canvas id="court" width="520" height="490"></canvas><div class="banner" id="banner" hidden></div></div>
+    <div class="legend"><span>O 공격 · X 수비</span><span>── 컷</span><span>┄┄ 패스</span><span>〰 드리블</span><span>─┤ 스크린</span></div>
+  </section>
+  <section class="panel" id="panel" aria-live="polite"></section>
+</main>
+<div class="sheet-wrap" id="noteWrap" hidden><div class="sheet" id="note" role="dialog" aria-label="작전 노트"></div></div>
+
+<script>
+(() => {
+const B = {x:250, y:52};
+const DEFS = [
+  {id:'man',   name:'대인 방어', d:'각자 한 명씩 맡고 스크린은 뚫고 따라간다.'},
+  {id:'switch',name:'스위치',   d:'스크린이 걸리면 마크맨을 맞바꾼다.'},
+  {id:'drop',  name:'드롭',     d:'빅맨이 림 앞까지 내려가 페인트를 지킨다.'},
+  {id:'blitz', name:'블리츠',   d:'볼 핸들러에게 두 명이 덮치는 더블팀.'},
+  {id:'z23',   name:'2-3 존',   d:'앞 2명, 뒤 3명. 페인트를 잠근다.', zone:true},
+  {id:'z131',  name:'1-3-1 존', d:'가운데 일자 라인에서 트랩을 건다.', zone:true},
+];
+const DEF = Object.fromEntries(DEFS.map(d=>[d.id,d]));
+const GROUPS = {
+  hs:{name:'하이 스크린 셋', opts:'픽앤롤 또는 픽앤팝'},
+  po:{name:'포스트 셋', opts:'포스트업 또는 하이-로우'},
+  wg:{name:'윙 셋', opts:'스태거 스크린 또는 백도어 컷'},
+  sp:{name:'스페이싱 셋', opts:'아이솔레이션 또는 드라이브 앤 킥'},
+};
+const S0 = [[250,330],[420,230],[80,230],[455,70],[175,100]];
+const PLAYS = [
+  {id:'pnr', name:'픽앤롤', g:'hs', pts:2, d:'센터가 스크린 후 림으로 롤.',
+   start:[[250,330],[455,70],[45,70],[80,240],[250,200]],
+   steps:[{mv:{4:[282,322]},scr:[4]},{mv:{0:[345,235],4:[262,140]}},{mv:{4:[250,80]},b:4}], screen:{h:0,s:4,k:1}},
+  {id:'pop', name:'픽앤팝', g:'hs', pts:3, d:'파워포워드가 스크린 후 3점 라인으로 빠진다.',
+   start:[[250,330],[455,70],[45,70],[250,200],[170,95]],
+   steps:[{mv:{3:[218,322]},scr:[3]},{mv:{0:[150,240],3:[345,318]}},{b:3}], screen:{h:0,s:3,k:1}},
+  {id:'post', name:'포스트업', g:'po', pts:2, d:'로우포스트 센터에게 볼 투입, 1대1.',
+   start:[[250,330],[420,230],[80,230],[455,70],[250,190]],
+   steps:[{mv:{4:[150,95]},b:2},{mv:{2:[70,160]},b:4},{mv:{4:[212,68]}}]},
+  {id:'hilo', name:'하이-로우', g:'po', pts:2, d:'자유투 라인에서 골밑으로 내려주는 패스.',
+   start:[[250,330],[420,230],[80,230],[455,70],[330,100]],
+   steps:[{mv:{3:[250,205]}},{mv:{4:[272,95]},b:3},{mv:{4:[250,72]},b:4}]},
+  {id:'stg', name:'스태거 스크린', g:'wg', pts:3, d:'연속 스크린으로 슈터를 3점 라인에 띄운다.',
+   start:[[250,330],[300,75],[420,230],[215,160],[160,230]],
+   steps:[{mv:{1:[215,118],3:[205,150],4:[150,225]},scr:[3,4]},{mv:{1:[130,295]}},{b:1}], screen:{h:1,s:3,k:1}},
+  {id:'bd', name:'백도어 컷', g:'wg', pts:2, d:'바짝 붙은 수비의 등 뒤로 림 컷.',
+   start:[[250,330],[420,230],[80,230],[455,70],[250,205]],
+   steps:[{mv:{1:[402,268]},b:4},{mv:{1:[300,105]}},{mv:{1:[262,66]},b:1}]},
+  {id:'iso', name:'아이솔레이션', g:'sp', pts:2, d:'에이스에게 한쪽을 비워주고 1대1.',
+   start:[[250,330],[455,70],[415,240],[45,70],[80,240]],
+   steps:[{mv:{0:[130,330]},b:2},{mv:{2:[395,212]}},{mv:{2:[310,140]}}]},
+  {id:'dk', name:'드라이브 앤 킥', g:'sp', pts:3, d:'돌파로 수비를 모은 뒤 코너로 킥아웃.',
+   start:[[250,330],[420,230],[45,70],[80,240],[175,100]],
+   steps:[{b:1},{mv:{1:[300,135],3:[120,310]}},{b:2}]},
+];
+const PLAY = Object.fromEntries(PLAYS.map(p=>[p.id,p]));
+// matchup: play|defense → [edge for the offense, why]
+const RAW = {
+ 'pnr|man':[2,'스크린 대응 규칙이 없는 대인 수비는 볼 핸들러와 롤맨을 동시에 막지 못합니다.'],
+ 'pnr|switch':[-1,'스위치로 마크맨을 바꿔 붙어 롤맨에게 가는 패스 길이 닫혔습니다.'],
+ 'pnr|blitz':[-1,'더블팀이 볼 핸들러를 덮쳐 패스가 쫓기듯 나갑니다. 턴오버 위험이 큽니다.'],
+ 'pnr|z23':[-1,'존 뒷선 세 명이 롤맨이 들어갈 페인트를 이미 채우고 있습니다.'],
+ 'pop|man':[-1,'대인 수비의 빅맨이 그대로 따라 나와 슛을 견제합니다.'],
+ 'pop|switch':[-1,'스위치로 가드가 곧바로 슈터에게 붙었습니다.'],
+ 'pop|drop':[2,'드롭 빅맨은 림 근처에 머물러 3점 라인으로 빠진 스크리너가 완전히 비었습니다.'],
+ 'pop|blitz':[1,'두 명이 볼 핸들러에게 몰린 사이 스크리너가 노마크가 됩니다.'],
+ 'pop|z131':[-1,'1-3-1의 탑과 윙이 3점 라인 위쪽을 촘촘히 덮고 있습니다.'],
+ 'post|switch':[2,'스위치로 작은 가드가 센터를 막게 됐습니다. 포스트 미스매치입니다.'],
+ 'post|drop':[-1,'드롭 빅맨이 이미 림 앞을 지키고 있어 포스트 공간이 좁습니다.'],
+ 'post|z23':[-2,'2-3 존 뒷선이 로우포스트를 두 겹으로 감쌉니다.'],
+ 'post|z131':[1,'1-3-1은 베이스라인을 한 명이 혼자 지켜 로우포스트가 약합니다.'],
+ 'hilo|drop':[-1,'드롭 빅맨이 로우포스트 앞을 막고 있어 내려줄 패스 각이 없습니다.'],
+ 'hilo|blitz':[1,'트랩을 피해 하이포스트로 빼내자 4대3 상황이 됐습니다.'],
+ 'hilo|z23':[2,'2-3 존의 구멍인 자유투 라인, 하이포스트를 정확히 찔렀습니다.'],
+ 'hilo|z131':[-1,'1-3-1 가운데 수비가 하이포스트에 서 있어 공을 받기 어렵습니다.'],
+ 'stg|switch':[-1,'스크린마다 바꿔 막아 슈터가 한 번도 비지 않았습니다.'],
+ 'stg|drop':[1,'빅맨이 페인트로 내려가 있어 스크린을 받고 나온 슈터를 늦게 견제합니다.'],
+ 'stg|z23':[1,'존은 오프볼 스크린을 받고 움직이는 슈터를 놓치기 쉽습니다.'],
+ 'bd|man':[1,'패스 길을 막으려 바짝 붙은 수비의 등 뒤로 컷했습니다.'],
+ 'bd|switch':[1,'스위치 소통이 엇갈린 순간 컷터가 림까지 비었습니다.'],
+ 'bd|z23':[-2,'존은 사람이 아닌 공간을 지킵니다. 등 뒤가 없으니 백도어가 통하지 않습니다.'],
+ 'iso|man':[-1,'헬프 수비가 대기하는 대인 수비는 1대1에 강합니다.'],
+ 'iso|switch':[2,'스위치로 생긴 느린 빅맨과의 미스매치를 에이스가 공략했습니다.'],
+ 'iso|blitz':[-1,'공격적인 더블팀이 에이스를 덮쳤습니다.'],
+ 'iso|z23':[-1,'존은 처음부터 돌파 길목에 두 명이 서 있습니다.'],
+ 'iso|z131':[-1,'1-3-1 윙과 가운데가 동시에 트랩을 겁니다.'],
+ 'dk|man':[1,'1대1 돌파에 헬프가 붙으면서 반대편 코너가 비었습니다.'],
+ 'dk|z23':[1,'존의 두 수비 사이 틈(갭)을 파고들어 수비를 모았습니다.'],
+ 'dk|z131':[-1,'돌파하는 순간 1-3-1의 트랩에 걸렸습니다.'],
+};
+const edge = (p,d) => (RAW[p+'|'+d]||[0])[0];
+const why = (p,d) => (RAW[p+'|'+d]||[0,'뚜렷한 상성 없이 선수들의 실력 싸움이었습니다.'])[1];
+
+const TEAMS = [
+  {name:'항구 갈매기', round:'8강', rating:0, def:[4,1,3,1,1,0], off:[3,1,2,2,1,1,1,1], adapt:.5,
+   scout:'대인 방어와 드롭 수비가 기본인 정석 팀. 공격은 픽앤롤과 포스트업 위주. 패턴을 늦게 읽는다.'},
+  {name:'북부 빙벽', round:'4강', rating:1, def:[1,0,2,1,4,3], off:[1,1,3,3,1,1,1,1], adapt:.8,
+   scout:'존 디펜스의 팀. 2-3과 1-3-1을 번갈아 세운다. 공격은 골밑 빅맨에게 집중한다.'},
+  {name:'수도 번개', round:'결승', rating:2, def:[2,5,1,2,1,1], off:[2,2,1,1,2,2,3,2], adapt:1.2,
+   scout:'거의 모든 스크린을 스위치한다. 에이스 아이솔레이션과 슈터 활용. 같은 작전을 반복하면 금방 읽힌다.'},
+];
+const PER_Q = 5, PER_OT = 2;
+const KEY = 'tactics-board-v1';
+
+// ---------- persistence ----------
+let SAVE = {stage:0, note:{}};
+try { const s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s) SAVE = Object.assign(SAVE, s); } catch(e){}
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch(e){} };
+
+let S = {screen:'title', game:null};
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const rnd = Math.random;
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp = (a,b,t) => a+(b-a)*t;
+const lp = (p,q,t) => [lerp(p[0],q[0],t), lerp(p[1],q[1],t)];
+const ease = t => t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const dist = (p,q) => Math.hypot(p[0]-q[0], p[1]-q[1]);
+const toward = (p,q,r) => { const d = dist(p,q)||1; return [p[0]+(q[0]-p[0])/d*r, p[1]+(q[1]-p[1])/d*r]; };
+const pickW = w => { const t = w.reduce((a,b)=>a+b,0); let r = rnd()*t; for (let i=0;i<w.length;i++){ r -= w[i]; if (r<=0) return i; } return w.length-1; };
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const edgeTag = e => e>0 ? ['up','▲ 유리'] : e<0 ? ['dn','▼ 불리'] : ['eq','● 보통'];
+
+// ---------- game ----------
+function newGame(ti){
+  S.game = {ti, q:1, ot:0, idx:0, side:'off', us:0, them:0, tos:2,
+    ourPlays:[], ourDefs:[], theirPlays:[], famFrom:0, seen:{man:0,switch:0,drop:0,blitz:0},
+    oppDef:null, oppPlay:null, reveal:false, sel:null, phase:'choose', last:null, log:[], stats:{}};
+  S.screen = 'play';
+  startPoss();
+}
+const T = () => TEAMS[S.game.ti];
+const perLen = g => g.q<=4 ? PER_Q : PER_OT;
+const perLabel = g => g.q<=4 ? g.q+'Q' : (g.q===5 ? 'OT' : 'OT'+(g.q-4));
+function startPoss(){
+  const g = S.game, t = T();
+  g.sel = null; g.reveal = false; g.phase = 'choose'; g.last = null;
+  if (g.side==='off'){
+    const hist = g.ourPlays.slice(-8);
+    const w = DEFS.map((d,j) => { let sc=0; for (const p of hist) sc -= edge(p,d.id); sc /= Math.max(3,hist.length); return t.def[j]*Math.exp(t.adapt*sc*1.6); });
+    g.oppDef = DEFS[pickW(w)].id;
+  } else {
+    const hist = g.ourDefs.slice(-8);
+    const w = PLAYS.map((p,j) => { let sc=0; for (const d of hist) sc += edge(p.id,d); sc /= Math.max(3,hist.length); return t.off[j]*Math.exp(t.adapt*sc*1.6); });
+    g.oppPlay = PLAYS[pickW(w)].id;
+  }
+  render(); drawStatic();
+}
+function famCount(g, pid){ return g.ourPlays.slice(Math.max(g.famFrom, g.ourPlays.length-3)).filter(x=>x===pid).length; }
+function resolve(pid, did, att){
+  const g = S.game, t = T(), play = PLAY[pid], e = edge(pid,did);
+  const fam = att==='us' ? famCount(g,pid)*0.05 : 0;
+  const rd = att==='us' ? -t.rating : t.rating;
+  let p = 0.47 + 0.10*e - fam + rd*0.015 + (pid==='iso' ? 0.04 : 0);
+  if (play.pts===3) p *= 0.78;
+  p = clamp(p, 0.1, 0.85);
+  const to = 0.05 + Math.max(0,-e)*0.04 + (pid==='pnr' && did==='blitz' ? 0.06 : 0);
+  if (rnd() < to) return {kind:'to', pts:0, e, fam};
+  const make = rnd() < p;
+  const and1 = make && play.pts===2 && e>=1 && rnd()<0.18;
+  return {kind: make?'make':'miss', pts: make ? play.pts + (and1?1:0) : 0, and1, e, fam};
+}
+function callPlay(){
+  const g = S.game; if (!g.sel || g.phase!=='choose') return;
+  const off = g.side==='off';
+  const pid = off ? g.sel : g.oppPlay, did = off ? g.oppDef : g.sel;
+  const r = resolve(pid, did, off?'us':'them');
+  const key = pid+'|'+did, isNew = !SAVE.note[key];
+  SAVE.note[key] = 1; persist();
+  g.last = {pid, did, r, off, isNew, clutch: isClutch(g)};
+  if (off){ g.ourPlays.push(pid); if (!DEF[did].zone) g.seen[did]++; const st = g.stats[pid] ||= {n:0,pts:0}; st.n++; st.pts += r.pts; }
+  else { g.ourDefs.push(did); g.theirPlays.push(pid); }
+  g.phase = 'anim';
+  render();
+  runAnim(PLAY[pid], did, r, off);
+}
+function finishPoss(){
+  const g = S.game, L = g.last, r = L.r;
+  if (L.off) g.us += r.pts; else g.them += r.pts;
+  const txt = L.off ? `${PLAY[L.pid].name} vs ${DEF[L.did].name}` : `${DEF[L.did].name} vs ${PLAY[L.pid].name}`;
+  const res = r.kind==='to' ? '턴오버' : r.kind==='miss' ? '실패' : `+${r.pts}`;
+  g.log.unshift({per:perLabel(g), off:L.off, txt, res});
+  g.phase = 'result';
+  updateScore(); render();
+}
+function nextPoss(){
+  const g = S.game;
+  if (g.side==='off'){ g.side='def'; return startPoss(); }
+  g.side = 'off'; g.idx++;
+  if (g.idx >= perLen(g)){
+    if (g.q < 4 || g.us===g.them){ g.q++; g.idx=0; if (g.q===3) g.tos = Math.max(g.tos,1); }
+    else return endGame();
+  }
+  startPoss();
+}
+function isClutch(g){ return g.q>=4 && g.idx===perLen(g)-1 && Math.abs(g.us-g.them)<=3; }
+function timeout(){
+  const g = S.game; if (g.tos<=0 || g.reveal || g.phase!=='choose') return;
+  g.tos--; g.reveal = true; g.famFrom = g.ourPlays.length;
+  render(); drawStatic();
+}
+function endGame(){
+  const g = S.game; g.phase = 'over';
+  const win = g.us > g.them;
+  if (win && SAVE.stage===g.ti) { SAVE.stage = g.ti+1; persist(); }
+  S.screen = 'over'; render(); drawStatic();
+}
+
+// ---------- panel ----------
+function render(){
+  const P = $('#panel');
+  P.classList.toggle('def-mode', !!(S.game && S.game.side==='def'));
+  if (S.screen==='title') P.innerHTML = titleHTML();
+  else if (S.screen==='scout') P.innerHTML = scoutHTML();
+  else if (S.screen==='over') P.innerHTML = overHTML();
+  else P.innerHTML = playHTML();
+  updateScore();
+}
+function noteCount(){ return Object.keys(SAVE.note).length; }
+function titleHTML(){
+  const st = SAVE.stage;
+  const rows = TEAMS.map((t,i)=>`<li class="${i<st?'done':i===st?'cur':''}"><span>${t.round} · ${esc(t.name)} <span class="stars">${'★'.repeat(t.rating+1)}</span></span><small>${i<st?'승리':i===st?'다음 상대':'대기'}</small></li>`).join('');
+  const champ = st>=TEAMS.length;
+  return `<p class="eyebrow">컵 대회 토너먼트 · 3라운드</p>
+  <h2>${champ?'우승했습니다':'선수는 그대로, 작전만 바꾼다'}</h2>
+  <p>당신은 감독입니다. 공격 때는 상대 수비 대형을 보고 작전을 부르고, 수비 때는 상대 공격 세트를 보고 수비 전술을 고릅니다. 모든 작전에는 상성이 있습니다.</p>
+  <p class="hint">대인 계열 수비(대인·스위치·드롭·블리츠)는 공을 잡기 전엔 똑같아 보입니다. 이번 경기에서 관찰한 대응 횟수와 작전 타임으로 추리하세요. 같은 작전을 연달아 쓰면 상대가 읽고, 상대는 당신이 자주 쓰는 작전에 맞춰 수비를 바꿉니다.</p>
+  <ol class="bracket">${rows}</ol>
+  <div><b>작전 노트</b> <span class="hint">${noteCount()}/48 상성 발견</span><div class="meter"><i style="width:${noteCount()/48*100}%"></i></div></div>
+  <div class="actions">${champ
+    ? `<button class="btn grow" data-act="reset">새 시즌 시작 (노트 유지)</button>`
+    : `<button class="btn grow" data-act="scout">${TEAMS[st].round} 스카우팅 리포트</button>`}
+    <button class="btn sec" data-act="note">작전 노트</button></div>`;
+}
+function scoutHTML(){
+  const t = TEAMS[SAVE.stage];
+  const top = (arr, list, n) => arr.map((w,i)=>[w,i]).sort((a,b)=>b[0]-a[0]).slice(0,n).map(([,i])=>list[i].name).join(', ');
+  return `<p class="eyebrow">${t.round} 스카우팅 리포트</p>
+  <h2>${esc(t.name)} <span class="stars">${'★'.repeat(t.rating+1)}</span></h2>
+  <p>${esc(t.scout)}</p>
+  <table class="tbl"><tr><th>주요 수비</th><td>${top(t.def, DEFS, 2)}</td></tr>
+  <tr><th>주요 공격</th><td>${top(t.off, PLAYS, 3)}</td></tr>
+  <tr><th>전력 차</th><td>${t.rating===0?'대등':'상대가 '+t.rating+'단계 위'}</td></tr>
+  <tr><th>적응 속도</th><td>${t.adapt<.7?'느림':t.adapt<1?'보통':'빠름'}</td></tr></table>
+  <p class="hint" style="margin-top:12px">쿼터마다 공격 ${PER_Q}번, 수비 ${PER_Q}번. 동점이면 연장(각 ${PER_OT}번). 작전 타임은 전반 2번, 후반엔 최소 1번 남습니다.</p>
+  <div class="actions"><button class="btn grow" data-act="tip">팁오프</button><button class="btn sec" data-act="home">돌아가기</button></div>`;
+}
+function playHTML(){
+  const g = S.game, off = g.side==='off';
+  let head = '', cards = '', obs = '';
+  if (g.phase==='result') return resultHTML();
+  if (off){
+    const d = DEF[g.oppDef];
+    const known = d.zone || g.reveal;
+    head = `<div class="ctx"><span class="side off">공격</span><span class="hint">상대 수비 대형</span></div>
+      <div class="read">${known ? d.name : '대인 계열 · 스크린 대응 미확인'}</div>
+      <p class="hint">${known ? (g.reveal && !d.zone ? '작전 타임에 확인한 수비입니다. ' : '') + d.d : '대인·스위치·드롭·블리츠 중 하나. 스크린이 걸려야 정체가 드러납니다.'}</p>`;
+    obs = `<div class="obs">이번 경기 관찰된 대인 계열: 대인 ${g.seen.man} · 스위치 ${g.seen.switch} · 드롭 ${g.seen.drop} · 블리츠 ${g.seen.blitz}</div>`;
+    cards = PLAYS.map(p => {
+      const f = famCount(g,p.id);
+      let bs = `<span class="bd">${p.pts}점 슛</span>`;
+      if (f) bs += `<span class="bd ${f>=2?'warn':''}">최근 ${f}회${f>=2?' · 읽힘':''}</span>`;
+      if (known && SAVE.note[p.id+'|'+d.id]){ const [c,l]=edgeTag(edge(p.id,d.id)); bs += `<span class="bd ${c}">노트 ${l}</span>`; }
+      return `<button class="card ${g.sel===p.id?'sel':''}" data-act="sel" data-id="${p.id}" ${g.phase!=='choose'?'disabled':''}><span class="n">${p.name}</span><span class="d">${p.d}</span><span class="badges">${bs}</span></button>`;
+    }).join('');
+  } else {
+    const p = PLAY[g.oppPlay], gr = GROUPS[p.g];
+    head = `<div class="ctx"><span class="side def">수비</span><span class="hint">상대 공격 세트</span></div>
+      <div class="read">${g.reveal ? p.name : gr.name}</div>
+      <p class="hint">${g.reveal ? '작전 타임에 읽어낸 작전입니다. '+p.d : '예상: '+gr.opts+'.'}</p>`;
+    const tp = {}; g.theirPlays.forEach(x=>tp[x]=(tp[x]||0)+1);
+    obs = `<div class="obs">이번 경기 상대 작전: ${Object.keys(tp).length ? Object.entries(tp).map(([k,v])=>PLAY[k].name+' '+v).join(' · ') : '아직 없음'}</div>`;
+    cards = DEFS.map(d => {
+      let bs = '';
+      const cand = g.reveal ? [p.id] : PLAYS.filter(x=>x.g===p.g).map(x=>x.id);
+      for (const c of cand) if (SAVE.note[c+'|'+d.id]){ const e = -edge(c,d.id); const [cl] = edgeTag(e); bs += `<span class="bd ${cl}">vs ${PLAY[c].name} ${e>0?'▲':e<0?'▼':'●'}</span>`; }
+      return `<button class="card ${g.sel===d.id?'sel':''}" data-act="sel" data-id="${d.id}" ${g.phase!=='choose'?'disabled':''}><span class="n">${d.name}</span><span class="d">${d.d}</span>${bs?`<span class="badges">${bs}</span>`:''}</button>`;
+    }).join('');
+  }
+  const acts = g.phase==='anim'
+    ? `<button class="btn sec grow" data-act="skip">빨리 보기</button>`
+    : `<button class="btn grow" data-act="call" ${g.sel?'':'disabled'}>${off?'작전 실행':'수비 지시'}</button>
+       <button class="btn sec" data-act="to" ${g.tos>0&&!g.reveal?'':'disabled'}>작전 타임 (${g.tos})</button>`;
+  return head + obs + `<div class="cards">${cards}</div><div class="actions">${acts}</div>` + logHTML();
+}
+function resultHTML(){
+  const g = S.game, L = g.last, r = L.r;
+  const good = L.off ? r.pts>0 : r.pts===0;
+  const big = r.kind==='to' ? (L.off?'턴오버':'스틸!') : r.kind==='miss' ? (L.off?'슛 실패':'막았다!') : (L.off ? `+${r.pts} 득점` : `${r.pts}점 실점`);
+  const e = L.off ? r.e : -r.e;
+  const [c,l] = edgeTag(e);
+  const p = PLAY[L.pid], d = DEF[L.did];
+  return `<div class="ctx"><span class="side ${L.off?'off':'def'}">${L.off?'공격':'수비'}</span><span class="hint">${perLabel(g)} 결과</span></div>
+    <div class="res ${good?'good':'bad'}">${big}${r.and1?' · 앤드원':''}</div>
+    <div class="vs">${L.off?`우리 <b>${p.name}</b> vs 상대 <b>${d.name}</b>`:`상대 <b>${p.name}</b> vs 우리 <b>${d.name}</b>`} <span class="chip ${c}">${l}</span></div>
+    <div class="why">${why(L.pid, L.did)}${L.off && r.fam ? ` 같은 작전 반복으로 상대가 미리 대비했습니다(성공률 −${Math.round(r.fam*100)}%p).` : ''}</div>
+    ${L.isNew?'<div class="new">작전 노트에 새 상성을 기록했습니다.</div>':''}
+    <div class="actions"><button class="btn grow" data-act="next">다음 포세션</button><button class="btn sec" data-act="note">작전 노트</button></div>` + logHTML();
+}
+function logHTML(){
+  const g = S.game; if (!g.log.length) return '';
+  return `<h3>경기 기록</h3><ul class="log">${g.log.slice(0,12).map(l=>`<li><span>${l.per}</span><span><b>${l.off?'공':'수'}</b> ${l.txt}</span><span class="p ${l.off?'u':'t'}">${l.res}</span></li>`).join('')}</ul>`;
+}
+function overHTML(){
+  const g = S.game, t = T(), win = g.us>g.them;
+  const rows = Object.entries(g.stats).sort((a,b)=>b[1].pts-a[1].pts).map(([k,v])=>`<tr><td>${PLAY[k].name}</td><td>${v.n}</td><td>${v.pts}</td><td>${(v.pts/v.n).toFixed(2)}</td></tr>`).join('');
+  const champ = SAVE.stage>=TEAMS.length && win;
+  return `<p class="eyebrow">${t.round} · 경기 종료${g.q>4?' (연장)':''}</p>
+    <h2>${champ?'우승! 컵을 들어 올렸습니다':win?'승리':'패배'} ${g.us} : ${g.them}</h2>
+    <p>${win ? (champ?'세 팀의 수비를 모두 읽어냈습니다.':'다음 상대는 '+TEAMS[g.ti+1].name+'. 스카우팅 리포트부터 확인하세요.') : '상대가 어떤 수비로 바꿨는지 경기 기록과 작전 노트를 돌아보세요.'}</p>
+    <h3>작전별 효율</h3>
+    <div class="scroll"><table class="tbl"><tr><th>작전</th><th>횟수</th><th>득점</th><th>포세션당</th></tr>${rows}</table></div>
+    <div class="actions">${win
+      ? (champ?`<button class="btn grow" data-act="home">대진표</button>`:`<button class="btn grow" data-act="scout">다음 라운드</button>`)
+      : `<button class="btn grow" data-act="retry">다시 도전</button>`}
+      <button class="btn sec" data-act="note">작전 노트</button></div>`;
+}
+function noteHTML(){
+  const head = DEFS.map(d=>`<th>${d.name}</th>`).join('');
+  const body = PLAYS.map(p=>`<tr><th class="r">${p.name}</th>${DEFS.map(d=>{
+    if (!SAVE.note[p.id+'|'+d.id]) return '<td class="q" title="아직 모름">?</td>';
+    const e = edge(p.id,d.id); const c = e>1?'u':e>0?'u':e<0?'d':'e';
+    const s = e>=2?'▲▲':e===1?'▲':e===0?'●':e===-1?'▼':'▼▼';
+    return `<td class="${c}" title="${esc(why(p.id,d.id))}">${s}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<p class="eyebrow">공격 작전 × 수비 전술</p><h2>작전 노트 <span class="hint" style="font-family:var(--f-ui);font-size:14px;font-weight:400">${noteCount()}/48 발견</span></h2>
+    <p class="hint">한 번 맞붙어 본 조합만 기록됩니다. 공격 입장에서 본 상성이며, 수비할 때는 반대로 읽으세요. 칸에 마우스를 올리면 이유가 보입니다.</p>
+    <div class="scroll"><table class="mx"><tr><th></th>${head}</tr>${body}</table></div>
+    <div class="key"><span>▲▲ 크게 유리</span><span>▲ 유리</span><span>● 보통</span><span>▼ 불리</span><span>▼▼ 크게 불리</span></div>
+    <div class="actions"><button class="btn" data-act="closenote">닫기</button></div>`;
+}
+function openNote(){ $('#note').innerHTML = noteHTML(); $('#noteWrap').hidden = false; $('#note button').focus(); }
+function closeNote(){ $('#noteWrap').hidden = true; }
+
+function updateScore(){
+  const g = S.game;
+  $('#sUs').textContent = g ? g.us : 0;
+  $('#sThem').textContent = g ? g.them : 0;
+  $('#sThemName').textContent = g ? T().name : (TEAMS[SAVE.stage]||TEAMS[2]).name;
+  $('#sPer').textContent = g ? (S.screen==='over'?'FINAL':perLabel(g)) : '—';
+  $('#sPos').textContent = g && S.screen==='play' ? `포세션 ${g.idx+1}/${perLen(g)} · ${g.side==='off'?'공격':'수비'}` : (g?'경기 종료':'팁오프 전');
+  const b = $('#banner');
+  const cl = g && S.screen==='play' && isClutch(g);
+  b.hidden = !cl; if (cl) b.textContent = '클러치 타임';
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, g = S.game;
+  if (a==='sel'){ g.sel = el.dataset.id; render(); drawStatic(); }
+  else if (a==='call') callPlay();
+  else if (a==='to') timeout();
+  else if (a==='skip'){ if (A) A.speed = 5; }
+  else if (a==='next') nextPoss();
+  else if (a==='scout'){ S.screen='scout'; S.game=null; render(); drawStatic(); }
+  else if (a==='tip') newGame(SAVE.stage);
+  else if (a==='retry') newGame(g.ti);
+  else if (a==='home'){ S.screen='title'; S.game=null; render(); drawStatic(); }
+  else if (a==='reset'){ SAVE.stage=0; persist(); render(); drawStatic(); }
+  else if (a==='note') openNote();
+  else if (a==='closenote') closeNote();
+});
+$('#noteBtn').onclick = openNote;
+$('#homeBtn').onclick = () => { if (A) return; S.screen='title'; S.game=null; render(); drawStatic(); };
+$('#noteWrap').addEventListener('click', e => { if (e.target.id==='noteWrap') closeNote(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeNote(); });
+
+// ---------- court drawing ----------
+const cv = $('#court'), ctx = cv.getContext('2d');
+const W = 520, H = 490, PAD = 10;
+let C = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['board','court','us','them','ball','ink','dim','good','bad']) C[k] = cs.getPropertyValue('--'+k).trim();
+}
+function fit(){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || W;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(w*H/W*dpr);
+  redraw();
+}
+function begin(){
+  const s = cv.width / W;
+  ctx.setTransform(s,0,0,s,0,0);
+  ctx.fillStyle = C.board; ctx.fillRect(0,0,W,H);
+  ctx.translate(PAD,PAD);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+}
+function court(){
+  ctx.strokeStyle = C.court; ctx.lineWidth = 2; ctx.setLineDash([]);
+  ctx.strokeRect(0,0,500,470);
+  ctx.strokeRect(170,0,160,190);
+  ctx.beginPath(); ctx.arc(250,190,60,0,Math.PI); ctx.stroke();
+  ctx.setLineDash([7,7]); ctx.beginPath(); ctx.arc(250,190,60,Math.PI,2*Math.PI); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(250,52,40,0,Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(30,0); ctx.lineTo(30,141.5); ctx.arc(250,52,237.5,2.756,0.386,true); ctx.lineTo(470,0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(250,470,60,Math.PI,2*Math.PI); ctx.stroke();
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(220,40); ctx.lineTo(280,40); ctx.stroke();
+  ctx.strokeStyle = C.ball; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(250,52,9,0,2*Math.PI); ctx.stroke();
+}
+function drawO(p, n, col){
+  ctx.strokeStyle = col; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.arc(p[0],p[1],12,0,2*Math.PI); ctx.stroke();
+  ctx.fillStyle = col; ctx.font = '600 14px Oswald, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(n, p[0], p[1]+1);
+}
+function drawX(p, col){
+  ctx.strokeStyle = col; ctx.lineWidth = 3.6; const r = 9;
+  ctx.beginPath(); ctx.moveTo(p[0]-r,p[1]-r); ctx.lineTo(p[0]+r,p[1]+r); ctx.moveTo(p[0]+r,p[1]-r); ctx.lineTo(p[0]-r,p[1]+r); ctx.stroke();
+}
+function drawBall(p){ ctx.fillStyle = C.ball; ctx.beginPath(); ctx.arc(p[0],p[1],5.5,0,2*Math.PI); ctx.fill(); }
+function head(x1,y1,x2,y2,s=10){
+  const a = Math.atan2(y2-y1,x2-x1);
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a-.45), y2-s*Math.sin(a-.45));
+  ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a+.45), y2-s*Math.sin(a+.45)); ctx.stroke();
+}
+function trim(p,q,a,b){ const d = dist(p,q)||1; return [[p[0]+(q[0]-p[0])/d*a, p[1]+(q[1]-p[1])/d*a],[q[0]-(q[0]-p[0])/d*b, q[1]-(q[1]-p[1])/d*b]]; }
+function path(p,q,type,col,label){
+  if (dist(p,q) < 30) return;
+  const [a,b] = trim(p,q,16,type==='screen'?4:16);
+  ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.setLineDash(type==='pass'?[6,7]:[]);
+  ctx.beginPath();
+  if (type==='dribble'){
+    const L = dist(a,b), ux=(b[0]-a[0])/L, uy=(b[1]-a[1])/L, n = Math.max(2, Math.floor((L-14)/9));
+    ctx.moveTo(a[0],a[1]);
+    for (let i=1;i<=n;i++){ const t=i*9, s=(i%2?1:-1)*5; ctx.lineTo(a[0]+ux*t-uy*s, a[1]+uy*t+ux*s); }
+    ctx.lineTo(b[0],b[1]);
+  } else { ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); }
+  ctx.stroke(); ctx.setLineDash([]);
+  if (type==='screen'){
+    const ang = Math.atan2(b[1]-a[1], b[0]-a[0]), px = -Math.sin(ang)*10, py = Math.cos(ang)*10;
+    ctx.beginPath(); ctx.moveTo(b[0]+px,b[1]+py); ctx.lineTo(b[0]-px,b[1]-py); ctx.stroke();
+  } else head(a[0],a[1],b[0],b[1]);
+  if (label){ ctx.fillStyle = col; ctx.font='600 13px Oswald, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const m = lp(a,b,.5), ang = Math.atan2(b[1]-a[1], b[0]-a[0]); ctx.fillText(label, m[0]-Math.sin(ang)*13, m[1]+Math.cos(ang)*13); }
+}
+function diagram(play, col){
+  let P = play.start, h = 0;
+  ctx.globalAlpha = .8;
+  play.steps.forEach((st,k) => {
+    const N = P.map(p=>p.slice()); for (const i in st.mv) N[i] = st.mv[i];
+    const nh = st.b!==undefined ? st.b : h;
+    for (let i=0;i<5;i++){
+      if (N[i][0]===P[i][0] && N[i][1]===P[i][1]) continue;
+      const type = st.scr && st.scr.includes(i) ? 'screen' : (i===h && nh===h ? 'dribble' : 'cut');
+      path(P[i], N[i], type, col, String(k+1));
+    }
+    if (nh!==h) path(N[h], N[nh], 'pass', col, String(k+1));
+    P = N; h = nh;
+  });
+  const s = P[h], [a,b] = trim(s,[B.x,B.y],16,14);
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([2,6]); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  return P;
+}
+const ZS = {z23:[[190,255],[310,255],[110,130],[390,130],[250,95]], z131:[[250,345],[100,215],[250,205],[400,215],[250,85]]};
+function defPos(off, ball, sf, d, play, holder){
+  if (ZS[d]){
+    const res = ZS[d].map(s => [s[0]+(ball[0]-250)*.3, s[1]+(ball[1]-220)*.12]);
+    const order = res.map((p,i)=>[dist(p,ball),i]).sort((a,b)=>a[0]-b[0]);
+    const hp = off[holder] || ball, tgt = toward(hp,[B.x,B.y],20);
+    res[order[0][1]] = lp(res[order[0][1]], tgt, .7);
+    if (d==='z131') res[order[1][1]] = lp(res[order[1][1]], [hp[0]+(hp[0]<250?16:-16), hp[1]+8], .4);
+    return res;
+  }
+  const asg = [0,1,2,3,4], sc = play && play.screen;
+  if (d==='switch' && sc && sf >= sc.k-.25){ asg[sc.h]=sc.s; asg[sc.s]=sc.h; }
+  const res = asg.map(a => toward(off[a],[B.x,B.y],22));
+  if (sc && sf >= sc.k-.5 && sf < sc.k+1.3){
+    if (d==='drop') res[sc.s] = lp(res[sc.s],[250,165],.75);
+    if (d==='blitz'){ const h = off[sc.h]; res[sc.s] = [h[0]+(h[0]<250?20:-20), h[1]-8]; }
+  }
+  if (d==='drop' && !sc) res[4] = lp(res[4],[250,115],.45);
+  if (d==='blitz' && !sc && sf>=.3){
+    const hp = off[holder]; let best=-1, bd=1e9;
+    for (let i=0;i<5;i++){ if (i===holder) continue; const dd = dist(off[i],hp); if (dd<bd){bd=dd;best=i;} }
+    if (best>=0) res[best] = lp(res[best],[hp[0]+(hp[0]<250?18:-18), hp[1]+10],.65);
+  }
+  return res;
+}
+function drawStatic(){ if (!A) redraw(); }
+function redraw(){
+  readColors(); begin(); court();
+  const g = S.game;
+  if (A){ frame(); return; }
+  if (!g || S.screen!=='play'){ idleBoard(); return; }
+  const off = g.side==='off';
+  const oc = off ? C.us : C.them, xc = off ? C.them : C.us;
+  if (g.phase==='result' && g.last){ const fin = g.last.final; if (fin){ fin.off.forEach((p,i)=>drawO(p,i+1,oc)); fin.def.forEach(p=>drawX(p,xc)); drawBall(fin.ball); } return; }
+  let O = S0, dType = 'man', play = null;
+  if (off){
+    dType = DEF[g.oppDef].zone || g.reveal ? g.oppDef : 'man';
+    if (g.sel){ play = PLAY[g.sel]; O = play.start; }
+  } else {
+    if (g.reveal){ play = PLAY[g.oppPlay]; O = play.start; }
+    if (g.sel) dType = g.sel;
+  }
+  const Dp = defPos(O, O[0], -1, dType, play, 0);
+  if (play) diagram(play, oc);
+  O.forEach((p,i)=>drawO(p,i+1,oc));
+  Dp.forEach(p=>drawX(p,xc));
+  drawBall([O[0][0]+9,O[0][1]-9]);
+}
+function idleBoard(){
+  const p = PLAY.pnr; diagram(p, C.us);
+  p.start.forEach((q,i)=>drawO(q,i+1,C.us));
+  defPos(p.start,p.start[0],-1,'z23',p,0).forEach(q=>drawX(q,C.them));
+  drawBall([p.start[0][0]+9,p.start[0][1]-9]);
+}
+
+// ---------- animation ----------
+let A = null, raf = 0;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function runAnim(play, did, r, off){
+  const K = [S0.map(p=>p.slice()), play.start.map(p=>p.slice())], Hs = [0,0];
+  let cur = play.start, h = 0;
+  for (const st of play.steps){ cur = cur.map(p=>p.slice()); for (const i in st.mv) cur[i] = st.mv[i].slice(); if (st.b!==undefined) h = st.b; K.push(cur); Hs.push(h); }
+  const D = [0, 420, ...play.steps.map(()=>640)];
+  A = {play, did, r, off, K, Hs, D, el:0, last:performance.now(), speed: reduce?4:1,
+       total: D.reduce((a,b)=>a+b,0), shot: 900, hold: 900};
+  if (!raf) raf = requestAnimationFrame(loop);
+}
+function loop(now){
+  raf = 0; if (!A) return;
+  A.el += Math.min(64, now - A.last) * A.speed; A.last = now;
+  redraw();
+  if (A.el >= A.total + A.shot + A.hold){
+    S.game.last.final = A.final; A = null; finishPoss(); redraw(); return;
+  }
+  raf = requestAnimationFrame(loop);
+}
+function frame(){
+  const {K,Hs,D,play,did,r,off} = A;
+  const oc = off ? C.us : C.them, xc = off ? C.them : C.us;
+  let t = A.el, j = 1;
+  while (j < D.length && t > D[j]){ t -= D[j]; j++; }
+  let O, ball, sf, holder;
+  const fin = K[K.length-1], sh = Hs[Hs.length-1];
+  if (j < D.length){
+    const u = ease(clamp(t/D[j],0,1));
+    O = K[j-1].map((p,i)=>lp(p,K[j][i],u));
+    sf = j===1 ? -1+u : j-2+u;
+    const a = Hs[j-1], b = Hs[j]; holder = b;
+    const hp = i => [O[i][0]+9, O[i][1]-9];
+    ball = a===b ? hp(a) : lp(hp(a), hp(b), ease(clamp(t/D[j]/.75,0,1)));
+    if (a!==b && t/D[j] < .4) holder = a;
+  } else {
+    O = fin.map(p=>p.slice()); sf = play.steps.length; holder = sh;
+    const st = A.el - A.total, u = clamp(st/A.shot,0,1);
+    const from = [fin[sh][0]+9, fin[sh][1]-9];
+    if (r.kind==='to'){
+      const Dn = defPos(O, from, sf, did, play, sh);
+      let bi=0, bd=1e9; Dn.forEach((p,i)=>{ const dd=dist(p,from); if (dd<bd){bd=dd;bi=i;} });
+      ball = lp(from, [Dn[bi][0]+8, Dn[bi][1]+8], ease(clamp(u*1.6,0,1)));
+    } else {
+      const rim = r.kind==='make' ? [250,52] : [262,48];
+      const v = ease(u); ball = lp(from, rim, v); ball[1] -= Math.sin(Math.PI*v)*Math.min(90, dist(from,rim)*.4);
+      if (st > A.shot){
+        const w = clamp((st-A.shot)/A.hold,0,1);
+        ball = r.kind==='make' ? [250, 52 + 26*ease(w)] : lp(rim,[318,118],ease(w));
+      }
+    }
+  }
+  const Dn = defPos(O, ball, sf, did, play, holder);
+  O.forEach((p,i)=>drawO(p,i+1,oc));
+  Dn.forEach(p=>drawX(p,xc));
+  drawBall(ball);
+  A.final = {off:O, def:Dn, ball};
+  const st = A.el - A.total;
+  if (st > A.shot*.75){
+    const txt = r.kind==='to' ? (off?'턴오버':'스틸!') : r.kind==='miss' ? (off?'노골':'블록아웃') : `+${r.pts}${r.and1?' 앤드원':''}`;
+    const good = off ? r.pts>0 : r.pts===0;
+    ctx.globalAlpha = clamp((st-A.shot*.75)/250,0,1);
+    ctx.fillStyle = good ? C.good : C.bad; ctx.font = '700 64px Gaegu, cursive'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(txt, 250, 400);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---------- boot ----------
+function start(data){
+  if (data && data.S){ S = data.S; if (S.game && S.game.phase==='anim'){ S.game.phase='choose'; } }
+  render(); fit();
+}
+window.claude?.hot?.snapshot?.(() => ({S: JSON.parse(JSON.stringify(S))}));
+new ResizeObserver(fit).observe(cv);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw);
+new MutationObserver(redraw).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
