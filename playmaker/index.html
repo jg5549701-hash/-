@@ -436,8 +436,9 @@ function dragTarget(d){
   const g=G,hi=g.holder;
   let best=null,bd=1.5;
   for(const o of g.of){if(o.i===hi)continue;const p=scrPt(o);const v=Math.hypot(d.sx-p.x,d.sy-p.y)/p.ppm;if(v<bd){bd=v;best=o.i}}
-  if(best!=null&&bd<.8)return{kind:'pass',to:best};
   const rp=proj(HOOP.x,HOOP.y,3.05),dh=Math.hypot(d.sx-rp.x,d.sy-rp.y)/pxPerM(HOOP.x,HOOP.y,3.05);
+  if(dh<.75)return{kind:'shot',aim:clamp((dh-.3)/.9,0,1)};
+  if(best!=null&&bd<.8)return{kind:'pass',to:best};
   if(dh<1.2)return{kind:'shot',aim:clamp((dh-.3)/.9,0,1)};
   if(best!=null)return{kind:'pass',to:best};
   return{kind:'move',x:clamp(d.x,.4,CW-.4),y:clamp(d.y,.4,CH-.4)};
