@@ -271,7 +271,7 @@ function setFormation(id){
 function startPoss(opt){
   const of=PORDER.map((pos,i)=>({i,pos,num:i+1,x:7.5,y:7,tx:7.5,ty:7,home:{x:7.5,y:7},me:i===0,order:null,shootT:0}));
   const df=of.map(o=>({i:o.i,man:o.i,x:7.5,y:6,lx:7.5,ly:6,stuck:0,hedge:0,drop:0,slow:0}));
-  G={opt,of,df,meI:0,oppF:.88+clamp((M.os-70)/18,0,1.4)*.24,style:M.style,
+  G={opt,of,df,meI:0,oppF:.85+clamp((M.os-70)/18,0,1.4)*.18,style:M.style,
     clock:opt.clock,time:0,holder:0,flight:null,drag:null,fx:[],ended:false,paused:true,menu:false,
     lastPass:null,helper:-1,ballAt:null,sig:'',playId:null,script:[],playT:0,iso:false,
     out:{pts:0,fga:0,fgm:0,tpa:0,tpm:0,fta:0,ftm:0,ast:0,tov:0,desc:'',play:null}};
@@ -332,10 +332,10 @@ function step(dt){
     if(d.hedge>0&&H&&H.i!==d.man){const u=unit(H,HOOP);tx=H.x+u.x*1.1;ty=H.y+u.y*1.1}
     else if(d.drop>0){const u=unit(HOOP,m);tx=HOOP.x+u.x*1.4;ty=HOOP.y+u.y*1.4}
     else if(d.i===g.helper){const u=unit(H,HOOP);tx=H.x+u.x*.95;ty=H.y+u.y*.95}
-    else{const on=H&&H.i===m.i,u=unit(m,HOOP),sh=isThree(m),gap=on?.95:sh?1.05:g.iso?1.2:1.5;tx=m.x+u.x*gap;ty=m.y+u.y*gap;
+    else{const on=H&&H.i===m.i,u=unit(m,HOOP),sh=isThree(m),gap=on?1.25:sh?1.3:g.iso?1.4:1.7;tx=m.x+u.x*gap;ty=m.y+u.y*gap;
       if(!on&&H&&!g.iso&&!sh){tx+=(H.x-m.x)*.12;ty+=(H.y-m.y)*.12}}
     const r=Math.min(1,dt*4.5);d.lx+=(tx-d.lx)*r;d.ly+=(ty-d.ly)*r;
-    moveTo(d,d.lx,d.ly,3.7*g.oppF*(d.hedge>0||d.i===g.helper?1.08:1)*(d.slow>0?.8:1),dt);
+    moveTo(d,d.lx,d.ly,3.3*g.oppF*(d.hedge>0||d.i===g.helper?1.08:1)*(d.slow>0?.8:1),dt);
   }
   separate();
   if(!g.ended)updOrders(dt);
@@ -354,7 +354,7 @@ function separate(){
 function stealCheck(dt,H){
   const g=G;if(dist(H,{x:H.tx,y:H.ty})<.25)return;
   for(const d of g.df){if(d.stuck>0)continue;
-    if(dist(d,H)<.82&&Math.random()<dt*.25*(1.2-attr(H.i,'drv')/100)*g.oppF*(d.hedge>0?1.6:1)){
+    if(dist(d,H)<.82&&Math.random()<dt*.12*(1.2-attr(H.i,'drv')/100)*g.oppF*(d.hedge>0?1.6:1)){
       g.out.tov++;g.holder=null;g.ballAt={x:d.x,y:d.y};fx('스틸!',d.x,d.y,'#ff5a5f');return endPoss(`🙅 ${H.num}번이 드리블하다 스틸당했다!`,'#ff5a5f')}}
 }
 
@@ -420,7 +420,7 @@ function useScreen(o){
 function passRisk(from,to){
   const g=G,a=g.of[from],b=g.of[to],pa=attr(from,'pas');let best=0,who=null,tt=0;
   for(const d of g.df){if(d.stuck>0)continue;const s=segDist(d,a,b);if(s.t<.08||s.t>.95||s.d>=1.05)continue;
-    const ch=(1-s.d/1.05)*.8*(1.2-pa/100)*g.oppF;if(ch>best){best=ch;who=d;tt=s.t}}
+    const ch=(1-s.d/1.05)*.55*(1.2-pa/100)*g.oppF;if(ch>best){best=ch;who=d;tt=s.t}}
   return{p:clamp(best,0,.85),d:who,t:tt};
 }
 function launchPass(from,to,type){
@@ -450,13 +450,13 @@ function shotProb(i,aim,aoop){
   const g=G,o=g.of[i],dR=dist(o,HOOP),th=isThree(o),cd=contest(o);let base;
   if(aoop){const pa=g.lastPass&&g.lastPass.to===i?attr(g.lastPass.from,'pas'):attr(1,'pas');base=.68+(pa-55)*.004+(attr(i,'drv')-55)*.003}
   else{const at=attr(i,dR<2.6?'drv':th?'tpt':'sht');
-    base=dR<2.6?.54+(at-55)*.006:!th?.4+(at-55)*.005-(dR-2.6)*.01:.34+(at-55)*.0045-Math.max(0,dR-7.6)*.07}
-  let con=cd<.85?-.25:cd<1.4?-.14:cd<2.2?-.04:cd<3?.09:.16;if(con<0)con*=g.oppF*(aoop?.5:1);
-  return clamp(base+con-aim*.17,.03,.9);
+    base=dR<2.6?.62+(at-55)*.006:!th?.47+(at-55)*.005-(dR-2.6)*.008:.4+(at-55)*.0045-Math.max(0,dR-7.6)*.06}
+  let con=cd<.85?-.16:cd<1.4?-.08:cd<2.2?-.01:cd<3?.08:.14;if(con<0)con*=g.oppF*(aoop?.5:1);
+  return clamp(base+con-aim*.15,.05,.92);
 }
 function shoot(i,aim,aoop){
   const g=G,o=g.of[i],pr=shotProb(i,aim,aoop),dR=dist(o,HOOP),th=!aoop&&isThree(o),cd=contest(o);
-  const made=Math.random()<pr,foul=!aoop&&dR<2.8&&cd<1.25&&Math.random()<.17,block=!made&&!foul&&cd<.95&&dR<3.2&&Math.random()<.5;
+  const made=Math.random()<pr,foul=!aoop&&dR<2.8&&cd<1.25&&Math.random()<.17,block=!made&&!foul&&cd<.9&&dR<3.2&&Math.random()<.25;
   g.holder=null;o.shootT=.7;
   g.flight={kind:'shot',from:i,sx:o.x,sy:o.y,t:0,dur:aoop?.3:block?.25:.55+dR*.04,made,th,foul,block,aoop,dR};
   if(made||!foul){g.out.fga++;if(th)g.out.tpa++}
