@@ -107,6 +107,15 @@ p{margin:0 0 10px;max-width:62ch}
 .stars{color:var(--ball);letter-spacing:2px}
 .meter{height:6px;background:var(--bg);border-radius:6px;overflow:hidden;margin:6px 0 2px}
 .meter i{display:block;height:100%;background:var(--us)}
+.ev{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.ev>div{background:var(--bg);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;min-width:0}
+.ev span{font-size:12px;color:var(--dim)}
+.ev b{font-family:var(--f-score);font-weight:600;font-size:24px;line-height:1.2;font-variant-numeric:tabular-nums}
+.ev small{font-size:12px;color:var(--dim)}
+.clock{height:6px;background:var(--bg);border-radius:6px;overflow:hidden;margin:4px 0 12px}
+.clock i{display:block;height:100%;width:100%;background:var(--ball);transition:width .1s linear}
+.opts{grid-template-columns:minmax(0,1fr)}
+.let{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--us);color:var(--us);font-family:var(--f-score);font-size:13px;margin-right:4px}
 .tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .tbl td,.tbl th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
 .tbl th{color:var(--dim);font-weight:500;font-size:12px}
@@ -189,7 +198,22 @@ const PLAYS = [
    start:[[250,330],[420,230],[45,70],[80,240],[175,100]],
    steps:[{b:1},{mv:{1:[300,135],3:[120,310]}},{b:2}]},
 ];
+// read options: at = steps before the read; option 0 finishes the play as drawn.
+// [name, edge row it uses, shot value, finishing steps]
+const OPTS = {
+  pnr:{at:2, o:[['롤맨에게 패스','pnr',2],['미스매치 돌파','iso',2,[{mv:{0:[298,118]}}]],['코너 킥아웃','dk',3,[{b:1}]]]},
+  pop:{at:2, o:[['팝 3점','pop',3],['핸들러 돌파 후 코너','dk',3,[{mv:{0:[205,140]}},{b:2}]],['숏롤 하이-로우','hilo',2,[{mv:{3:[250,200]},b:3},{mv:{4:[232,70]},b:4}]]]},
+  post:{at:2, o:[['포스트 마무리','post',2],['반대편 코너 킥아웃','dk',3,[{b:3}]],['베이스라인 컷터','bd',2,[{mv:{1:[272,72]},b:1}]]]},
+  hilo:{at:2, o:[['로우포스트 투입','hilo',2],['윙 슈터에게 스킵','stg',3,[{b:2}]],['백도어 컷','bd',2,[{mv:{1:[265,70]},b:1}]]]},
+  stg:{at:2, o:[['슈터 3점','stg',3],['스크리너 슬립','pnr',2,[{mv:{3:[245,78]},b:3}]],['슈터 돌파','iso',2,[{b:1},{mv:{1:[205,128]}}]]]},
+  bd:{at:1, o:[['백도어 컷','bd',2],['핸드오프 3점','stg',3,[{mv:{4:[320,242],1:[365,300]}},{b:1}]],['코너 빅맨 다이브','hilo',2,[{mv:{3:[278,80]},b:3}]]]},
+  iso:{at:2, o:[['1대1 마무리','iso',2],['도움 오면 킥아웃','dk',3,[{mv:{2:[332,152]}},{b:1}]],['포스트업 전환','post',2,[{mv:{2:[350,110]}},{mv:{2:[300,72]}}]]]},
+  dk:{at:2, o:[['코너 킥아웃','dk',3],['직접 마무리','iso',2,[{mv:{1:[262,74]}}]],['빅맨 덤프오프','post',2,[{mv:{4:[215,68]},b:4}]]]},
+};
+PLAYS.forEach(p => { const o = OPTS[p.id]; p.pre = p.steps.slice(0,o.at);
+  p.opts = o.o.map((x,i) => ({n:x[0], row:x[1], pts:x[2], fin: i===0 ? p.steps.slice(o.at) : x[3]})); });
 const PLAY = Object.fromEntries(PLAYS.map(p=>[p.id,p]));
+const LET = ['A','B','C'];
 // matchup: play|defense → [edge for the offense, why]
 const RAW = {
  'pnr|man':[2,'스크린 대응 규칙이 없는 대인 수비는 볼 핸들러와 롤맨을 동시에 막지 못합니다.'],
@@ -228,11 +252,11 @@ const edge = (p,d) => (RAW[p+'|'+d]||[0])[0];
 const why = (p,d) => (RAW[p+'|'+d]||[0,'뚜렷한 상성 없이 선수들의 실력 싸움이었습니다.'])[1];
 
 const TEAMS = [
-  {name:'항구 갈매기', round:'8강', rating:0, def:[4,1,3,1,1,0], off:[3,1,2,2,1,1,1,1], adapt:.5,
+  {name:'항구 갈매기', round:'8강', rating:0, def:[4,1,3,1,1,0], off:[3,1,2,2,1,1,1,1], adapt:.5, read:.3,
    scout:'대인 방어와 드롭 수비가 기본인 정석 팀. 공격은 픽앤롤과 포스트업 위주. 패턴을 늦게 읽는다.'},
-  {name:'북부 빙벽', round:'4강', rating:1, def:[1,0,2,1,4,3], off:[1,1,3,3,1,1,1,1], adapt:.8,
+  {name:'북부 빙벽', round:'4강', rating:1, def:[1,0,2,1,4,3], off:[1,1,3,3,1,1,1,1], adapt:.8, read:.55,
    scout:'존 디펜스의 팀. 2-3과 1-3-1을 번갈아 세운다. 공격은 골밑 빅맨에게 집중한다.'},
-  {name:'수도 번개', round:'결승', rating:2, def:[2,5,1,2,1,1], off:[2,2,1,1,2,2,3,2], adapt:1.2,
+  {name:'수도 번개', round:'결승', rating:2, def:[2,5,1,2,1,1], off:[2,2,1,1,2,2,3,2], adapt:1.2, read:.8,
    scout:'거의 모든 스크린을 스위치한다. 에이스 아이솔레이션과 슈터 활용. 같은 작전을 반복하면 금방 읽힌다.'},
 ];
 const PER_Q = 5, PER_OT = 2;
@@ -262,7 +286,8 @@ const edgeTag = e => e>0 ? ['up','▲ 유리'] : e<0 ? ['dn','▼ 불리'] : ['e
 function newGame(ti){
   S.game = {ti, q:1, ot:0, idx:0, side:'off', us:0, them:0, tos:2,
     ourPlays:[], ourDefs:[], theirPlays:[], famFrom:0, seen:{man:0,switch:0,drop:0,blitz:0},
-    oppDef:null, oppPlay:null, reveal:false, sel:null, phase:'choose', last:null, log:[], stats:{}};
+    oppDef:null, oppPlay:null, reveal:false, sel:null, phase:'choose', last:null, log:[], stats:{},
+    cur:null, defW:[], playW:[], loss:0, nDec:0, xUs:0, xThem:0};
   S.screen = 'play';
   startPoss();
 }
@@ -275,46 +300,108 @@ function startPoss(){
   if (g.side==='off'){
     const hist = g.ourPlays.slice(-8);
     const w = DEFS.map((d,j) => { let sc=0; for (const p of hist) sc -= edge(p,d.id); sc /= Math.max(3,hist.length); return t.def[j]*Math.exp(t.adapt*sc*1.6); });
-    g.oppDef = DEFS[pickW(w)].id;
+    g.defW = w; g.oppDef = DEFS[pickW(w)].id;
   } else {
     const hist = g.ourDefs.slice(-8);
     const w = PLAYS.map((p,j) => { let sc=0; for (const d of hist) sc += edge(p.id,d); sc /= Math.max(3,hist.length); return t.off[j]*Math.exp(t.adapt*sc*1.6); });
-    g.oppPlay = PLAYS[pickW(w)].id;
+    g.playW = w; g.oppPlay = PLAYS[pickW(w)].id;
   }
   render(); drawStatic();
 }
 function famCount(g, pid){ return g.ourPlays.slice(Math.max(g.famFrom, g.ourPlays.length-3)).filter(x=>x===pid).length; }
-function resolve(pid, did, att){
-  const g = S.game, t = T(), play = PLAY[pid], e = edge(pid,did);
-  const fam = att==='us' ? famCount(g,pid)*0.05 : 0;
-  const rd = att==='us' ? -t.rating : t.rating;
-  let p = 0.47 + 0.10*e - fam + rd*0.015 + (pid==='iso' ? 0.04 : 0);
-  if (play.pts===3) p *= 0.78;
+// ----- odds & expected points -----
+function odds(row, pts, did, att, fam, pen){
+  const t = T(), e = edge(row,did), rd = att==='us' ? -t.rating : t.rating;
+  let p = 0.47 + 0.10*e - fam - pen + rd*0.015 + (row==='iso' ? 0.04 : 0);
+  if (pts===3) p *= 0.78;
   p = clamp(p, 0.1, 0.85);
-  const to = 0.05 + Math.max(0,-e)*0.04 + (pid==='pnr' && did==='blitz' ? 0.06 : 0);
+  const to = 0.05 + Math.max(0,-e)*0.04 + (row==='pnr' && did==='blitz' ? 0.06 : 0);
+  return {e, p, to};
+}
+const optPen = oi => oi>0 ? 0.03 : 0;
+function optEV(play, oi, did, att, fam){
+  const o = play.opts[oi], {e,p,to} = odds(o.row, o.pts, did, att, fam, optPen(oi));
+  return (1-to) * p * (o.pts + (o.pts===2 && e>=1 ? 0.18 : 0));
+}
+function bestOpt(play, did, att, fam){
+  let bi = 0, bv = -1;
+  play.opts.forEach((o,i) => { const v = optEV(play,i,did,att,fam); if (v > bv + 1e-9){ bv = v; bi = i; } });
+  return [bi, bv];
+}
+const oppEV = (play, did) => { const r = T().read; return r*bestOpt(play,did,'them',0)[1] + (1-r)*optEV(play,0,did,'them',0); };
+function roll(play, oi, did, att, fam){
+  const o = play.opts[oi], {e,p,to} = odds(o.row, o.pts, did, att, fam, optPen(oi));
   if (rnd() < to) return {kind:'to', pts:0, e, fam};
-  const make = rnd() < p;
-  const and1 = make && play.pts===2 && e>=1 && rnd()<0.18;
-  return {kind: make?'make':'miss', pts: make ? play.pts + (and1?1:0) : 0, and1, e, fam};
+  const make = rnd() < p, and1 = make && o.pts===2 && e>=1 && rnd()<0.18;
+  return {kind: make?'make':'miss', pts: make ? o.pts + (and1?1:0) : 0, and1, e, fam};
+}
+const norm = L => { const s = L.reduce((a,b)=>a+b[1],0) || 1; return L.map(([k,w])=>[k,w/s]); };
+// what the coach could know before the call
+function defInfo(g){
+  if (DEF[g.oppDef].zone || g.reveal) return [[g.oppDef,1]];
+  return norm(DEFS.map((d,i)=>[d.id,g.defW[i]]).filter(([id,w]) => !DEF[id].zone && w>0));
+}
+function playInfo(g){
+  const p = PLAY[g.oppPlay];
+  if (g.reveal) return [[p.id,1]];
+  return norm(PLAYS.map((x,i)=>[x.id,g.playW[i]]).filter(([id]) => PLAY[id].g===p.g));
+}
+function setLast(pid, did, oi, r, off, ev){
+  const row = PLAY[pid].opts[oi].row, key = row+'|'+did, isNew = !SAVE.note[key];
+  SAVE.note[key] = 1; persist();
+  S.game.last = {pid, did, oi, row, r, off, isNew, ev};
 }
 function callPlay(){
   const g = S.game; if (!g.sel || g.phase!=='choose') return;
-  const off = g.side==='off';
-  const pid = off ? g.sel : g.oppPlay, did = off ? g.oppDef : g.sel;
-  const r = resolve(pid, did, off?'us':'them');
-  const key = pid+'|'+did, isNew = !SAVE.note[key];
-  SAVE.note[key] = 1; persist();
-  g.last = {pid, did, r, off, isNew, clutch: isClutch(g)};
-  if (off){ g.ourPlays.push(pid); if (!DEF[did].zone) g.seen[did]++; const st = g.stats[pid] ||= {n:0,pts:0}; st.n++; st.pts += r.pts; }
-  else { g.ourDefs.push(did); g.theirPlays.push(pid); }
-  g.phase = 'anim';
-  render();
-  runAnim(PLAY[pid], did, r, off);
+  if (g.side==='off'){
+    const pid = g.sel, did = g.oppDef, play = PLAY[pid], fam = famCount(g,pid)*0.05;
+    const info = defInfo(g);
+    const fv = id => info.reduce((a,[d,w]) => a + w*bestOpt(PLAY[id], d, 'us', famCount(g,id)*0.05)[1], 0);
+    let bestP = pid, best = -1; PLAYS.forEach(p => { const v = fv(p.id); if (v > best + 1e-9){ best = v; bestP = p.id; } });
+    g.cur = {pid, did, fam, first:{v:fv(pid), best, bestP}};
+    g.ourPlays.push(pid); if (!DEF[did].zone) g.seen[did]++;
+    g.phase = 'anim'; render();
+    runAnim(play, play.pre, did, true);
+  } else {
+    const did = g.sel, play = PLAY[g.oppPlay];
+    const oi = rnd() < T().read ? bestOpt(play,did,'them',0)[0] : 0;
+    const info = playInfo(g), dv = d => info.reduce((a,[p,w]) => a + w*oppEV(PLAY[p], d), 0);
+    let bestD = did, best = 1e9; DEFS.forEach(d => { const v = dv(d.id); if (v < best - 1e-9){ best = v; bestD = d.id; } });
+    const v = dv(did), r = roll(play, oi, did, 'them', 0);
+    g.ourDefs.push(did); g.theirPlays.push(play.id);
+    g.loss += v - best; g.nDec++; g.xThem += optEV(play, oi, did, 'them', 0);
+    setLast(play.id, did, oi, r, false, {def:{v, best, bestD}});
+    g.phase = 'anim'; render();
+    runAnim(play, play.pre.concat(play.opts[oi].fin), did, false); A.r = r;
+  }
 }
+function chooseOpt(oi){
+  const g = S.game; if (!g || g.phase!=='read' || !A) return;
+  stopTimer();
+  const c = g.cur, play = PLAY[c.pid];
+  const r = roll(play, oi, c.did, 'us', c.fam);
+  const [bo, bv] = bestOpt(play, c.did, 'us', c.fam), v = optEV(play, oi, c.did, 'us', c.fam);
+  g.loss += (c.first.best - c.first.v) + (bv - v); g.nDec += 2; g.xUs += v;
+  const st = g.stats[c.pid] ||= {n:0,pts:0}; st.n++; st.pts += r.pts;
+  setLast(c.pid, c.did, oi, r, true, {first:c.first, read:{v, best:bv, bestO:bo}});
+  g.phase = 'anim'; render();
+  A.r = r; appendSteps(play.opts[oi].fin); A.pauseAt = null; A.last = performance.now(); kick();
+}
+let TM = 0; const READ_MS = 8000;
+function startTimer(){
+  stopTimer(); const t0 = performance.now();
+  TM = setInterval(() => {
+    const left = 1 - (performance.now()-t0)/READ_MS, b = $('#clockBar');
+    if (b) b.style.width = Math.max(0,left*100) + '%';
+    if (left <= 0){ stopTimer(); chooseOpt(0); }
+  }, 100);
+}
+function stopTimer(){ clearInterval(TM); TM = 0; }
 function finishPoss(){
   const g = S.game, L = g.last, r = L.r;
   if (L.off) g.us += r.pts; else g.them += r.pts;
-  const txt = L.off ? `${PLAY[L.pid].name} vs ${DEF[L.did].name}` : `${DEF[L.did].name} vs ${PLAY[L.pid].name}`;
+  const pn = PLAY[L.pid].name + (L.oi ? '→' + PLAY[L.pid].opts[L.oi].n : '');
+  const txt = L.off ? `${pn} vs ${DEF[L.did].name}` : `${DEF[L.did].name} vs ${pn}`;
   const res = r.kind==='to' ? '턴오버' : r.kind==='miss' ? '실패' : `+${r.pts}`;
   g.log.unshift({per:perLabel(g), off:L.off, txt, res});
   g.phase = 'result';
@@ -361,7 +448,7 @@ function titleHTML(){
   return `<p class="eyebrow">컵 대회 토너먼트 · 3라운드</p>
   <h2>${champ?'우승했습니다':'선수는 그대로, 작전만 바꾼다'}</h2>
   <p>당신은 감독입니다. 공격 때는 상대 수비 대형을 보고 작전을 부르고, 수비 때는 상대 공격 세트를 보고 수비 전술을 고릅니다. 모든 작전에는 상성이 있습니다.</p>
-  <p class="hint">대인 계열 수비(대인·스위치·드롭·블리츠)는 공을 잡기 전엔 똑같아 보입니다. 이번 경기에서 관찰한 대응 횟수와 작전 타임으로 추리하세요. 같은 작전을 연달아 쓰면 상대가 읽고, 상대는 당신이 자주 쓰는 작전에 맞춰 수비를 바꿉니다.</p>
+  <p class="hint">작전이 시작되면 수비 반응이 드러나는 순간 멈춥니다. 8초 안에 A·B·C 중 공을 보낼 곳을 고르세요. 매 포세션의 판단은 기대 득점으로 평가됩니다. 대인 계열 수비(대인·스위치·드롭·블리츠)는 공을 잡기 전엔 똑같아 보입니다. 이번 경기에서 관찰한 대응 횟수와 작전 타임으로 추리하세요. 같은 작전을 연달아 쓰면 상대가 읽고, 상대는 당신이 자주 쓰는 작전에 맞춰 수비를 바꿉니다.</p>
   <ol class="bracket">${rows}</ol>
   <div><b>작전 노트</b> <span class="hint">${noteCount()}/48 상성 발견</span><div class="meter"><i style="width:${noteCount()/48*100}%"></i></div></div>
   <div class="actions">${champ
@@ -386,6 +473,7 @@ function playHTML(){
   const g = S.game, off = g.side==='off';
   let head = '', cards = '', obs = '';
   if (g.phase==='result') return resultHTML();
+  if (g.phase==='read') return readHTML();
   if (off){
     const d = DEF[g.oppDef];
     const known = d.zone || g.reveal;
@@ -420,17 +508,43 @@ function playHTML(){
        <button class="btn sec" data-act="to" ${g.tos>0&&!g.reveal?'':'disabled'}>작전 타임 (${g.tos})</button>`;
   return head + obs + `<div class="cards">${cards}</div><div class="actions">${acts}</div>` + logHTML();
 }
+function readHTML(){
+  const g = S.game, c = g.cur, play = PLAY[c.pid], d = DEF[c.did];
+  const opts = play.opts.map((o,i) => {
+    let bs = `<span class="bd">${o.pts}점 슛</span>${i===0?'<span class="bd">작전대로</span>':''}`;
+    if (SAVE.note[o.row+'|'+d.id]){ const [cl,l] = edgeTag(edge(o.row,d.id)); bs += `<span class="bd ${cl}">노트 ${l}</span>`; }
+    return `<button class="card" data-act="opt" data-i="${i}"><span class="n"><span><span class="let">${LET[i]}</span> ${o.n}</span></span><span class="badges">${bs}</span></button>`;
+  }).join('');
+  return `<div class="ctx"><span class="side off">읽기</span><span class="hint">${play.name} 진행 중 · 8초 안에 결정</span></div>
+    <div class="read">수비 반응: ${d.name}</div>
+    <p class="hint">${d.d} 보드의 A·B·C 화살표 중 어디로 공을 보낼까요? 시간이 지나면 작전대로(A) 진행합니다.</p>
+    <div class="clock"><i id="clockBar"></i></div>
+    <div class="cards opts">${opts}</div>` + logHTML();
+}
+const f2 = x => x.toFixed(2);
+function evHTML(L){
+  const cell = (label, v, best, alt, low) => { const gap = low ? v-best : best-v;
+    return `<div><span>${label}</span><b>${f2(v)}</b><small>${gap < 0.005 ? '최선의 판단' : gap < 0.05 ? `거의 최선 · ${alt} ${f2(best)}` : `최선 ${f2(best)} · ${alt}`}</small></div>`; };
+  if (L.off){
+    const F = L.ev.first, R = L.ev.read, play = PLAY[L.pid];
+    return `<div class="ev">${cell('작전 선택', F.v, F.best, PLAY[F.bestP].name)}${cell('읽기', R.v, R.best, LET[R.bestO]+' '+play.opts[R.bestO].n)}</div>`;
+  }
+  const X = L.ev.def;
+  return `<div class="ev">${cell('상대 기대 득점', X.v, X.best, DEF[X.bestD].name, true)}</div>`;
+}
 function resultHTML(){
   const g = S.game, L = g.last, r = L.r;
   const good = L.off ? r.pts>0 : r.pts===0;
   const big = r.kind==='to' ? (L.off?'턴오버':'스틸!') : r.kind==='miss' ? (L.off?'슛 실패':'막았다!') : (L.off ? `+${r.pts} 득점` : `${r.pts}점 실점`);
   const e = L.off ? r.e : -r.e;
   const [c,l] = edgeTag(e);
-  const p = PLAY[L.pid], d = DEF[L.did];
+  const p = PLAY[L.pid], d = DEF[L.did], pn = `<b>${p.name}</b>${L.oi ? ' → <b>'+p.opts[L.oi].n+'</b>' : ''}`;
   return `<div class="ctx"><span class="side ${L.off?'off':'def'}">${L.off?'공격':'수비'}</span><span class="hint">${perLabel(g)} 결과</span></div>
     <div class="res ${good?'good':'bad'}">${big}${r.and1?' · 앤드원':''}</div>
-    <div class="vs">${L.off?`우리 <b>${p.name}</b> vs 상대 <b>${d.name}</b>`:`상대 <b>${p.name}</b> vs 우리 <b>${d.name}</b>`} <span class="chip ${c}">${l}</span></div>
-    <div class="why">${why(L.pid, L.did)}${L.off && r.fam ? ` 같은 작전 반복으로 상대가 미리 대비했습니다(성공률 −${Math.round(r.fam*100)}%p).` : ''}</div>
+    <div class="vs">${L.off?`우리 ${pn} vs 상대 <b>${d.name}</b>`:`상대 ${pn} vs 우리 <b>${d.name}</b>`} <span class="chip ${c}">${l}</span></div>
+    <div class="why">${!L.off && L.oi ? '상대가 우리 수비를 읽고 전환했습니다. ' : ''}${why(L.row, L.did)}${L.off && r.fam ? ` 같은 작전 반복으로 상대가 미리 대비했습니다(성공률 −${Math.round(r.fam*100)}%p).` : ''}</div>
+    <h3>기대 득점으로 본 판단</h3>${evHTML(L)}
+    <p class="hint">기대 득점은 슛이 들어갔는지와 상관없이, 그 판단을 수없이 반복했을 때의 평균 득점입니다.${L.off?'':' 수비는 낮을수록 좋습니다.'}</p>
     ${L.isNew?'<div class="new">작전 노트에 새 상성을 기록했습니다.</div>':''}
     <div class="actions"><button class="btn grow" data-act="next">다음 포세션</button><button class="btn sec" data-act="note">작전 노트</button></div>` + logHTML();
 }
@@ -442,9 +556,16 @@ function overHTML(){
   const g = S.game, t = T(), win = g.us>g.them;
   const rows = Object.entries(g.stats).sort((a,b)=>b[1].pts-a[1].pts).map(([k,v])=>`<tr><td>${PLAY[k].name}</td><td>${v.n}</td><td>${v.pts}</td><td>${(v.pts/v.n).toFixed(2)}</td></tr>`).join('');
   const champ = SAVE.stage>=TEAMS.length && win;
+  const per = g.loss / Math.max(1,g.nDec);
+  const grade = per < .03 ? 'S' : per < .07 ? 'A' : per < .13 ? 'B' : per < .2 ? 'C' : 'D';
+  const luck = (g.us - g.xUs) - (g.them - g.xThem);
   return `<p class="eyebrow">${t.round} · 경기 종료${g.q>4?' (연장)':''}</p>
     <h2>${champ?'우승! 컵을 들어 올렸습니다':win?'승리':'패배'} ${g.us} : ${g.them}</h2>
     <p>${win ? (champ?'세 팀의 수비를 모두 읽어냈습니다.':'다음 상대는 '+TEAMS[g.ti+1].name+'. 스카우팅 리포트부터 확인하세요.') : '상대가 어떤 수비로 바꿨는지 경기 기록과 작전 노트를 돌아보세요.'}</p>
+    <h3>감독 판단 평가</h3>
+    <div class="ev"><div><span>판단 등급</span><b>${grade}</b><small>판단 ${g.nDec}번 · 평균 손실 ${f2(per)}점</small></div>
+      <div><span>기대 득점</span><b>${g.xUs.toFixed(1)} : ${g.xThem.toFixed(1)}</b><small>실제 ${g.us} : ${g.them}</small></div>
+      <div><span>운</span><b>${luck>=0?'+':''}${luck.toFixed(1)}</b><small>${Math.abs(luck)<2?'실력대로 나온 결과':luck>0?'운이 따랐습니다':'운이 없었습니다'}</small></div></div>
     <h3>작전별 효율</h3>
     <div class="scroll"><table class="tbl"><tr><th>작전</th><th>횟수</th><th>득점</th><th>포세션당</th></tr>${rows}</table></div>
     <div class="actions">${win
@@ -486,6 +607,7 @@ document.addEventListener('click', e => {
   const a = el.dataset.act, g = S.game;
   if (a==='sel'){ g.sel = el.dataset.id; render(); drawStatic(); }
   else if (a==='call') callPlay();
+  else if (a==='opt') chooseOpt(+el.dataset.i);
   else if (a==='to') timeout();
   else if (a==='skip'){ if (A) A.speed = 5; }
   else if (a==='next') nextPoss();
@@ -569,24 +691,29 @@ function path(p,q,type,col,label){
   if (label){ ctx.fillStyle = col; ctx.font='600 13px Oswald, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     const m = lp(a,b,.5), ang = Math.atan2(b[1]-a[1], b[0]-a[0]); ctx.fillText(label, m[0]-Math.sin(ang)*13, m[1]+Math.cos(ang)*13); }
 }
-function diagram(play, col){
-  let P = play.start, h = 0;
+function drawSteps(P, h, steps, col, lab){
   ctx.globalAlpha = .8;
-  play.steps.forEach((st,k) => {
+  steps.forEach((st,k) => {
     const N = P.map(p=>p.slice()); for (const i in st.mv) N[i] = st.mv[i];
-    const nh = st.b!==undefined ? st.b : h;
+    const nh = st.b!==undefined ? st.b : h, L = lab || String(k+1);
     for (let i=0;i<5;i++){
       if (N[i][0]===P[i][0] && N[i][1]===P[i][1]) continue;
       const type = st.scr && st.scr.includes(i) ? 'screen' : (i===h && nh===h ? 'dribble' : 'cut');
-      path(P[i], N[i], type, col, String(k+1));
+      path(P[i], N[i], type, col, L);
     }
-    if (nh!==h) path(N[h], N[nh], 'pass', col, String(k+1));
+    if (nh!==h) path(N[h], N[nh], 'pass', col, L);
     P = N; h = nh;
   });
   const s = P[h], [a,b] = trim(s,[B.x,B.y],16,14);
   ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([2,6]); ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); ctx.setLineDash([]);
+  if (lab){ ctx.fillStyle = col; ctx.font = '600 15px Oswald, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(lab, s[0]+(s[0]<250?-20:20), s[1]+18); }
   ctx.globalAlpha = 1;
   return P;
+}
+function diagram(play, col){ return drawSteps(play.start, 0, play.pre.concat(play.opts[0].fin), col, null); }
+function readDiagram(){
+  const P = A.K[A.K.length-1], h = A.Hs[A.Hs.length-1];
+  A.play.opts.forEach((o,i) => drawSteps(P, h, o.fin, C.us, LET[i]));
 }
 const ZS = {z23:[[190,255],[310,255],[110,130],[390,130],[250,95]], z131:[[250,345],[100,215],[250,205],[400,215],[250,85]]};
 function defPos(off, ball, sf, d, play, holder){
@@ -617,7 +744,7 @@ function drawStatic(){ if (!A) redraw(); }
 function redraw(){
   readColors(); begin(); court();
   const g = S.game;
-  if (A){ frame(); return; }
+  if (A){ frame(); if (g && g.phase==='read') readDiagram(); return; }
   if (!g || S.screen!=='play'){ idleBoard(); return; }
   const off = g.side==='off';
   const oc = off ? C.us : C.them, xc = off ? C.them : C.us;
@@ -646,18 +773,30 @@ function idleBoard(){
 // ---------- animation ----------
 let A = null, raf = 0;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-function runAnim(play, did, r, off){
-  const K = [S0.map(p=>p.slice()), play.start.map(p=>p.slice())], Hs = [0,0];
-  let cur = play.start, h = 0;
-  for (const st of play.steps){ cur = cur.map(p=>p.slice()); for (const i in st.mv) cur[i] = st.mv[i].slice(); if (st.b!==undefined) h = st.b; K.push(cur); Hs.push(h); }
-  const D = [0, 420, ...play.steps.map(()=>640)];
-  A = {play, did, r, off, K, Hs, D, el:0, last:performance.now(), speed: reduce?4:1,
-       total: D.reduce((a,b)=>a+b,0), shot: 900, hold: 900};
-  if (!raf) raf = requestAnimationFrame(loop);
+function runAnim(play, steps, did, off){
+  A = {play, did, r:null, off, K:[S0.map(p=>p.slice()), play.start.map(p=>p.slice())], Hs:[0,0], D:[0,420],
+       el:0, last:performance.now(), speed: reduce?4:1, total:420, shot:900, hold:900, pauseAt:null};
+  appendSteps(steps);
+  if (off) A.pauseAt = A.total;
+  kick();
 }
+function appendSteps(steps){
+  let cur = A.K[A.K.length-1], h = A.Hs[A.Hs.length-1];
+  for (const st of steps){
+    cur = cur.map(p=>p.slice()); for (const i in st.mv) cur[i] = st.mv[i].slice();
+    if (st.b!==undefined) h = st.b;
+    A.K.push(cur); A.Hs.push(h); A.D.push(640); A.total += 640;
+  }
+}
+function kick(){ if (!raf) raf = requestAnimationFrame(loop); }
 function loop(now){
   raf = 0; if (!A) return;
   A.el += Math.min(64, now - A.last) * A.speed; A.last = now;
+  if (A.pauseAt!==null && A.el >= A.pauseAt){
+    A.el = A.pauseAt; A.speed = reduce?4:1;
+    if (S.game.phase!=='read'){ S.game.phase = 'read'; render(); startTimer(); }
+    redraw(); return;
+  }
   redraw();
   if (A.el >= A.total + A.shot + A.hold){
     S.game.last.final = A.final; A = null; finishPoss(); redraw(); return;
@@ -714,7 +853,8 @@ function frame(){
 
 // ---------- boot ----------
 function start(data){
-  if (data && data.S){ S = data.S; if (S.game && S.game.phase==='anim'){ S.game.phase='choose'; } }
+  if (data && data.S){ S = data.S; const g = S.game;
+    if (g && (g.phase==='anim' || g.phase==='read')){ if (g.side==='off' && g.phase==='read') g.ourPlays.pop(); g.phase='choose'; } }
   render(); fit();
 }
 window.claude?.hot?.snapshot?.(() => ({S: JSON.parse(JSON.stringify(S))}));
