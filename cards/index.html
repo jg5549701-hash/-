@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>코치의 작전 카드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="농구 작전을 카드로 쥐고 싸우는 덱빌딩 전략 카드 게임">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;700&family=Oswald:wght@500;600&display=swap">
+<style>
+/* Layout: the card table sits on the coach's clipboard — duel slots on a whiteboard, hand fanned below, opponent's deck tracker at the side */
+:root{
+  --bg:#e6e9e3; --surface:#fbfcf9; --board:#fefefc; --frame:#86683f; --frame-text:#fffaf0;
+  --ink:#1c2230; --dim:#5d6674; --line:#d6dad2; --court:#a4acb6;
+  --us:#1d5bd0; --them:#cf3027; --ball:#d9640c; --good:#1b8a4c; --bad:#cf3027; --hl:rgba(29,91,208,.09);
+  --f-marker:'Gaegu','Nanum Pen Script',cursive;
+  --f-ui:'IBM Plex Sans KR',system-ui,-apple-system,sans-serif;
+  --f-score:'Oswald','IBM Plex Sans KR',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151a; --surface:#192027; --board:#1c242b; --frame:#4a3d2a; --frame-text:#f1e6d2;
+  --ink:#e6eaee; --dim:#97a1ab; --line:#2b343d; --court:#5a6773;
+  --us:#6ea8ff; --them:#ff6e60; --ball:#ff9a3c; --good:#45c483; --bad:#ff6e60; --hl:rgba(110,168,255,.13); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151a; --surface:#192027; --board:#1c242b; --frame:#4a3d2a; --frame-text:#f1e6d2;
+  --ink:#e6eaee; --dim:#97a1ab; --line:#2b343d; --court:#5a6773;
+  --us:#6ea8ff; --them:#ff6e60; --ball:#ff9a3c; --good:#45c483; --bad:#ff6e60; --hl:rgba(110,168,255,.13); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--us);outline-offset:2px}
+.top{max-width:1180px;margin:0 auto 12px;display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--f-marker);font-weight:700;font-size:30px;line-height:1}
+.brand span{color:var(--ball)}
+.top nav{display:flex;gap:8px;flex-wrap:wrap}
+.ghostbtn{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--dim)}
+.ghostbtn:hover{color:var(--ink);border-color:var(--dim)}
+#app{max-width:1180px;margin:0 auto}
+
+/* game grid */
+.game{display:grid;grid-template-columns:minmax(0,1fr) 290px;grid-template-areas:"table side" "hand side";gap:16px;align-items:start}
+.game>.clip{grid-area:table} .game>.handwrap{grid-area:hand} .game>.side{grid-area:side}
+@media (max-width:900px){.game{grid-template-columns:minmax(0,1fr);grid-template-areas:"table" "hand" "side"}}
+
+.clip{background:var(--frame);border-radius:18px;padding:30px 12px 12px;position:relative}
+.clip::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:120px;height:26px;border-radius:7px 7px 12px 12px;background:linear-gradient(180deg,#d7dbe0,#9aa1aa);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.scorebar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:0 6px 10px}
+.tm{display:flex;align-items:center;gap:10px;min-width:0}
+.tm.them{justify-content:flex-end}
+.nm2{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--frame-text)}
+.pts{font-family:var(--f-score);font-weight:600;font-size:32px;line-height:1;font-variant-numeric:tabular-nums;background:var(--surface);border-radius:8px;padding:4px 10px;min-width:58px;text-align:center}
+.us .pts{color:var(--us)} .them .pts{color:var(--them)}
+.mid{display:flex;flex-direction:column;align-items:center;font-family:var(--f-score);color:var(--frame-text);line-height:1.15;text-align:center}
+.mid b{font-size:20px;font-weight:600}
+.mid small{font-size:12px;letter-spacing:.04em;opacity:.85;font-variant-numeric:tabular-nums}
+.table{background:var(--board);border-radius:8px;padding:12px 14px 16px;display:flex;flex-direction:column;gap:12px}
+.opp{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+.backs{display:flex}
+.backs i{width:14px;height:20px;border-radius:3px;background:var(--frame);border:1.5px solid var(--board);margin-left:-4px}
+.backs i:first-child{margin-left:0}
+.peekhand{display:flex;gap:6px;flex-wrap:wrap}
+.chipc{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;border:1.5px solid var(--k);color:var(--k)}
+.slots{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:10px;justify-items:center}
+.slot{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.sl{font-size:12px;font-weight:700;color:var(--dim);text-align:center}
+.vs{font-family:var(--f-marker);font-weight:700;font-size:30px;color:var(--dim);align-self:center}
+.rcs{display:flex;flex-direction:column;gap:4px;align-items:center}
+.rchip{font-size:12px;font-weight:700;color:var(--ball)}
+.odds{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:center;font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim)}
+.odds b{font-family:var(--f-score);font-size:22px;font-weight:600;color:var(--ink)}
+.odds .ar{color:var(--ball);font-weight:700}
+.prompt{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.prompt p{margin:0;max-width:64ch}
+.res{font-family:var(--f-marker);font-weight:700;font-size:38px;line-height:1}
+.res.good{color:var(--good)} .res.bad{color:var(--bad)}
+.why{border-left:3px solid var(--line);padding:2px 0 2px 12px;font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-weight:700;font-size:14.5px;background:var(--ink);color:var(--surface)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.hint{color:var(--dim);font-size:13px}
+.new{font-size:12px;color:var(--us);font-weight:700}
+.chip{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid currentColor}
+.chip.up{color:var(--good)} .chip.eq{color:var(--dim)} .chip.dn{color:var(--bad)}
+
+/* cards */
+.k-play{--k:var(--us)} .k-def{--k:var(--them)} .k-tac{--k:var(--ball)}
+.card{--cw:132px;width:var(--cw);flex:0 0 var(--cw);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:8px 8px 9px;
+  display:flex;flex-direction:column;gap:5px;text-align:left;position:relative;box-shadow:inset 0 4px 0 var(--k);transition:transform .15s ease,border-color .15s}
+button.card:hover{border-color:var(--k)}
+.card .tp{display:flex;justify-content:space-between;gap:4px;font-size:10.5px;font-weight:700;color:var(--k);letter-spacing:.02em;margin-top:2px}
+.card .tp span:last-child{color:var(--dim)}
+.card .art{width:100%;aspect-ratio:22/15;border-radius:6px;display:block;border:1px solid var(--line)}
+.card .nm{font-weight:700;font-size:14px;line-height:1.2}
+.card .tx{font-size:11px;color:var(--dim);line-height:1.35}
+.card .bdg{display:flex;gap:4px;flex-wrap:wrap}
+.bd{font-size:10.5px;padding:0 5px;border-radius:4px;background:var(--bg);color:var(--dim);font-weight:500}
+.bd.up{color:var(--good);font-weight:700} .bd.dn{color:var(--bad);font-weight:700} .bd.warn{color:var(--bad)}
+.card.sel{border-color:var(--k);transform:translateY(-8px);background:var(--hl)}
+.card.dim{opacity:.5}
+.card.ghost{border-style:dashed;box-shadow:none}
+.card.big,.back.big,.ph.big{--cw:150px;min-height:236px}
+.back{--cw:132px;width:var(--cw);border-radius:12px;background:var(--frame);border:1.5px solid var(--frame);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;text-align:center;
+  background-image:repeating-linear-gradient(45deg,transparent 0 10px,rgba(255,255,255,.06) 10px 20px)}
+.back .logo{font-family:var(--f-marker);font-weight:700;font-size:40px;color:var(--frame-text);line-height:1}
+.back .hint2{font-weight:700;font-size:14px;color:var(--frame-text);background:rgba(0,0,0,.18);padding:3px 10px;border-radius:999px}
+.back .sub{font-size:11px;color:var(--frame-text);opacity:.85;line-height:1.35}
+.ph{--cw:132px;width:var(--cw);border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:13px;padding:10px}
+.flipin{animation:flip .5s ease both}
+@keyframes flip{from{transform:perspective(700px) rotateY(90deg)}to{transform:none}}
+@media (max-width:560px){.card.big,.back.big,.ph.big{--cw:118px;min-height:208px}.card.big .tx{font-size:10px}.vs{font-size:22px}}
+@media (prefers-reduced-motion: reduce){.flipin{animation:none}.card{transition:none}}
+
+.handwrap{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 12px 4px;min-width:0}
+.hh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.hh b{font-size:14px}
+.hand{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 10px;scroll-snap-type:x proximity}
+.hand .card{scroll-snap-align:start}
+
+.side{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+h3{font-size:13px;font-weight:700;margin:14px 0 6px;color:var(--dim);letter-spacing:.04em}
+.side h3:first-child{margin-top:0}
+.trk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;font-size:12.5px}
+.trk li{display:grid;grid-template-columns:8px 1fr auto;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+.trk li::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--k)}
+.trk li.gone{color:var(--dim);text-decoration:line-through}
+.log{list-style:none;margin:0;padding:0;font-size:12px;display:flex;flex-direction:column;gap:3px;max-height:220px;overflow:auto}
+.log li{display:grid;grid-template-columns:30px 1fr auto;gap:6px;color:var(--dim);font-variant-numeric:tabular-nums}
+.log b{color:var(--ink);font-weight:500}
+.log .p{font-weight:700} .log .p.u{color:var(--us)} .log .p.t{color:var(--them)}
+
+/* solo screens */
+.solo{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:860px;margin:0 auto}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--dim);margin:0 0 4px;font-weight:500}
+h2{font-family:var(--f-marker);font-weight:700;font-size:32px;line-height:1.1;margin:0 0 10px;text-wrap:balance}
+p{margin:0 0 10px;max-width:66ch}
+.rules{margin:0 0 12px;padding-left:18px;display:flex;flex-direction:column;gap:4px;max-width:66ch}
+.bracket{list-style:none;padding:0;margin:12px 0 14px;display:flex;flex-direction:column;gap:6px}
+.bracket li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;border:1px solid var(--line)}
+.bracket li.cur{border-color:var(--ink);font-weight:700}
+.bracket li.done{color:var(--dim)}
+.bracket small{color:var(--dim);font-weight:400}
+.stars{color:var(--ball);letter-spacing:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.row.center{justify-content:center}
+.deckgrid{display:flex;gap:8px;flex-wrap:wrap}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+.stat>div{background:var(--bg);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column}
+.stat span{font-size:12px;color:var(--dim)} .stat b{font-family:var(--f-score);font-weight:600;font-size:24px;font-variant-numeric:tabular-nums}
+
+.sheet-wrap{position:fixed;inset:0;background:rgba(10,14,20,.45);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--surface);border-radius:14px;max-width:820px;width:100%;max-height:100%;overflow:auto;padding:18px}
+.scroll{overflow-x:auto}
+.mx{border-collapse:collapse;font-size:13px;min-width:560px;width:100%}
+.mx th{font-weight:700;font-size:12px;padding:6px;color:var(--dim);text-align:center;white-space:nowrap}
+.mx th.r{text-align:left;color:var(--ink)}
+.mx td{text-align:center;padding:5px;border:1px solid var(--line);font-family:var(--f-marker);font-size:19px;font-weight:700;line-height:1}
+.mx td.u{color:var(--good)} .mx td.d{color:var(--bad)} .mx td.e{color:var(--dim)} .mx td.q{color:var(--line)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">코치의 작전 카드 <span>X·O</span></div>
+  <nav><button class="ghostbtn" type="button" data-act="deck">내 덱</button><button class="ghostbtn" type="button" data-act="note">작전 노트</button><button class="ghostbtn" type="button" data-act="home">대진표</button></nav>
+</header>
+<main id="app" aria-live="polite"></main>
+<div class="sheet-wrap" id="modal" hidden><div class="sheet" id="modalBody" role="dialog"></div></div>
+
+<script>
+(() => {
+const B = {x:250, y:52};
+const DEFS = [
+  {id:'man',   name:'대인 방어', d:'각자 한 명씩 맡고 스크린은 뚫고 따라간다.'},
+  {id:'switch',name:'스위치',   d:'스크린이 걸리면 마크맨을 맞바꾼다.'},
+  {id:'drop',  name:'드롭',     d:'빅맨이 림 앞까지 내려가 페인트를 지킨다.'},
+  {id:'blitz', name:'블리츠',   d:'볼 핸들러에게 두 명이 덮치는 더블팀.'},
+  {id:'z23',   name:'2-3 존',   d:'앞 2명, 뒤 3명. 페인트를 잠근다.', zone:true},
+  {id:'z131',  name:'1-3-1 존', d:'가운데 일자 라인에서 트랩을 건다.', zone:true},
+];
+const DEF = Object.fromEntries(DEFS.map(d=>[d.id,d]));
+const GROUPS = {
+  hs:{name:'하이 스크린 셋', opts:'픽앤롤, 픽앤팝, 스페인 픽앤롤 중 하나'},
+  po:{name:'포스트 셋', opts:'포스트업, 하이-로우, UCLA 컷 중 하나'},
+  wg:{name:'윙 셋', opts:'스태거 스크린, 백도어 컷, 엘리베이터 스크린 중 하나'},
+  sp:{name:'스페이싱 셋', opts:'아이솔레이션, 드라이브 앤 킥, 해머 스크린 중 하나'},
+};
+const S0 = [[250,330],[420,230],[80,230],[455,70],[175,100]];
+const PLAYS = [
+  {id:'pnr', name:'픽앤롤', g:'hs', pts:2, d:'센터가 스크린 후 림으로 롤.',
+   start:[[250,330],[455,70],[45,70],[80,240],[250,200]],
+   steps:[{mv:{4:[282,322]},scr:[4]},{mv:{0:[345,235],4:[262,140]}},{mv:{4:[250,80]},b:4}], screen:{h:0,s:4,k:1}},
+  {id:'pop', name:'픽앤팝', g:'hs', pts:3, d:'파워포워드가 스크린 후 3점 라인으로 빠진다.',
+   start:[[250,330],[455,70],[45,70],[250,200],[170,95]],
+   steps:[{mv:{3:[218,322]},scr:[3]},{mv:{0:[150,240],3:[345,318]}},{b:3}], screen:{h:0,s:3,k:1}},
+  {id:'post', name:'포스트업', g:'po', pts:2, d:'로우포스트 센터에게 볼 투입, 1대1.',
+   start:[[250,330],[420,230],[80,230],[455,70],[250,190]],
+   steps:[{mv:{4:[150,95]},b:2},{mv:{2:[70,160]},b:4},{mv:{4:[212,68]}}]},
+  {id:'hilo', name:'하이-로우', g:'po', pts:2, d:'자유투 라인에서 골밑으로 내려주는 패스.',
+   start:[[250,330],[420,230],[80,230],[455,70],[330,100]],
+   steps:[{mv:{3:[250,205]}},{mv:{4:[272,95]},b:3},{mv:{4:[250,72]},b:4}]},
+  {id:'stg', name:'스태거 스크린', g:'wg', pts:3, d:'연속 스크린으로 슈터를 3점 라인에 띄운다.',
+   start:[[250,330],[300,75],[420,230],[215,160],[160,230]],
+   steps:[{mv:{1:[215,118],3:[205,150],4:[150,225]},scr:[3,4]},{mv:{1:[130,295]}},{b:1}], screen:{h:1,s:3,k:1}},
+  {id:'bd', name:'백도어 컷', g:'wg', pts:2, d:'바짝 붙은 수비의 등 뒤로 림 컷.',
+   start:[[250,330],[420,230],[80,230],[455,70],[250,205]],
+   steps:[{mv:{1:[402,268]},b:4},{mv:{1:[300,105]}},{mv:{1:[262,66]},b:1}]},
+  {id:'iso', name:'아이솔레이션', g:'sp', pts:2, d:'에이스에게 한쪽을 비워주고 1대1.',
+   start:[[250,330],[455,70],[415,240],[45,70],[80,240]],
+   steps:[{mv:{0:[130,330]},b:2},{mv:{2:[395,212]}},{mv:{2:[310,140]}}]},
+  {id:'dk', name:'드라이브 앤 킥', g:'sp', pts:3, d:'돌파로 수비를 모은 뒤 코너로 킥아웃.',
+   start:[[250,330],[420,230],[45,70],[80,240],[175,100]],
+   steps:[{b:1},{mv:{1:[300,135],3:[120,310]}},{b:2}]},
+  {id:'spain', name:'스페인 픽앤롤', g:'hs', pts:2, d:'픽앤롤에 백스크린을 더해 롤맨의 수비를 떼어낸다.',
+   start:[[250,330],[455,70],[45,70],[300,190],[215,230]],
+   steps:[{mv:{4:[282,322]},scr:[4]},{mv:{0:[345,240],4:[255,205],3:[275,275]},scr:[3]},{mv:{4:[250,82]},b:4}], screen:{h:0,s:4,k:1}},
+  {id:'ucla', name:'UCLA 컷', g:'po', pts:2, d:'윙에 패스한 가드가 하이포스트 스크린을 받고 림으로 컷.',
+   start:[[250,330],[420,230],[80,230],[455,70],[250,200]],
+   steps:[{b:1},{mv:{4:[285,245]},scr:[4]},{mv:{0:[268,85]}},{mv:{0:[255,70]},b:0}], screen:{h:0,s:4,k:2}},
+  {id:'elev', name:'엘리베이터 스크린', g:'wg', pts:3, d:'두 빅맨 사이로 슈터가 빠져나가면 문을 닫듯 막아선다.',
+   start:[[390,300],[250,95],[45,70],[205,250],[295,250]],
+   steps:[{mv:{1:[250,215]}},{mv:{1:[250,320],3:[235,262],4:[265,262]},scr:[3,4]},{b:1}], screen:{h:1,s:3,k:1}},
+  {id:'ham', name:'해머 스크린', g:'sp', pts:3, d:'베이스라인 돌파 순간 반대편 코너 수비에 백스크린.',
+   start:[[250,330],[420,230],[70,210],[120,170],[330,95]],
+   steps:[{b:1},{mv:{1:[400,95],0:[300,330]}},{mv:{3:[95,110],2:[45,70]},scr:[3]},{b:2}]},
+];
+// read options: at = steps before the read; option 0 finishes the play as drawn.
+// [name, edge row it uses, shot value, finishing steps]
+const OPTS = {
+  pnr:{at:2, o:[['롤맨에게 패스','pnr',2],['미스매치 돌파','iso',2,[{mv:{0:[298,118]}}]],['코너 킥아웃','dk',3,[{b:1}]]]},
+  pop:{at:2, o:[['팝 3점','pop',3],['핸들러 돌파 후 코너','dk',3,[{mv:{0:[205,140]}},{b:2}]],['숏롤 하이-로우','hilo',2,[{mv:{3:[250,200]},b:3},{mv:{4:[232,70]},b:4}]]]},
+  post:{at:2, o:[['포스트 마무리','post',2],['반대편 코너 킥아웃','dk',3,[{b:3}]],['베이스라인 컷터','bd',2,[{mv:{1:[272,72]},b:1}]]]},
+  hilo:{at:2, o:[['로우포스트 투입','hilo',2],['윙 슈터에게 스킵','stg',3,[{b:2}]],['백도어 컷','bd',2,[{mv:{1:[265,70]},b:1}]]]},
+  stg:{at:2, o:[['슈터 3점','stg',3],['스크리너 슬립','pnr',2,[{mv:{3:[245,78]},b:3}]],['슈터 돌파','iso',2,[{b:1},{mv:{1:[205,128]}}]]]},
+  bd:{at:1, o:[['백도어 컷','bd',2],['핸드오프 3점','stg',3,[{mv:{4:[320,242],1:[365,300]}},{b:1}]],['코너 빅맨 다이브','hilo',2,[{mv:{3:[278,80]},b:3}]]]},
+  iso:{at:2, o:[['1대1 마무리','iso',2],['도움 오면 킥아웃','dk',3,[{mv:{2:[332,152]}},{b:1}]],['포스트업 전환','post',2,[{mv:{2:[350,110]}},{mv:{2:[300,72]}}]]]},
+  dk:{at:2, o:[['코너 킥아웃','dk',3],['직접 마무리','iso',2,[{mv:{1:[262,74]}}]],['빅맨 덤프오프','post',2,[{mv:{4:[215,68]},b:4}]]]},
+  spain:{at:2, o:[['롤맨에게 패스','spain',2],['백스크리너 팝 3점','pop',3,[{mv:{3:[170,315]}},{b:3}]],['코너 킥아웃','dk',3,[{b:1}]]]},
+  ucla:{at:3, o:[['컷터에게 패스','ucla',2],['스크리너 팝 3점','pop',3,[{mv:{4:[250,320]},b:4}]],['빅맨 포스트 투입','post',2,[{mv:{4:[340,95]},b:4},{mv:{4:[290,70]}}]]]},
+  elev:{at:2, o:[['슈터 3점','elev',3],['문 닫은 빅맨 다이브','pnr',2,[{mv:{4:[260,80]},b:4}]],['슈터 돌파','iso',2,[{b:1},{mv:{1:[230,140]}}]]]},
+  ham:{at:3, o:[['코너로 스킵 패스','ham',3],['베이스라인 마무리','iso',2,[{mv:{1:[300,62]}}]],['빅맨 덤프오프','post',2,[{mv:{4:[265,70]},b:4}]]]},
+};
+PLAYS.forEach(p => { const o = OPTS[p.id]; p.pre = p.steps.slice(0,o.at);
+  p.opts = o.o.map((x,i) => ({n:x[0], row:x[1], pts:x[2], fin: i===0 ? p.steps.slice(o.at) : x[3]})); });
+const PLAY = Object.fromEntries(PLAYS.map(p=>[p.id,p]));
+const LET = ['A','B','C'];
+const NOTE_N = PLAYS.length * DEFS.length;
+// matchup: play|defense → [edge for the offense, why]
+const RAW = {
+ 'pnr|man':[2,'스크린 대응 규칙이 없는 대인 수비는 볼 핸들러와 롤맨을 동시에 막지 못합니다.'],
+ 'pnr|switch':[-1,'스위치로 마크맨을 바꿔 붙어 롤맨에게 가는 패스 길이 닫혔습니다.'],
+ 'pnr|blitz':[-1,'더블팀이 볼 핸들러를 덮쳐 패스가 쫓기듯 나갑니다. 턴오버 위험이 큽니다.'],
+ 'pnr|z23':[-1,'존 뒷선 세 명이 롤맨이 들어갈 페인트를 이미 채우고 있습니다.'],
+ 'pop|man':[-1,'대인 수비의 빅맨이 그대로 따라 나와 슛을 견제합니다.'],
+ 'pop|switch':[-1,'스위치로 가드가 곧바로 슈터에게 붙었습니다.'],
+ 'pop|drop':[2,'드롭 빅맨은 림 근처에 머물러 3점 라인으로 빠진 스크리너가 완전히 비었습니다.'],
+ 'pop|blitz':[1,'두 명이 볼 핸들러에게 몰린 사이 스크리너가 노마크가 됩니다.'],
+ 'pop|z131':[-1,'1-3-1의 탑과 윙이 3점 라인 위쪽을 촘촘히 덮고 있습니다.'],
+ 'post|switch':[2,'스위치로 작은 가드가 센터를 막게 됐습니다. 포스트 미스매치입니다.'],
+ 'post|drop':[-1,'드롭 빅맨이 이미 림 앞을 지키고 있어 포스트 공간이 좁습니다.'],
+ 'post|z23':[-2,'2-3 존 뒷선이 로우포스트를 두 겹으로 감쌉니다.'],
+ 'post|z131':[1,'1-3-1은 베이스라인을 한 명이 혼자 지켜 로우포스트가 약합니다.'],
+ 'hilo|drop':[-1,'드롭 빅맨이 로우포스트 앞을 막고 있어 내려줄 패스 각이 없습니다.'],
+ 'hilo|blitz':[1,'트랩을 피해 하이포스트로 빼내자 4대3 상황이 됐습니다.'],
+ 'hilo|z23':[2,'2-3 존의 구멍인 자유투 라인, 하이포스트를 정확히 찔렀습니다.'],
+ 'hilo|z131':[-1,'1-3-1 가운데 수비가 하이포스트에 서 있어 공을 받기 어렵습니다.'],
+ 'stg|switch':[-1,'스크린마다 바꿔 막아 슈터가 한 번도 비지 않았습니다.'],
+ 'stg|drop':[1,'빅맨이 페인트로 내려가 있어 스크린을 받고 나온 슈터를 늦게 견제합니다.'],
+ 'stg|z23':[1,'존은 오프볼 스크린을 받고 움직이는 슈터를 놓치기 쉽습니다.'],
+ 'bd|man':[1,'패스 길을 막으려 바짝 붙은 수비의 등 뒤로 컷했습니다.'],
+ 'bd|switch':[1,'스위치 소통이 엇갈린 순간 컷터가 림까지 비었습니다.'],
+ 'bd|z23':[-2,'존은 사람이 아닌 공간을 지킵니다. 등 뒤가 없으니 백도어가 통하지 않습니다.'],
+ 'iso|man':[-1,'헬프 수비가 대기하는 대인 수비는 1대1에 강합니다.'],
+ 'iso|switch':[2,'스위치로 생긴 느린 빅맨과의 미스매치를 에이스가 공략했습니다.'],
+ 'iso|blitz':[-1,'공격적인 더블팀이 에이스를 덮쳤습니다.'],
+ 'iso|z23':[-1,'존은 처음부터 돌파 길목에 두 명이 서 있습니다.'],
+ 'iso|z131':[-1,'1-3-1 윙과 가운데가 동시에 트랩을 겁니다.'],
+ 'dk|man':[1,'1대1 돌파에 헬프가 붙으면서 반대편 코너가 비었습니다.'],
+ 'dk|z23':[1,'존의 두 수비 사이 틈(갭)을 파고들어 수비를 모았습니다.'],
+ 'dk|z131':[-1,'돌파하는 순간 1-3-1의 트랩에 걸렸습니다.'],
+ 'spain|switch':[1,'백스크린이 스위치 수비의 소통을 끊어 롤맨이 림까지 비었습니다.'],
+ 'spain|drop':[1,'림 앞에서 기다리던 드롭 빅맨이 백스크린에 걸려 롤맨을 놓쳤습니다.'],
+ 'spain|blitz':[-1,'더블팀이 볼 핸들러를 먼저 덮쳐 백스크린 타이밍이 무너졌습니다.'],
+ 'spain|z23':[-1,'존은 사람이 아닌 공간을 지켜 백스크린을 걸 대상이 없습니다.'],
+ 'spain|z131':[-1,'1-3-1 가운데 수비가 롤맨이 들어갈 길에 서 있습니다.'],
+ 'ucla|man':[1,'하이포스트 백스크린에 가드 수비가 걸려 컷터가 림까지 비었습니다.'],
+ 'ucla|switch':[-1,'백스크린을 스위치로 바꿔 막아 컷이 끊겼습니다.'],
+ 'ucla|blitz':[1,'공을 압박하느라 앞으로 나온 수비의 등 뒤가 비었습니다.'],
+ 'ucla|z23':[-1,'존 뒷선이 림 앞에서 컷터를 기다리고 있습니다.'],
+ 'elev|switch':[1,'두 스크리너가 문을 닫듯 붙어 스위치할 틈이 없었습니다.'],
+ 'elev|drop':[1,'빅맨이 페인트로 내려가 있어 엘리베이터를 통과한 슈터를 늦게 견제합니다.'],
+ 'elev|z23':[-1,'존 앞선 두 명이 3점 라인 위쪽을 이미 지키고 있습니다.'],
+ 'elev|z131':[-1,'1-3-1 탑과 윙이 슈터가 나오는 길목을 막고 있습니다.'],
+ 'ham|switch':[-1,'스위치로 바꿔 막아 코너 슈터를 놓치지 않았습니다.'],
+ 'ham|blitz':[-1,'베이스라인 돌파에 더블팀이 붙어 패스 각이 사라졌습니다.'],
+ 'ham|z23':[1,'베이스라인 돌파에 존 뒷선이 끌려가자 반대편 코너가 비었습니다.'],
+ 'ham|z131':[1,'1-3-1의 약점인 베이스라인을 뚫고 코너로 빼냈습니다.'],
+};
+const edge = (p,d) => (RAW[p+'|'+d]||[0])[0];
+const why = (p,d) => (RAW[p+'|'+d]||[0,'뚜렷한 상성 없이 선수들의 실력 싸움이었습니다.'])[1];
+
+const ZS = {z23:[[190,255],[310,255],[110,130],[390,130],[250,95]], z131:[[250,345],[100,215],[250,205],[400,215],[250,85]]};
+function defPos(off, ball, sf, d, play, holder){
+  if (ZS[d]){
+    const res = ZS[d].map(s => [s[0]+(ball[0]-250)*.3, s[1]+(ball[1]-220)*.12]);
+    const order = res.map((p,i)=>[dist(p,ball),i]).sort((a,b)=>a[0]-b[0]);
+    const hp = off[holder] || ball, tgt = toward(hp,[B.x,B.y],20);
+    res[order[0][1]] = lp(res[order[0][1]], tgt, .7);
+    if (d==='z131') res[order[1][1]] = lp(res[order[1][1]], [hp[0]+(hp[0]<250?16:-16), hp[1]+8], .4);
+    return res;
+  }
+  const asg = [0,1,2,3,4], sc = play && play.screen;
+  if (d==='switch' && sc && sf >= sc.k-.25){ asg[sc.h]=sc.s; asg[sc.s]=sc.h; }
+  const res = asg.map(a => toward(off[a],[B.x,B.y],22));
+  if (sc && sf >= sc.k-.5 && sf < sc.k+1.3){
+    if (d==='drop') res[sc.s] = lp(res[sc.s],[250,165],.75);
+    if (d==='blitz'){ const h = off[sc.h]; res[sc.s] = [h[0]+(h[0]<250?20:-20), h[1]-8]; }
+  }
+  if (d==='drop' && !sc) res[4] = lp(res[4],[250,115],.45);
+  if (d==='blitz' && !sc && sf>=.3){
+    const hp = off[holder]; let best=-1, bd=1e9;
+    for (let i=0;i<5;i++){ if (i===holder) continue; const dd = dist(off[i],hp); if (dd<bd){bd=dd;best=i;} }
+    if (best>=0) res[best] = lp(res[best],[hp[0]+(hp[0]<250?18:-18), hp[1]+10],.65);
+  }
+  return res;
+}
+
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const rnd = Math.random;
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp = (a,b,t) => a+(b-a)*t;
+const lp = (p,q,t) => [lerp(p[0],q[0],t), lerp(p[1],q[1],t)];
+const dist = (p,q) => Math.hypot(p[0]-q[0], p[1]-q[1]);
+const toward = (p,q,r) => { const d = dist(p,q)||1; return [p[0]+(q[0]-p[0])/d*r, p[1]+(q[1]-p[1])/d*r]; };
+const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct = x => Math.round(x*100) + '%';
+const f2 = x => x.toFixed(2);
+const edgeTag = e => e>0 ? ['up','▲ 유리'] : e<0 ? ['dn','▼ 불리'] : ['eq','● 보통'];
+const uniq = a => [...new Set(a)];
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const norm = L => { const s = L.reduce((a,b)=>a+b[1],0) || 1; return L.map(([k,w])=>[k,w/s]); };
+
+// ---------- cards ----------
+const C = {};
+PLAYS.forEach(p => C[p.id] = {id:p.id, kind:'play', name:p.name, pts:p.pts, g:p.g, text:p.d});
+C.free = {id:'free', kind:'play', name:'자유 공격', pts:2, g:'sp', text:'맞는 카드가 없을 때. 상성 없음, 성공률 −5%p.', base:true};
+DEFS.forEach(d => C['d_'+d.id] = {id:'d_'+d.id, kind:'def', def:d.id, name:d.name, text:d.d});
+C.d_base = {id:'d_base', kind:'def', def:'man', name:'기본 대인', text:'맞는 카드가 없을 때. 대인 방어와 같지만 상대 성공률 +3%p.', base:true};
+[
+ ['timeout','pre','any','작전 타임','상대가 엎어 둔 카드를 미리 뒤집어 본다.','TIME'],
+ ['scout','pre','any','스카우팅 리포트','이번 포세션 동안 상대 손패를 모두 본다.','SCOUT'],
+ ['memo','pre','any','작전 메모','카드 2장을 뽑는다.','+2'],
+ ['kick','react','off','코너 킥아웃','코너 3점으로 마무리. 드라이브 앤 킥의 상성이 적용된다.','KICK'],
+ ['mismatch','react','off','미스매치 공략','상대가 스위치면 상성 +2, 다른 대인 계열이면 +1.','1v1'],
+ ['ace','react','off','에이스 투입','이번 슛 성공률 +12%p.','ACE'],
+ ['help','react','def','헬프 로테이션','상대 작전의 상성 −1.','HELP'],
+ ['trap','react','def','트랩','상대 턴오버 확률 +15%p.','TRAP'],
+ ['foul','react','def','파울 작전','슛 대신 자유투 2개(각 75%)를 준다.','FOUL'],
+].forEach(([id,when,side,name,text,icon]) => C[id] = {id, kind:'tac', when, side, name, text, icon});
+const KIND_ORDER = {play:0, def:1, tac:2};
+
+const START = ['pnr','pop','post','dk','bd','iso','d_man','d_man','d_switch','d_drop','d_z23','timeout'];
+const POOL = {
+  play:['hilo','stg','spain','ucla','elev','ham','pnr','pop','dk','post'],
+  def:['d_blitz','d_z131','d_switch','d_drop','d_z23','d_man'],
+  tac:['timeout','scout','memo','kick','mismatch','ace','help','trap','foul'],
+};
+const TEAMS = [
+  {name:'항구 갈매기', round:'8강', rating:0, temp:.35, adapt:.3,
+   deck:['pnr','pnr','post','post','dk','hilo','d_man','d_man','d_drop','d_drop','d_z23','help','ace'],
+   scout:'정석 팀. 픽앤롤과 포스트업, 대인과 드롭 수비가 중심이고 반응 카드는 두 장뿐이다.'},
+  {name:'북부 빙벽', round:'4강', rating:1, temp:.2, adapt:.6,
+   deck:['post','post','hilo','hilo','ucla','pnr','d_z23','d_z23','d_z131','d_z131','d_drop','help','trap','ace'],
+   scout:'수비 카드 다섯 장 중 네 장이 존. 골밑 작전 위주이고 트랩을 숨겨 둔다.'},
+  {name:'수도 번개', round:'결승', rating:2, temp:.1, adapt:1,
+   deck:['iso','iso','stg','spain','ham','elev','pop','d_switch','d_switch','d_switch','d_blitz','d_man','help','trap','foul','kick','ace'],
+   scout:'스위치 카드 세 장과 슈터 작전. 파울 작전, 킥아웃까지 반응 카드가 다섯 장이다.'},
+];
+const PER_Q = 4, PER_OT = 2, HAND_MAX = 8, MIN_DECK = 10;
+const KEY = 'tactics-cards-v1';
+
+let SAVE = {stage:0, deck:START.slice(), note:{}};
+try { const s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s) SAVE = Object.assign(SAVE, s); } catch(e){}
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch(e){} };
+
+let S = {screen:'title', G:null, offer:null, modal:null};
+const T = () => TEAMS[S.G ? S.G.ti : Math.min(SAVE.stage, TEAMS.length-1)];
+
+// ---------- odds ----------
+function evalCtx(offId, defId, reacts, att, fam){
+  const oc = C[offId], dc = C[defId], did = dc.def;
+  let row = oc.id, pts = oc.pts, eMod = 0, pAdd = 0, toAdd = 0, foul = false;
+  if (oc.base) pAdd -= .05;
+  if (dc.base) pAdd += .03;
+  pAdd -= fam||0;
+  for (const r of reacts){
+    if (r==='kick'){ row = 'dk'; pts = 3; }
+    else if (r==='mismatch') eMod += did==='switch' ? 2 : (DEF[did].zone ? 0 : 1);
+    else if (r==='ace') pAdd += .12;
+    else if (r==='help') eMod -= 1;
+    else if (r==='trap') toAdd += .15;
+    else if (r==='foul') foul = true;
+  }
+  const e = edge(row, did) + eMod;
+  const rd = att==='us' ? -T().rating : T().rating;
+  let p = .47 + .10*e + pAdd + rd*.015 + (row==='iso' ? .04 : 0);
+  if (pts===3) p *= .78;
+  p = clamp(p, .08, .88);
+  let to = clamp(.05 + Math.max(0,-e)*.04 + (row==='pnr' && did==='blitz' ? .06 : 0) + toAdd, 0, .5);
+  if (foul) to = 0;
+  const ev = foul ? 1.5 : (1-to)*p*(pts + (pts===2 && e>=1 ? .18 : 0));
+  return {row, pts, did, e, p, to, foul, ev};
+}
+function cur(extra){
+  const g = S.G, off = g.side==='off';
+  const offId = off ? g.myCard.id : g.aiCard.id, defId = off ? g.aiCard.id : g.myCard.id;
+  const ids = g.reacts.map(r=>r.id).concat(extra ? [extra] : []);
+  return evalCtx(offId, defId, ids, off?'us':'them', off ? g.fam : 0);
+}
+
+// ---------- game flow ----------
+function mk(P, ids){ P.deck = shuffle(ids.map(id => ({uid: ++S.G.uid, id}))); P.hand = []; P.disc = []; }
+function draw(P, n){
+  for (let k=0;k<n;k++){
+    if (P.hand.length >= HAND_MAX) return;
+    if (!P.deck.length){ if (!P.disc.length) return; P.deck = shuffle(P.disc); P.disc = []; }
+    P.hand.push(P.deck.pop());
+  }
+}
+function newGame(ti){
+  S.G = {ti, uid:0, q:1, idx:0, side:'off', us:0, them:0, me:{}, ai:{}, myPlays:[], myDefs:[], log:[],
+         phase:'pre', myCard:null, aiCard:null, reacts:[], peek:false, scout:false, sel:null, fam:0, res:null, flip:false, xUs:0, xThem:0};
+  mk(S.G.me, SAVE.deck); mk(S.G.ai, TEAMS[ti].deck);
+  draw(S.G.me, 5); draw(S.G.ai, 5);
+  S.screen = 'game';
+  startPoss();
+}
+const perLen = g => g.q<=4 ? PER_Q : PER_OT;
+const perLabel = g => g.q<=4 ? g.q+'Q' : (g.q===5 ? 'OT' : 'OT'+(g.q-4));
+function startPoss(){
+  const g = S.G;
+  const n = (g.idx===0 && g.side==='off') ? 2 : 1;
+  draw(g.me, n); draw(g.ai, n);
+  Object.assign(g, {myCard:null, aiCard:null, reacts:[], peek:false, scout:false, sel:null, fam:0, res:null, phase:'pre', aiMsg:''});
+  aiCommit();
+  render();
+}
+function softPick(cands, score, temp){
+  const s = cands.map(score), m = Math.max(...s);
+  const w = s.map(v => Math.exp((v-m)/temp));
+  let r = rnd()*w.reduce((a,b)=>a+b,0);
+  for (let i=0;i<w.length;i++){ r -= w[i]; if (r<=0) return cands[i]; }
+  return cands[cands.length-1];
+}
+function deckCounts(kind){ const m = {}; SAVE.deck.forEach(id => { if (C[id].kind===kind) m[id] = (m[id]||0)+1; }); return m; }
+function aiCommit(){
+  const g = S.G, t = T(), off = g.side==='off'; // off = human attacks, AI defends
+  let pick;
+  if (off){
+    const m = deckCounts('play'); m.free = (m.free||0) + .5;
+    g.myPlays.slice(-6).forEach(p => m[p] = (m[p]||0) + t.adapt);
+    const W = norm(Object.entries(m));
+    const cands = uniq(g.ai.hand.filter(c=>C[c.id].kind==='def').map(c=>c.id)).concat(['d_base']);
+    pick = softPick(cands, d => -W.reduce((a,[p,w]) => a + w*evalCtx(p,d,[],'us',0).ev, 0), t.temp);
+  } else {
+    const m = deckCounts('def'); m.d_base = (m.d_base||0) + .5;
+    g.myDefs.slice(-6).forEach(d => m[d] = (m[d]||0) + t.adapt);
+    const W = norm(Object.entries(m));
+    const cands = uniq(g.ai.hand.filter(c=>C[c.id].kind==='play').map(c=>c.id)).concat(['free']);
+    pick = softPick(cands, p => W.reduce((a,[d,w]) => a + w*evalCtx(p,d,[],'them',0).ev, 0), t.temp);
+  }
+  const i = g.ai.hand.findIndex(c => c.id===pick);
+  g.aiCard = i>=0 ? g.ai.hand.splice(i,1)[0] : {uid:0, id:pick};
+}
+function aiReact(role){
+  const g = S.G, base = cur().ev;
+  const cands = uniq(g.ai.hand.filter(c => C[c.id].kind==='tac' && C[c.id].when==='react' && C[c.id].side===role).map(c=>c.id));
+  let best = null, bg = role==='off' ? .1 : .12;
+  for (const id of cands){ const ev = cur(id).ev, gain = role==='off' ? ev-base : base-ev; if (gain > bg){ bg = gain; best = id; } }
+  if (!best) return;
+  const i = g.ai.hand.findIndex(c => c.id===best), inst = g.ai.hand.splice(i,1)[0];
+  g.ai.disc.push(inst); g.reacts.push({id:best, who:'ai'});
+  g.aiMsg = `상대가 <b>${C[best].name}</b> 카드를 썼습니다.`;
+}
+function selCard(){ const g = S.G; if (g.sel==='base') return {uid:0, id: g.side==='off' ? 'free' : 'd_base'}; return g.me.hand.find(c => c.uid===g.sel); }
+function canMain(c){ const k = C[c.id].kind; return S.G.phase==='pre' && k===(S.G.side==='off' ? 'play' : 'def'); }
+function canPre(c){ const d = C[c.id]; return S.G.phase==='pre' && d.kind==='tac' && d.when==='pre'; }
+function canReact(c){ const d = C[c.id], g = S.G; return g.phase==='react' && d.kind==='tac' && d.when==='react' && d.side===g.side; }
+function takeFromHand(uid){ const P = S.G.me, i = P.hand.findIndex(c=>c.uid===uid); return i>=0 ? P.hand.splice(i,1)[0] : null; }
+function usePre(){
+  const g = S.G, c = selCard(); if (!c || !canPre(c)) return;
+  takeFromHand(c.uid); g.me.disc.push(c); g.sel = null;
+  if (c.id==='timeout'){ g.peek = true; g.flip = true; }
+  else if (c.id==='scout') g.scout = true;
+  else if (c.id==='memo') draw(g.me, 2);
+  render();
+}
+function commit(){
+  const g = S.G, c = selCard(); if (!c || !canMain(c)) return;
+  if (c.uid) takeFromHand(c.uid);
+  g.myCard = c; g.sel = null;
+  if (g.side==='off'){ g.fam = c.id==='free' ? 0 : g.myPlays.slice(-2).filter(x=>x===c.id).length*.05; g.myPlays.push(c.id); }
+  else g.myDefs.push(c.id);
+  if (!g.peek) g.flip = true;
+  g.phase = 'react';
+  if (g.side==='def') aiReact('off');
+  if (!g.me.hand.some(canReact)) return pass();
+  render();
+}
+function react(){
+  const g = S.G, c = selCard(); if (!c || !canReact(c)) return;
+  takeFromHand(c.uid); g.me.disc.push(c); g.reacts.push({id:c.id, who:'me'}); g.sel = null;
+  pass();
+}
+function pass(){
+  const g = S.G; if (g.phase!=='react') return;
+  if (g.side==='off') aiReact('def');
+  resolve();
+}
+function resolve(){
+  const g = S.G, off = g.side==='off', x = cur();
+  let kind, pts = 0, and1 = false;
+  if (x.foul){ pts = (rnd()<.75) + (rnd()<.75); kind = 'ft'; }
+  else if (rnd() < x.to) kind = 'to';
+  else if (rnd() < x.p){ kind = 'make'; pts = x.pts; if (x.pts===2 && x.e>=1 && rnd()<.18){ pts++; and1 = true; } }
+  else kind = 'miss';
+  if (off){ g.us += pts; g.xUs += x.ev; } else { g.them += pts; g.xThem += x.ev; }
+  const offC = off ? g.myCard : g.aiCard, defC = off ? g.aiCard : g.myCard;
+  let isNew = false;
+  if (x.row!=='free'){ const key = x.row+'|'+x.did; isNew = !SAVE.note[key]; SAVE.note[key] = 1; persist(); }
+  if (g.myCard.uid) g.me.disc.push(g.myCard);
+  if (g.aiCard.uid) g.ai.disc.push(g.aiCard);
+  g.res = {kind, pts, and1, x, isNew, offName:C[offC.id].name, defName:C[defC.id].name};
+  const reacts = g.reacts.map(r=>C[r.id].name).join('·');
+  g.log.unshift({per:perLabel(g), off, txt:`${C[offC.id].name} vs ${C[defC.id].name}${reacts?' ('+reacts+')':''}`,
+                 res: kind==='to' ? '턴오버' : kind==='miss' ? '실패' : kind==='ft' ? `FT ${pts}` : `+${pts}`});
+  g.phase = 'result'; g.flip = false;
+  render();
+}
+function nextPoss(){
+  const g = S.G;
+  if (g.side==='off'){ g.side = 'def'; return startPoss(); }
+  g.side = 'off'; g.idx++;
+  if (g.idx >= perLen(g)){
+    if (g.q < 4 || g.us===g.them){ g.q++; g.idx = 0; }
+    else return endGame();
+  }
+  startPoss();
+}
+function endGame(){
+  const g = S.G, win = g.us > g.them;
+  if (win && SAVE.stage===g.ti){ SAVE.stage++; persist(); }
+  if (win && SAVE.stage < TEAMS.length){ S.offer = ['play','def','tac'].map(k => POOL[k][Math.floor(rnd()*POOL[k].length)]); S.screen = 'draft'; }
+  else S.screen = win ? 'champ' : 'over';
+  render();
+}
+
+// ---------- rendering ----------
+function render(){
+  const h = $('.hand'), sl = h ? h.scrollLeft : 0;
+  const app = $('#app');
+  app.innerHTML = S.screen==='game' ? gameHTML() : `<div class="solo">${soloHTML()}</div>`;
+  const h2 = $('.hand'); if (h2) h2.scrollLeft = sl;
+  $('#modal').hidden = !S.modal;
+  if (S.modal) $('#modalBody').innerHTML = S.modal==='deck' ? deckHTML() : noteHTML();
+  if (S.G) S.G.flip = false;
+}
+function kindLabel(c){ return c.kind==='play' ? '공격' : c.kind==='def' ? '수비' : (c.when==='pre' ? '전술 · 사전' : '전술 · 반응'); }
+function cornerLabel(c){
+  if (c.kind==='play') return c.pts+'점';
+  if (c.kind==='def') return DEF[c.def].zone ? '존' : '대인 계열';
+  return c.when==='react' ? (c.side==='off' ? '공격 때' : '수비 때') : '언제든';
+}
+function cardHTML(id, o={}){
+  const c = C[id], tag = o.uid!==undefined ? 'button' : 'div';
+  const attrs = tag==='button' ? ` type="button" data-act="sel" data-uid="${o.uid}" aria-pressed="${!!o.sel}"` : '';
+  return `<${tag} class="card k-${c.kind}${o.big?' big':''}${o.sel?' sel':''}${o.dim?' dim':''}${o.flip?' flipin':''}${c.base?' ghost':''}"${attrs}>
+    <span class="tp"><span>${kindLabel(c)}</span><span>${cornerLabel(c)}</span></span>
+    <img class="art" src="${art(id)}" alt="">
+    <span class="nm">${c.name}</span><span class="tx">${c.text}</span>${o.badges?`<span class="bdg">${o.badges}</span>`:''}</${tag}>`;
+}
+function backHint(){
+  const g = S.G, a = C[g.aiCard.id];
+  if (g.side==='off') return DEF[a.def].zone ? [a.name, '존 수비는 대형만 봐도 알 수 있습니다.'] : ['대인 계열', '대인·스위치·드롭·블리츠 중 하나'];
+  const gr = GROUPS[a.g]; return [gr.name, gr.opts];
+}
+function gameHTML(){
+  const g = S.G, off = g.side==='off', t = T();
+  const [hint, sub] = backHint();
+  const aiShown = g.phase!=='pre' || g.peek;
+  const aiCard = aiShown ? cardHTML(g.aiCard.id, {big:true, flip:g.flip}) :
+    `<div class="back big"><span class="logo">X·O</span><span class="hint2">${hint}</span><span class="sub">${sub}</span></div>`;
+  const myCard = g.myCard ? cardHTML(g.myCard.id, {big:true}) : `<div class="ph big">${off?'공격':'수비'} 카드를<br>내세요</div>`;
+  const rc = who => g.reacts.filter(r=>r.who===who).map(r=>`<span class="rchip">+ ${C[r.id].name}</span>`).join('');
+  return `<div class="game">
+  <section class="clip" aria-label="카드 테이블">
+    <div class="scorebar">
+      <div class="tm us"><span class="pts">${g.us}</span><span class="nm2">우리 팀</span></div>
+      <div class="mid"><b>${perLabel(g)}</b><small>포세션 ${g.idx+1}/${perLen(g)} · ${off?'공격':'수비'}</small></div>
+      <div class="tm them"><span class="nm2">${esc(t.name)}</span><span class="pts">${g.them}</span></div>
+    </div>
+    <div class="table">
+      <div class="opp"><span>상대 손패 ${g.ai.hand.length}장</span><span class="backs">${'<i></i>'.repeat(g.ai.hand.length)}</span><span>덱 ${g.ai.deck.length} · 버림 ${g.ai.disc.length}</span></div>
+      ${g.scout ? `<div class="peekhand">${g.ai.hand.map(c=>`<span class="chipc k-${C[c.id].kind}">${C[c.id].name}</span>`).join('') || '<span class="hint">손패 없음</span>'}</div>` : ''}
+      <div class="slots">
+        <div class="slot"><div class="sl">${esc(t.name)} · ${off?'수비':'공격'}</div>${aiCard}<div class="rcs">${rc('ai')}</div></div>
+        <div class="vs">VS</div>
+        <div class="slot"><div class="sl">우리 · ${off?'공격':'수비'}</div>${myCard}<div class="rcs">${rc('me')}</div></div>
+      </div>
+      ${oddsHTML()}
+      <div class="prompt">${promptHTML()}</div>
+    </div>
+  </section>
+  <section class="handwrap" aria-label="내 손패">
+    <div class="hh"><b>내 손패 ${g.me.hand.length}장</b><span class="hint">덱 ${g.me.deck.length} · 버림 ${g.me.disc.length} · 손패 최대 ${HAND_MAX}장</span></div>
+    <div class="hand">${handHTML()}</div>
+  </section>
+  <aside class="side">${trackerHTML()}${logHTML()}</aside>
+  </div>`;
+}
+function oddsHTML(){
+  const g = S.G; if (!g.myCard || g.phase==='pre') return '';
+  const x = g.phase==='result' ? g.res.x : cur(), off = g.side==='off';
+  const [c,l] = edgeTag(off ? x.e : -x.e);
+  let prev = '';
+  if (g.phase==='react' && g.sel && g.sel!=='base'){ const s = selCard(); if (s && canReact(s)) prev = ` <span class="ar">→ ${f2(cur(s.id).ev)}</span>`; }
+  return `<div class="odds"><span class="chip ${c}">${l}</span>
+    ${x.foul ? '<span><b>자유투 2개</b> 각 75%</span>' : `<span><b>${pct(x.p)}</b> 성공</span><span>턴오버 ${pct(x.to)}</span><span>성공 시 ${x.pts}점</span>`}
+    <span>${off?'우리':'상대'} 기대 득점 <b>${f2(x.ev)}</b>${prev}</span></div>`;
+}
+function promptHTML(){
+  const g = S.G, off = g.side==='off';
+  if (g.phase==='pre'){
+    const [hint, sub] = backHint(), s = g.sel ? selCard() : null;
+    const what = off ? `상대가 수비 카드를 엎어 놓았습니다. 뒷면 표시는 <b>${hint}</b>.` : `상대가 공격 카드를 엎어 놓았습니다. <b>${hint}</b>: ${sub}.`;
+    let btn;
+    if (!s) btn = `<button class="btn" disabled>카드를 고르세요</button>`;
+    else if (canMain(s)) btn = `<button class="btn" data-act="commit">${C[s.id].name} 내기</button>`;
+    else if (canPre(s)) btn = `<button class="btn" data-act="pre">${C[s.id].name} 사용</button>`;
+    else btn = `<button class="btn" disabled>${C[s.id].kind==='tac' ? '반응 카드는 공개 후에 씁니다' : (off ? '지금은 공격 카드를 낼 차례' : '지금은 수비 카드를 낼 차례')}</button>`;
+    return `<p>${what} ${g.peek ? '<b>작전 타임으로 앞면을 확인했습니다.</b> ' : ''}손패에서 ${off?'공격':'수비'} 카드를 내세요. 사전 전술 카드는 그 전에 쓸 수 있습니다.</p><div class="actions">${btn}</div>`;
+  }
+  if (g.phase==='react'){
+    const s = g.sel ? selCard() : null;
+    return `<p>${g.aiMsg ? g.aiMsg+' ' : ''}반응 카드를 쓸 차례입니다. ${off ? '공격 반응 후 상대 수비가 반응합니다.' : '이 반응으로 끝입니다.'}</p>
+      <div class="actions">${s && canReact(s) ? `<button class="btn" data-act="react">${C[s.id].name} 쓰기</button>` : `<button class="btn" disabled>${off?'공격 때':'수비 때'} 반응 카드를 고르세요</button>`}<button class="btn sec" data-act="pass">넘기기</button></div>`;
+  }
+  const r = g.res, x = r.x;
+  const good = off ? r.pts>0 : r.pts===0;
+  const big = r.kind==='to' ? (off?'턴오버':'스틸!') : r.kind==='miss' ? (off?'슛 실패':'막았다!') : r.kind==='ft' ? `자유투 ${r.pts}/2` : (off ? `+${r.pts} 득점` : `${r.pts}점 실점`);
+  const why2 = x.foul ? '파울로 끊어 슛 대신 자유투 2개를 줬습니다.' : x.row==='free' ? '정해진 작전 없이 1대1로 해결했습니다.' : why(x.row, x.did);
+  return `<div class="res ${good?'good':'bad'}">${big}${r.and1?' · 앤드원':''}</div>
+    <div class="why">${g.aiMsg ? g.aiMsg+' ' : ''}${why2}${off && g.fam ? ` 같은 카드를 연달아 내서 상대가 대비했습니다(−${Math.round(g.fam*100)}%p).` : ''}</div>
+    ${r.isNew ? '<div class="new">작전 노트에 새 상성을 기록했습니다.</div>' : ''}
+    <div class="actions"><button class="btn" data-act="next">다음 포세션</button></div>`;
+}
+function handHTML(){
+  const g = S.G, off = g.side==='off';
+  const sorted = g.me.hand.slice().sort((a,b) => KIND_ORDER[C[a.id].kind]-KIND_ORDER[C[b.id].kind] || C[a.id].name.localeCompare(C[b.id].name));
+  const knownDef = off && g.aiCard && (g.peek || DEF[C[g.aiCard.id].def].zone) ? C[g.aiCard.id].def : null;
+  const html = sorted.map(c => {
+    const d = C[c.id], ok = canMain(c) || canPre(c) || canReact(c);
+    let b = '';
+    if (d.kind==='play' && knownDef && SAVE.note[c.id+'|'+knownDef]){ const [cl,l] = edgeTag(edge(c.id,knownDef)); b += `<span class="bd ${cl}">노트 ${l}</span>`; }
+    if (d.kind==='play' && off){ const n = g.myPlays.slice(-2).filter(x=>x===c.id).length; if (n) b += `<span class="bd warn">연속 ${n}회 · 읽힘</span>`; }
+    return cardHTML(c.id, {uid:c.uid, sel:g.sel===c.uid, dim:!ok, badges:b});
+  }).join('');
+  const base = off ? 'free' : 'd_base';
+  return html + (g.phase==='pre' ? cardHTML(base, {uid:'base', sel:g.sel==='base'}) : '');
+}
+function trackerHTML(){
+  const g = S.G, t = T();
+  const left = {}; [...g.ai.deck, ...g.ai.hand].forEach(c => left[c.id] = (left[c.id]||0)+1);
+  const tot = {}; t.deck.forEach(id => tot[id] = (tot[id]||0)+1);
+  const rows = Object.keys(tot).sort((a,b)=>KIND_ORDER[C[a].kind]-KIND_ORDER[C[b].kind]).map(id =>
+    `<li class="k-${C[id].kind}${left[id]?'':' gone'}"><span>${C[id].name}</span><span>${left[id]||0}/${tot[id]}</span></li>`).join('');
+  return `<h3>${esc(t.name)}의 남은 카드</h3><ul class="trk">${rows}</ul>
+    <p class="hint" style="margin-top:8px;font-size:12px">덱과 손패에 남은 수입니다. 덱이 바닥나면 버린 더미를 섞어 다시 채웁니다.</p>`;
+}
+function logHTML(){
+  const g = S.G; if (!g.log.length) return '<h3>경기 기록</h3><p class="hint">아직 기록이 없습니다.</p>';
+  return `<h3>경기 기록</h3><ul class="log">${g.log.slice(0,16).map(l=>`<li><span>${l.per}</span><span><b>${l.off?'공':'수'}</b> ${l.txt}</span><span class="p ${l.off?'u':'t'}">${l.res}</span></li>`).join('')}</ul>`;
+}
+function bracketHTML(){
+  const st = SAVE.stage;
+  return `<ol class="bracket">${TEAMS.map((t,i)=>`<li class="${i<st?'done':i===st?'cur':''}"><span>${t.round} · ${esc(t.name)} <span class="stars">${'★'.repeat(t.rating+1)}</span></span><small>${i<st?'승리':i===st?'다음 상대':'대기'}</small></li>`).join('')}</ol>`;
+}
+function deckList(ids, act){
+  return `<div class="deckgrid">${ids.map((id,i)=>`<div style="display:flex;flex-direction:column;gap:6px;align-items:center">${cardHTML(id)}${act?`<button class="btn sec" data-act="${act}" data-i="${i}">빼기</button>`:''}</div>`).join('')}</div>`;
+}
+const sortIds = ids => ids.slice().sort((a,b)=>KIND_ORDER[C[a].kind]-KIND_ORDER[C[b].kind] || C[a].name.localeCompare(C[b].name));
+function soloHTML(){
+  const st = SAVE.stage, kinds = k => SAVE.deck.filter(id=>C[id].kind===k).length;
+  const deckLine = `내 덱 ${SAVE.deck.length}장 · 공격 ${kinds('play')} · 수비 ${kinds('def')} · 전술 ${kinds('tac')}`;
+  if (S.screen==='title'){
+    return `<p class="eyebrow">덱빌딩 전략 카드 게임 · 컵 토너먼트</p>
+    <h2>작전을 손에 쥐고 싸운다</h2>
+    <ul class="rules">
+      <li>매 포세션 상대가 먼저 카드를 엎어 놓습니다. 뒷면에는 수비 계열이나 공격 세트가 보입니다.</li>
+      <li>손패에서 맞는 카드를 내면 함께 공개되고, 상성에 따라 성공 확률이 정해집니다.</li>
+      <li>공개 후 공격 → 수비 순서로 반응 카드를 한 장씩 쓸 수 있습니다.</li>
+      <li>상대 덱 목록은 공개입니다. 남은 카드를 세며 다음 카드를 추리하세요. 상대도 내 덱 구성을 알고 있습니다.</li>
+      <li>이기면 카드 한 장을 얻고 한 장을 뺄 수 있습니다. 덱은 다음 라운드로 이어집니다.</li>
+    </ul>
+    ${bracketHTML()}
+    <p class="hint">${deckLine}</p>
+    <div class="actions">${st>=TEAMS.length ? `<button class="btn" data-act="reset">새 시즌 (덱 초기화, 노트 유지)</button>` : `<button class="btn" data-act="scout">${TEAMS[st].round} 스카우팅 리포트</button>`}
+      <button class="btn sec" data-act="deck">내 덱 보기</button></div>`;
+  }
+  if (S.screen==='scout'){
+    const t = TEAMS[st];
+    return `<p class="eyebrow">${t.round} 스카우팅 리포트</p>
+    <h2>${esc(t.name)} <span class="stars">${'★'.repeat(t.rating+1)}</span></h2>
+    <p>${esc(t.scout)}</p>
+    <p class="hint">상대 덱 ${t.deck.length}장${t.rating?` · 전력이 ${t.rating}단계 위라 성공률이 조금씩 차이 납니다`:''}. 쿼터마다 공격 ${PER_Q}번, 수비 ${PER_Q}번, 동점이면 연장.</p>
+    <h3>상대 덱</h3>${deckList(sortIds(t.deck))}
+    <div class="row"><button class="btn" data-act="tip">팁오프</button><button class="btn sec" data-act="home">돌아가기</button></div>`;
+  }
+  if (S.screen==='draft'){
+    return `<p class="eyebrow">${TEAMS[st-1].round} 승리 · 보상</p><h2>카드 한 장을 덱에 넣으세요</h2>
+    <p class="hint">${deckLine}</p>
+    <div class="row center">${S.offer.map(id=>`<div style="display:flex;flex-direction:column;gap:8px;align-items:center">${cardHTML(id,{big:true})}<button class="btn" data-act="draft" data-id="${id}">이 카드 받기</button></div>`).join('')}</div>`;
+  }
+  if (S.screen==='trim'){
+    const can = SAVE.deck.length > MIN_DECK;
+    return `<p class="eyebrow">덱 정리</p><h2>한 장을 뺄 수 있습니다</h2>
+    <p class="hint">${deckLine}. ${can ? '덱이 얇을수록 좋은 카드가 자주 돌아옵니다. 빼지 않아도 됩니다.' : `덱은 최소 ${MIN_DECK}장이어야 합니다.`}</p>
+    <div class="row"><button class="btn" data-act="skiptrim">빼지 않고 계속</button></div>
+    ${deckList(SAVE.deck, can ? 'trim' : null)}`;
+  }
+  const g = S.G;
+  const stats = g ? `<div class="stat"><div><span>최종 점수</span><b>${g.us} : ${g.them}</b></div><div><span>기대 득점</span><b>${g.xUs.toFixed(1)} : ${g.xThem.toFixed(1)}</b></div><div><span>운</span><b>${(((g.us-g.xUs)-(g.them-g.xThem))>=0?'+':'')+((g.us-g.xUs)-(g.them-g.xThem)).toFixed(1)}</b></div></div>` : '';
+  if (S.screen==='champ') return `<p class="eyebrow">결승 승리</p><h2>우승! 컵을 들어 올렸습니다</h2>${stats}<p>${deckLine}. 이 덱으로 세 팀을 모두 꺾었습니다.</p><div class="actions"><button class="btn" data-act="reset">새 시즌 시작</button><button class="btn sec" data-act="deck">우승 덱 보기</button></div>`;
+  return `<p class="eyebrow">${T().round} · 경기 종료</p><h2>패배 ${g.us} : ${g.them}</h2>${stats}
+    <p>덱은 그대로 남아 있습니다. 상대 남은 카드 기록과 작전 노트를 보고 다시 도전하세요.</p>
+    <div class="actions"><button class="btn" data-act="retry">다시 도전</button><button class="btn sec" data-act="deck">내 덱 보기</button></div>`;
+}
+function deckHTML(){
+  return `<p class="eyebrow">내 덱 · ${SAVE.deck.length}장</p><h2>내 덱</h2>${deckList(sortIds(SAVE.deck))}<div class="row"><button class="btn" data-act="close">닫기</button></div>`;
+}
+function noteHTML(){
+  const n = Object.keys(SAVE.note).length;
+  const head = DEFS.map(d=>`<th>${d.name}</th>`).join('');
+  const body = PLAYS.map(p=>`<tr><th class="r">${p.name}</th>${DEFS.map(d=>{
+    if (!SAVE.note[p.id+'|'+d.id]) return '<td class="q">?</td>';
+    const e = edge(p.id,d.id), c = e>0?'u':e<0?'d':'e', s = e>=2?'▲▲':e===1?'▲':e===0?'●':e===-1?'▼':'▼▼';
+    return `<td class="${c}" title="${esc(why(p.id,d.id))}">${s}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<p class="eyebrow">공격 작전 × 수비 전술</p><h2>작전 노트 <span class="hint" style="font-family:var(--f-ui);font-size:14px;font-weight:400">${n}/${PLAYS.length*DEFS.length} 발견</span></h2>
+    <p class="hint">맞붙어 본 조합만 기록됩니다. 공격 입장의 상성이며 칸에 마우스를 올리면 이유가 보입니다.</p>
+    <div class="scroll"><table class="mx"><tr><th></th>${head}</tr>${body}</table></div>
+    <div class="row"><button class="btn" data-act="close">닫기</button></div>`;
+}
+
+// ---------- card art ----------
+const cv = document.createElement('canvas'); cv.width = 440; cv.height = 300;
+const x = cv.getContext('2d');
+let K = {}, KKEY = '', ART = {};
+function readColors(){
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['board','court','us','them','ball','dim','line']) K[k] = cs.getPropertyValue('--'+k).trim();
+  const key = Object.values(K).join(); if (key!==KKEY){ KKEY = key; ART = {}; }
+}
+function head(x1,y1,x2,y2,s=11){ const a = Math.atan2(y2-y1,x2-x1);
+  x.beginPath(); x.moveTo(x2,y2); x.lineTo(x2-s*Math.cos(a-.45), y2-s*Math.sin(a-.45)); x.moveTo(x2,y2); x.lineTo(x2-s*Math.cos(a+.45), y2-s*Math.sin(a+.45)); x.stroke(); }
+function trim(p,q,a,b){ const d = dist(p,q)||1; return [[p[0]+(q[0]-p[0])/d*a, p[1]+(q[1]-p[1])/d*a],[q[0]-(q[0]-p[0])/d*b, q[1]-(q[1]-p[1])/d*b]]; }
+function path(p,q,type,col){
+  if (dist(p,q) < 28) return;
+  const [a,b] = trim(p,q,17,type==='screen'?4:17);
+  x.strokeStyle = col; x.lineWidth = 5.5; x.setLineDash(type==="pass"?[11,10]:[]);
+  x.beginPath();
+  if (type==='dribble'){
+    const L = dist(a,b), ux=(b[0]-a[0])/L, uy=(b[1]-a[1])/L, n = Math.max(2, Math.floor((L-14)/11));
+    x.moveTo(a[0],a[1]); for (let i=1;i<=n;i++){ const t=i*11, s=(i%2?1:-1)*6; x.lineTo(a[0]+ux*t-uy*s, a[1]+uy*t+ux*s); } x.lineTo(b[0],b[1]);
+  } else { x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); }
+  x.stroke(); x.setLineDash([]);
+  if (type==='screen'){ const g = Math.atan2(b[1]-a[1], b[0]-a[0]), px = -Math.sin(g)*12, py = Math.cos(g)*12; x.beginPath(); x.moveTo(b[0]+px,b[1]+py); x.lineTo(b[0]-px,b[1]-py); x.stroke(); }
+  else head(a[0],a[1],b[0],b[1],17);
+}
+function drawO(p,n,col){ x.strokeStyle = col; x.lineWidth = 5.5; x.beginPath(); x.arc(p[0],p[1],17,0,2*Math.PI); x.stroke();
+  x.fillStyle = col; x.font = '600 21px Oswald, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(n, p[0], p[1]+1); }
+function drawX(p,col){ x.strokeStyle = col; x.lineWidth = 6; const r = 13; x.beginPath(); x.moveTo(p[0]-r,p[1]-r); x.lineTo(p[0]+r,p[1]+r); x.moveTo(p[0]+r,p[1]-r); x.lineTo(p[0]-r,p[1]+r); x.stroke(); }
+function drawBall(p){ x.fillStyle = K.ball; x.beginPath(); x.arc(p[0]+10,p[1]-10,6.5,0,2*Math.PI); x.fill(); }
+function courtArt(){
+  x.strokeStyle = K.court; x.lineWidth = 3.6; x.setLineDash([]);
+  x.strokeRect(1,1,498,345); x.strokeRect(170,1,160,189);
+  x.beginPath(); x.arc(250,190,60,0,Math.PI); x.stroke();
+  x.beginPath(); x.arc(250,52,40,0,Math.PI); x.stroke();
+  x.beginPath(); x.moveTo(30,1); x.lineTo(30,141.5); x.arc(250,52,237.5,2.756,0.386,true); x.lineTo(470,1); x.stroke();
+  x.lineWidth = 4; x.beginPath(); x.moveTo(220,40); x.lineTo(280,40); x.stroke();
+  x.strokeStyle = K.ball; x.lineWidth = 3; x.beginPath(); x.arc(250,52,9,0,2*Math.PI); x.stroke();
+}
+function playArt(p){
+  let P = p.start, h = 0;
+  p.steps.forEach(st => {
+    const N = P.map(q=>q.slice()); for (const i in st.mv) N[i] = st.mv[i];
+    const nh = st.b!==undefined ? st.b : h;
+    for (let i=0;i<5;i++){ if (N[i][0]===P[i][0] && N[i][1]===P[i][1]) continue;
+      path(P[i], N[i], st.scr && st.scr.includes(i) ? 'screen' : (i===h && nh===h ? 'dribble' : 'cut'), K.us); }
+    if (nh!==h) path(N[h], N[nh], 'pass', K.us);
+    P = N; h = nh;
+  });
+  const [a,b] = trim(P[h],[B.x,B.y],17,14);
+  x.strokeStyle = K.us; x.lineWidth = 4; x.setLineDash([4,9]); x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(b[0],b[1]); x.stroke(); x.setLineDash([]);
+  p.start.forEach((q,i)=>drawO(q,i+1,K.us)); drawBall(p.start[0]);
+}
+function defArt(d){
+  if (ZS[d]){ S0.forEach((q,i)=>drawO(q,i+1,K.dim)); drawBall(S0[0]); defPos(S0,S0[0],-1,d,null,0).forEach(q=>drawX(q,K.them)); return; }
+  const O = [[250,330],[455,70],[45,70],[80,240],[282,322]], pnr = PLAY.pnr;
+  O.forEach((q,i)=>drawO(q,i+1,K.dim)); drawBall(O[0]);
+  const plain = defPos(O,O[0],1.1,'man',pnr,0), act = defPos(O,O[0],1.1,d,pnr,0);
+  act.forEach((q,i) => { if (dist(q,plain[i]) > 28) path(plain[i], q, 'cut', K.them); drawX(q,K.them); });
+  x.strokeStyle = K.them; x.lineWidth = 3;
+  if (d==='switch'){ const a = [214,268], b = [318,268]; x.beginPath(); x.moveTo(a[0],a[1]); x.quadraticCurveTo(266,236,b[0],b[1]); x.stroke(); head(266,236,b[0],b[1],13); head(266,236,a[0],a[1],13); }
+  if (d==='blitz'){ x.beginPath(); x.ellipse(262,318,46,30,0,0,2*Math.PI); x.stroke(); }
+}
+function tacArt(c){
+  x.fillStyle = K.ball; x.font = '700 120px Gaegu, cursive'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(c.icon, 250, 160);
+  x.strokeStyle = K.ball; x.lineWidth = 5; x.beginPath(); x.moveTo(110,250);
+  for (let i=1;i<=14;i++) x.lineTo(110+i*20, 250+(i%2?-9:9)); x.stroke();
+}
+function freeArt(){
+  S0.forEach((q,i)=>drawO(q,i+1,K.us)); drawBall(S0[0]);
+  path(S0[0],[270,120],'dribble',K.us);
+}
+function art(id){
+  readColors();
+  if (ART[id]) return ART[id];
+  x.setTransform(1,0,0,1,0,0); x.fillStyle = K.board; x.fillRect(0,0,440,300);
+  x.setTransform(.88,0,0,.88,0,0); x.lineCap = 'round'; x.lineJoin = 'round';
+  const c = C[id];
+  if (c.kind!=='tac') courtArt();
+  if (c.kind==='play') c.base ? freeArt() : playArt(PLAY[id]);
+  else if (c.kind==='def') defArt(c.def);
+  else tacArt(c);
+  return ART[id] = cv.toDataURL('image/png');
+}
+
+// ---------- events ----------
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, g = S.G;
+  if (a==='sel'){ const u = el.dataset.uid==='base' ? 'base' : +el.dataset.uid; g.sel = g.sel===u ? null : u; render(); }
+  else if (a==='commit') commit();
+  else if (a==='pre') usePre();
+  else if (a==='react') react();
+  else if (a==='pass') pass();
+  else if (a==='next') nextPoss();
+  else if (a==='scout'){ S.screen='scout'; S.G=null; render(); }
+  else if (a==='tip') newGame(Math.min(SAVE.stage, TEAMS.length-1));
+  else if (a==='retry') newGame(g.ti);
+  else if (a==='home'){ if (S.screen==='game' && !confirmLeave(el)) return; S.screen='title'; S.G=null; S.modal=null; render(); }
+  else if (a==='reset'){ SAVE.stage=0; SAVE.deck=START.slice(); persist(); S.screen='title'; S.G=null; render(); }
+  else if (a==='draft'){ SAVE.deck.push(el.dataset.id); persist(); S.screen='trim'; render(); }
+  else if (a==='trim'){ SAVE.deck.splice(+el.dataset.i,1); persist(); S.screen='scout'; S.G=null; render(); }
+  else if (a==='skiptrim'){ S.screen='scout'; S.G=null; render(); }
+  else if (a==='deck'){ S.modal='deck'; render(); }
+  else if (a==='note'){ S.modal='note'; render(); }
+  else if (a==='close'){ S.modal=null; render(); }
+});
+// leaving a game needs a second tap, since the viewer has no confirm()
+function confirmLeave(el){
+  if (el.dataset.armed){ return true; }
+  el.dataset.armed = '1'; el.textContent = '한 번 더 누르면 경기 포기'; setTimeout(()=>{ if (el.isConnected){ delete el.dataset.armed; el.textContent='대진표'; } }, 2500);
+  return false;
+}
+$('#modal').addEventListener('click', e => { if (e.target.id==='modal'){ S.modal=null; render(); } });
+document.addEventListener('keydown', e => { if (e.key==='Escape' && S.modal){ S.modal=null; render(); } });
+
+function start(data){
+  if (data && data.S){ S = data.S; }
+  render();
+}
+window.claude?.hot?.snapshot?.(() => ({S: JSON.parse(JSON.stringify(S))}));
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => render());
+new MutationObserver(() => render()).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { ART = {}; KKEY = ''; render(); });
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>
