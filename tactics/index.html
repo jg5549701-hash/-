@@ -166,10 +166,10 @@ const DEFS = [
 ];
 const DEF = Object.fromEntries(DEFS.map(d=>[d.id,d]));
 const GROUPS = {
-  hs:{name:'하이 스크린 셋', opts:'픽앤롤 또는 픽앤팝'},
-  po:{name:'포스트 셋', opts:'포스트업 또는 하이-로우'},
-  wg:{name:'윙 셋', opts:'스태거 스크린 또는 백도어 컷'},
-  sp:{name:'스페이싱 셋', opts:'아이솔레이션 또는 드라이브 앤 킥'},
+  hs:{name:'하이 스크린 셋', opts:'픽앤롤, 픽앤팝, 스페인 픽앤롤 중 하나'},
+  po:{name:'포스트 셋', opts:'포스트업, 하이-로우, UCLA 컷 중 하나'},
+  wg:{name:'윙 셋', opts:'스태거 스크린, 백도어 컷, 엘리베이터 스크린 중 하나'},
+  sp:{name:'스페이싱 셋', opts:'아이솔레이션, 드라이브 앤 킥, 해머 스크린 중 하나'},
 };
 const S0 = [[250,330],[420,230],[80,230],[455,70],[175,100]];
 const PLAYS = [
@@ -197,6 +197,18 @@ const PLAYS = [
   {id:'dk', name:'드라이브 앤 킥', g:'sp', pts:3, d:'돌파로 수비를 모은 뒤 코너로 킥아웃.',
    start:[[250,330],[420,230],[45,70],[80,240],[175,100]],
    steps:[{b:1},{mv:{1:[300,135],3:[120,310]}},{b:2}]},
+  {id:'spain', name:'스페인 픽앤롤', g:'hs', pts:2, d:'픽앤롤에 백스크린을 더해 롤맨의 수비를 떼어낸다.',
+   start:[[250,330],[455,70],[45,70],[300,190],[215,230]],
+   steps:[{mv:{4:[282,322]},scr:[4]},{mv:{0:[345,240],4:[255,205],3:[275,275]},scr:[3]},{mv:{4:[250,82]},b:4}], screen:{h:0,s:4,k:1}},
+  {id:'ucla', name:'UCLA 컷', g:'po', pts:2, d:'윙에 패스한 가드가 하이포스트 스크린을 받고 림으로 컷.',
+   start:[[250,330],[420,230],[80,230],[455,70],[250,200]],
+   steps:[{b:1},{mv:{4:[285,245]},scr:[4]},{mv:{0:[268,85]}},{mv:{0:[255,70]},b:0}], screen:{h:0,s:4,k:2}},
+  {id:'elev', name:'엘리베이터 스크린', g:'wg', pts:3, d:'두 빅맨 사이로 슈터가 빠져나가면 문을 닫듯 막아선다.',
+   start:[[390,300],[250,95],[45,70],[205,250],[295,250]],
+   steps:[{mv:{1:[250,215]}},{mv:{1:[250,320],3:[235,262],4:[265,262]},scr:[3,4]},{b:1}], screen:{h:1,s:3,k:1}},
+  {id:'ham', name:'해머 스크린', g:'sp', pts:3, d:'베이스라인 돌파 순간 반대편 코너 수비에 백스크린.',
+   start:[[250,330],[420,230],[70,210],[120,170],[330,95]],
+   steps:[{b:1},{mv:{1:[400,95],0:[300,330]}},{mv:{3:[95,110],2:[45,70]},scr:[3]},{b:2}]},
 ];
 // read options: at = steps before the read; option 0 finishes the play as drawn.
 // [name, edge row it uses, shot value, finishing steps]
@@ -209,11 +221,16 @@ const OPTS = {
   bd:{at:1, o:[['백도어 컷','bd',2],['핸드오프 3점','stg',3,[{mv:{4:[320,242],1:[365,300]}},{b:1}]],['코너 빅맨 다이브','hilo',2,[{mv:{3:[278,80]},b:3}]]]},
   iso:{at:2, o:[['1대1 마무리','iso',2],['도움 오면 킥아웃','dk',3,[{mv:{2:[332,152]}},{b:1}]],['포스트업 전환','post',2,[{mv:{2:[350,110]}},{mv:{2:[300,72]}}]]]},
   dk:{at:2, o:[['코너 킥아웃','dk',3],['직접 마무리','iso',2,[{mv:{1:[262,74]}}]],['빅맨 덤프오프','post',2,[{mv:{4:[215,68]},b:4}]]]},
+  spain:{at:2, o:[['롤맨에게 패스','spain',2],['백스크리너 팝 3점','pop',3,[{mv:{3:[170,315]}},{b:3}]],['코너 킥아웃','dk',3,[{b:1}]]]},
+  ucla:{at:3, o:[['컷터에게 패스','ucla',2],['스크리너 팝 3점','pop',3,[{mv:{4:[250,320]},b:4}]],['빅맨 포스트 투입','post',2,[{mv:{4:[340,95]},b:4},{mv:{4:[290,70]}}]]]},
+  elev:{at:2, o:[['슈터 3점','elev',3],['문 닫은 빅맨 다이브','pnr',2,[{mv:{4:[260,80]},b:4}]],['슈터 돌파','iso',2,[{b:1},{mv:{1:[230,140]}}]]]},
+  ham:{at:3, o:[['코너로 스킵 패스','ham',3],['베이스라인 마무리','iso',2,[{mv:{1:[300,62]}}]],['빅맨 덤프오프','post',2,[{mv:{4:[265,70]},b:4}]]]},
 };
 PLAYS.forEach(p => { const o = OPTS[p.id]; p.pre = p.steps.slice(0,o.at);
   p.opts = o.o.map((x,i) => ({n:x[0], row:x[1], pts:x[2], fin: i===0 ? p.steps.slice(o.at) : x[3]})); });
 const PLAY = Object.fromEntries(PLAYS.map(p=>[p.id,p]));
 const LET = ['A','B','C'];
+const NOTE_N = PLAYS.length * DEFS.length;
 // matchup: play|defense → [edge for the offense, why]
 const RAW = {
  'pnr|man':[2,'스크린 대응 규칙이 없는 대인 수비는 볼 핸들러와 롤맨을 동시에 막지 못합니다.'],
@@ -247,16 +264,33 @@ const RAW = {
  'dk|man':[1,'1대1 돌파에 헬프가 붙으면서 반대편 코너가 비었습니다.'],
  'dk|z23':[1,'존의 두 수비 사이 틈(갭)을 파고들어 수비를 모았습니다.'],
  'dk|z131':[-1,'돌파하는 순간 1-3-1의 트랩에 걸렸습니다.'],
+ 'spain|switch':[1,'백스크린이 스위치 수비의 소통을 끊어 롤맨이 림까지 비었습니다.'],
+ 'spain|drop':[1,'림 앞에서 기다리던 드롭 빅맨이 백스크린에 걸려 롤맨을 놓쳤습니다.'],
+ 'spain|blitz':[-1,'더블팀이 볼 핸들러를 먼저 덮쳐 백스크린 타이밍이 무너졌습니다.'],
+ 'spain|z23':[-1,'존은 사람이 아닌 공간을 지켜 백스크린을 걸 대상이 없습니다.'],
+ 'spain|z131':[-1,'1-3-1 가운데 수비가 롤맨이 들어갈 길에 서 있습니다.'],
+ 'ucla|man':[1,'하이포스트 백스크린에 가드 수비가 걸려 컷터가 림까지 비었습니다.'],
+ 'ucla|switch':[-1,'백스크린을 스위치로 바꿔 막아 컷이 끊겼습니다.'],
+ 'ucla|blitz':[1,'공을 압박하느라 앞으로 나온 수비의 등 뒤가 비었습니다.'],
+ 'ucla|z23':[-1,'존 뒷선이 림 앞에서 컷터를 기다리고 있습니다.'],
+ 'elev|switch':[1,'두 스크리너가 문을 닫듯 붙어 스위치할 틈이 없었습니다.'],
+ 'elev|drop':[1,'빅맨이 페인트로 내려가 있어 엘리베이터를 통과한 슈터를 늦게 견제합니다.'],
+ 'elev|z23':[-1,'존 앞선 두 명이 3점 라인 위쪽을 이미 지키고 있습니다.'],
+ 'elev|z131':[-1,'1-3-1 탑과 윙이 슈터가 나오는 길목을 막고 있습니다.'],
+ 'ham|switch':[-1,'스위치로 바꿔 막아 코너 슈터를 놓치지 않았습니다.'],
+ 'ham|blitz':[-1,'베이스라인 돌파에 더블팀이 붙어 패스 각이 사라졌습니다.'],
+ 'ham|z23':[1,'베이스라인 돌파에 존 뒷선이 끌려가자 반대편 코너가 비었습니다.'],
+ 'ham|z131':[1,'1-3-1의 약점인 베이스라인을 뚫고 코너로 빼냈습니다.'],
 };
 const edge = (p,d) => (RAW[p+'|'+d]||[0])[0];
 const why = (p,d) => (RAW[p+'|'+d]||[0,'뚜렷한 상성 없이 선수들의 실력 싸움이었습니다.'])[1];
 
 const TEAMS = [
-  {name:'항구 갈매기', round:'8강', rating:0, def:[4,1,3,1,1,0], off:[3,1,2,2,1,1,1,1], adapt:.5, read:.3,
+  {name:'항구 갈매기', round:'8강', rating:0, def:[4,1,3,1,1,0], off:[3,1,2,2,1,1,1,1,1,1,1,1], adapt:.5, read:.3,
    scout:'대인 방어와 드롭 수비가 기본인 정석 팀. 공격은 픽앤롤과 포스트업 위주. 패턴을 늦게 읽는다.'},
-  {name:'북부 빙벽', round:'4강', rating:1, def:[1,0,2,1,4,3], off:[1,1,3,3,1,1,1,1], adapt:.8, read:.55,
+  {name:'북부 빙벽', round:'4강', rating:1, def:[1,0,2,1,4,3], off:[1,1,3,3,1,1,1,1,0,2,1,1], adapt:.8, read:.55,
    scout:'존 디펜스의 팀. 2-3과 1-3-1을 번갈아 세운다. 공격은 골밑 빅맨에게 집중한다.'},
-  {name:'수도 번개', round:'결승', rating:2, def:[2,5,1,2,1,1], off:[2,2,1,1,2,2,3,2], adapt:1.2, read:.8,
+  {name:'수도 번개', round:'결승', rating:2, def:[2,5,1,2,1,1], off:[2,2,1,1,2,2,3,2,2,1,2,2], adapt:1.2, read:.8,
    scout:'거의 모든 스크린을 스위치한다. 에이스 아이솔레이션과 슈터 활용. 같은 작전을 반복하면 금방 읽힌다.'},
 ];
 const PER_Q = 5, PER_OT = 2;
@@ -450,7 +484,7 @@ function titleHTML(){
   <p>당신은 감독입니다. 공격 때는 상대 수비 대형을 보고 작전을 부르고, 수비 때는 상대 공격 세트를 보고 수비 전술을 고릅니다. 모든 작전에는 상성이 있습니다.</p>
   <p class="hint">작전이 시작되면 수비 반응이 드러나는 순간 멈춥니다. 8초 안에 A·B·C 중 공을 보낼 곳을 고르세요. 매 포세션의 판단은 기대 득점으로 평가됩니다. 대인 계열 수비(대인·스위치·드롭·블리츠)는 공을 잡기 전엔 똑같아 보입니다. 이번 경기에서 관찰한 대응 횟수와 작전 타임으로 추리하세요. 같은 작전을 연달아 쓰면 상대가 읽고, 상대는 당신이 자주 쓰는 작전에 맞춰 수비를 바꿉니다.</p>
   <ol class="bracket">${rows}</ol>
-  <div><b>작전 노트</b> <span class="hint">${noteCount()}/48 상성 발견</span><div class="meter"><i style="width:${noteCount()/48*100}%"></i></div></div>
+  <div><b>작전 노트</b> <span class="hint">${noteCount()}/${NOTE_N} 상성 발견</span><div class="meter"><i style="width:${noteCount()/NOTE_N*100}%"></i></div></div>
   <div class="actions">${champ
     ? `<button class="btn grow" data-act="reset">새 시즌 시작 (노트 유지)</button>`
     : `<button class="btn grow" data-act="scout">${TEAMS[st].round} 스카우팅 리포트</button>`}
@@ -581,7 +615,7 @@ function noteHTML(){
     const s = e>=2?'▲▲':e===1?'▲':e===0?'●':e===-1?'▼':'▼▼';
     return `<td class="${c}" title="${esc(why(p.id,d.id))}">${s}</td>`;
   }).join('')}</tr>`).join('');
-  return `<p class="eyebrow">공격 작전 × 수비 전술</p><h2>작전 노트 <span class="hint" style="font-family:var(--f-ui);font-size:14px;font-weight:400">${noteCount()}/48 발견</span></h2>
+  return `<p class="eyebrow">공격 작전 × 수비 전술</p><h2>작전 노트 <span class="hint" style="font-family:var(--f-ui);font-size:14px;font-weight:400">${noteCount()}/${NOTE_N} 발견</span></h2>
     <p class="hint">한 번 맞붙어 본 조합만 기록됩니다. 공격 입장에서 본 상성이며, 수비할 때는 반대로 읽으세요. 칸에 마우스를 올리면 이유가 보입니다.</p>
     <div class="scroll"><table class="mx"><tr><th></th>${head}</tr>${body}</table></div>
     <div class="key"><span>▲▲ 크게 유리</span><span>▲ 유리</span><span>● 보통</span><span>▼ 불리</span><span>▼▼ 크게 불리</span></div>
