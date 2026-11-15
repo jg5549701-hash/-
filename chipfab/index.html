@@ -49,11 +49,16 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .bay.empty{border:1.5px dashed var(--trace);color:var(--dim);font-size:12px}
 .bay.lock{opacity:.4;font-size:11px;color:var(--dim)}
 .bay .tag{position:absolute;top:6px;left:8px;font-family:var(--mono);font-size:9.5px;color:var(--dim)}
-.wafer{width:58%;aspect-ratio:1/1;border-radius:50%;position:relative;
+.wafer{width:46%;aspect-ratio:1/1;border-radius:50%;position:relative;
   background:repeating-linear-gradient(0deg,transparent 0 7px,#0004 7px 8px),repeating-linear-gradient(90deg,transparent 0 7px,#0004 7px 8px),radial-gradient(circle at 35% 30%,#e6e9ff,var(--si) 55%,#5b67b8);
   box-shadow:0 0 0 2px #0006 inset}
 .wafer::after{content:"";position:absolute;bottom:-1px;left:50%;width:18%;height:6%;background:var(--tile);transform:translateX(-50%)}
 .bay .lbl{font-size:11px;font-weight:700;text-align:center}
+.steps{display:flex;gap:2px}
+.steps i{font-style:normal;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:var(--board);border:1px solid var(--line);color:var(--dim)}
+.steps i.done{background:var(--trace);color:var(--ink);border-color:var(--trace)}
+.steps i.now{border-color:var(--copper);color:var(--copper);box-shadow:0 0 6px #e39a5f88}
+.t-step{border-color:#3a8f8f;background:linear-gradient(170deg,#14302f,var(--tile) 60%)} .t-step .ty{color:#6fd4d0}
 .prog{width:80%;height:5px;border-radius:9px;background:var(--line);overflow:hidden}
 .prog u{display:block;height:100%;background:var(--copper)}
 .bay .left{font-size:10.5px;color:var(--dim)}
@@ -172,6 +177,8 @@ const PROD={
   cpu:{n:'중앙처리장치',k:'처리장치',p:42,rep:1},
 };
 const RAW={si:'웨이퍼',dp:'도펀트',cu:'구리'};
+const STEP={ox:{n:'산화',s:'산'},li:{n:'노광',s:'노'},et:{n:'식각',s:'식'},mt:{n:'배선',s:'배'}};
+const stepTxt=st=>st.map(k=>STEP[k].n).join('→');
 const BUYERS={
   home:{n:'가전 회사',a:'📺',want:['diode','led'],w:3},
   car:{n:'자동차 회사',a:'🚗',want:['mos','bjt'],w:2},
@@ -190,13 +197,19 @@ const C={
   copper:{n:'구리 타깃',a:'🟠',t:'mat',c:0,price:4,d:'구리 +2',fx:s=>gain(s,{cu:2})},
   supply:{n:'공급망 계약',a:'🚢',t:'mat',c:1,price:6,d:'웨이퍼 +3, 도펀트 +1, 구리 +1',fx:s=>gain(s,{si:3,dp:1,cu:1})},
 
-  p_diode:{n:'다이오드 공정',t:'proc',c:1,price:3,r:{need:{si:2},out:'diode',q:2,days:1}},
-  p_bjt:{n:'쌍극 트랜지스터 공정',t:'proc',c:1,price:5,r:{need:{si:2},out:'bjt',q:3,days:1}},
-  p_led:{n:'발광 다이오드 공정',t:'proc',c:1,price:4,r:{need:{si:1,dp:1},out:'led',q:5,days:1}},
-  p_mos:{n:'전력 트랜지스터 공정',t:'proc',c:1,price:6,r:{need:{si:3},out:'mos',q:2,days:1}},
-  p_cmos:{n:'논리 회로 공정',t:'proc',c:1,price:8,r:{need:{si:2,dp:2},out:'cmos',q:3,days:2}},
-  p_dram:{n:'메모리 공정',t:'proc',c:1,price:9,r:{need:{si:1,dp:1,cu:2},out:'dram',q:2,days:2}},
-  p_cpu:{n:'처리장치 공정',t:'proc',c:2,price:12,r:{need:{si:2,dp:2,cu:3},out:'cpu',q:1,days:3}},
+  p_diode:{n:'다이오드 공정',t:'proc',c:1,price:3,r:{need:{si:2},out:'diode',q:2,st:['li','et']}},
+  p_bjt:{n:'쌍극 트랜지스터 공정',t:'proc',c:1,price:5,r:{need:{si:2},out:'bjt',q:3,st:['ox','et']}},
+  p_led:{n:'발광 다이오드 공정',t:'proc',c:1,price:4,r:{need:{si:1,dp:1},out:'led',q:5,st:['li','mt']}},
+  p_mos:{n:'전력 트랜지스터 공정',t:'proc',c:1,price:6,r:{need:{si:3},out:'mos',q:2,st:['ox','li']}},
+  p_cmos:{n:'논리 회로 공정',t:'proc',c:1,price:8,r:{need:{si:2,dp:2},out:'cmos',q:3,st:['ox','li','et']}},
+  p_dram:{n:'메모리 공정',t:'proc',c:1,price:9,r:{need:{si:1,dp:1,cu:2},out:'dram',q:2,st:['li','et','mt']}},
+  p_cpu:{n:'처리장치 공정',t:'proc',c:2,price:12,r:{need:{si:2,dp:2,cu:3},out:'cpu',q:1,st:['ox','li','et','mt']}},
+
+  s_ox:{n:'산화로 가동',a:'🔥',t:'step',c:0,price:4,step:'ox'},
+  s_li:{n:'노광 작업',a:'🔦',t:'step',c:0,price:4,step:'li'},
+  s_et:{n:'식각 작업',a:'🧪',t:'step',c:0,price:4,step:'et'},
+  s_mt:{n:'금속 배선',a:'🔩',t:'step',c:0,price:4,step:'mt'},
+  s_any:{n:'만능 엔지니어',a:'🛠️',t:'step',c:0,price:8,step:'any'},
 
   drink:{n:'에너지 드링크',a:'🥤',t:'op',c:0,price:4,d:'⚡+2',fx:s=>{s.en+=2}},
   intern:{n:'인턴 엔지니어',a:'🧑‍🔬',t:'op',c:0,price:6,d:'카드 1장 뽑기, ⚡+1',fx:s=>{draw(s,1);s.en+=1}},
@@ -206,7 +219,7 @@ const C={
   sample:{n:'샘플 제공',a:'📦',t:'op',c:1,price:4,d:'신뢰 +1, 오늘 바이어 +1',fx:s=>{s.rep+=1;s.today.cust+=1}},
   discount:{n:'재고 할인',a:'🏷️',t:'op',c:0,price:3,d:'오늘 바이어 +3, 가격 -20%',fx:s=>{s.today.cust+=3;s.today.mul*=0.8}},
   cert:{n:'품질 인증',a:'🏅',t:'op',c:1,price:7,d:'오늘 가격 +30%',fx:s=>{s.today.mul*=1.3}},
-  rush:{n:'공정 가속',a:'⏩',t:'op',c:1,price:6,d:'모든 장비 1일 단축 (완성 즉시 입고)',fx:s=>{s.bays.forEach(o=>{if(o)o.left--});collect(s,true)}},
+  rush:{n:'공정 가속',a:'⏩',t:'op',c:1,price:6,d:'모든 웨이퍼가 한 단계씩 진행 (끝나면 바로 입고)',fx:s=>{s.bays.forEach(o=>{if(o)o.at++});collect(s,true)}},
   purge:{n:'클린룸 정화',a:'🌀',t:'op',c:1,price:5,d:'손의 번아웃 카드를 덱에서 제거, 1장 뽑기',fx:s=>{const n=s.hand.filter(x=>x==='burnout').length;s.hand=s.hand.filter(x=>x!=='burnout');if(n)toast(`번아웃 ${n}장 제거`);draw(s,1)}},
 
   f_tool:{n:'노광 장비 증설',a:'🔬',t:'fac',c:1,price:15,d:'[영구] 장비 칸 +1',fx:s=>{if(s.bays.length<MAX_BAYS)s.bays.push(null);else s.baseCust+=1},fac:'장비 증설'},
@@ -218,10 +231,10 @@ const C={
 
   burnout:{n:'번아웃',a:'😵',t:'bad',c:99,price:0,d:'사용할 수 없다. 손만 차지한다.'},
 };
-const TYPE_N={mat:'원자재',proc:'공정',op:'운영',fac:'설비',bad:'방해'};
-const SHOP_POOL=['wafer2','dopant','copper','supply','p_bjt','p_led','p_mos','p_cmos','p_dram','p_cpu',
+const TYPE_N={mat:'원자재',proc:'투입',step:'공정 단계',op:'운영',fac:'설비',bad:'방해'};
+const SHOP_POOL=['s_ox','s_li','s_et','s_mt','s_any','s_li','s_et','wafer2','dopant','copper','supply','p_bjt','p_led','p_mos','p_cmos','p_dram','p_cpu',
   'drink','intern','manual','meeting','expo','sample','discount','cert','rush','purge','f_tool','f_yield','f_store','f_sales','f_partner','f_robot'];
-const STARTER=['wafer','wafer','wafer','wafer','p_diode','p_diode','p_led','dopant','meeting','drink'];
+const STARTER=['wafer','wafer','wafer','wafer','p_diode','p_diode','p_led','dopant','meeting','s_li','s_et'];
 const EVENTS=[
   {n:'평범한 하루',d:'특별한 일은 없다.',w:6},
   {n:'공급망 차질',d:'오늘 바이어 -2',w:2,fx:s=>{s.today.cust-=2}},
@@ -241,7 +254,7 @@ const pickW=l=>{let r=Math.random()*l.reduce((a,x)=>a+x.w,0);for(const x of l){i
 let S=null, SEL=-1, PREV=null, LONG=false;
 const calm=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const s=localStorage.getItem(KEY);if(!s)return null;const v=JSON.parse(s);v.buyers=v.buyers||[];v.next=v.next||null;v.rerolls=v.rerolls||0;v.sales=v.sales||[];return v}catch(e){return null}}
+function load(){try{const s=localStorage.getItem(KEY);if(!s)return null;const v=JSON.parse(s);v.buyers=v.buyers||[];v.next=v.next||null;v.rerolls=v.rerolls||0;v.sales=v.sales||[];(v.bays||[]).forEach(o=>{if(o&&!o.st){o.st=Array(o.total||1).fill('et');o.at=(o.total||1)-(o.left||1);o.yb=0}});return v}catch(e){return null}}
 function wipe(){try{localStorage.removeItem(KEY)}catch(e){}}
 let tT;function toast(m){let el=document.querySelector('.toast');if(!el){el=document.createElement('div');el.className='toast';document.body.appendChild(el)}el.textContent=m;el.hidden=false;clearTimeout(tT);tT=setTimeout(()=>el.hidden=true,1700)}
 
@@ -257,8 +270,8 @@ function gain(s,o){for(const k in o)s.raw[k]+=o[k]}
 function draw(s,n){for(let i=0;i<n;i++){if(!s.draw.length){if(!s.disc.length)return;s.draw=shuffle(s.disc);s.disc=[]}s.hand.push(s.draw.pop())}}
 function collect(s,now){
   const msgs=[];
-  s.bays.forEach((o,i)=>{if(o&&o.left<=0){
-    let good=0;for(let k=0;k<o.q;k++)if(Math.random()<s.yield)good++;
+  s.bays.forEach((o,i)=>{if(o&&o.at>=o.st.length){
+    const y=Math.min(.99,s.yield+(o.yb||0));let good=0;for(let k=0;k<o.q;k++)if(Math.random()<y)good++;
     const bad=o.q-good;s.stats.defect+=bad;if(good)addStock(s,o.out,good);s.bays[i]=null;
     msgs.push(`${PROD[o.out].n} ${good}개${bad?` (불량 ${bad})`:''}`);
   }});
@@ -276,7 +289,7 @@ function addStock(s,p,q){const x=s.stock.find(i=>i.p===p&&i.age===0);if(x)x.q+=q
 function startDay(){
   const s=S;s.day++;s.phase='play';SEL=-1;
   s.today={cust:0,mul:1,cost:{si:2,dp:2,cu:2},reviewer:0,x2:[],x15:[]};
-  s.bays.forEach(o=>{if(o)o.left--});const got=collect(s,false);s.morning=got.length?'밤새 완성: '+got.join(', '):'';
+  s.bays.forEach(o=>{if(o)o.at++});const got=collect(s,false);s.morning=got.length?'밤새 완성: '+got.join(', '):'';
   const ev=s.day===1?EVENTS[0]:pickW(EVENTS);s.event={n:ev.n,d:ev.d};if(ev.fx)ev.fx(s);
   if(!s.order&&s.day%3===2){const outs=new Set([...s.draw,...s.disc,...s.hand].filter(id=>C[id].r).map(id=>C[id].r.out));
     const ok=ORDERS.filter(o=>outs.has(o.p));if(ok.length){const o=ok[rnd(ok.length)];s.order={...o,due:s.day+2}}}
@@ -285,17 +298,20 @@ function startDay(){
   s.shop=shuffle(SHOP_POOL.slice()).slice(0,6);s.rerolls=0;
   s.removed=false;s.overtime=false;s.en=s.maxEn;draw(s,s.handSize);save();render();
 }
-function canPlay(id){const c=C[id];if(c.t==='bad'||S.en<c.c)return false;
+function stepTarget(s,k){let best=-1,bl=99;s.bays.forEach((o,i)=>{if(o&&o.at<o.st.length&&(k==='any'||o.st[o.at]===k)){const l=o.st.length-o.at;if(l<bl){bl=l;best=i}}});return best}
+function canPlay(id){const c=C[id];if(c.t==='bad'||S.en<c.c)return false;if(c.step&&stepTarget(S,c.step)<0)return false;
   if(c.r){if(!S.bays.includes(null))return false;for(const k in c.r.need)if(S.raw[k]<c.r.need[k])return false}return true}
 function whyNot(id){const c=C[id];if(c.t==='bad')return '번아웃은 쓸 수 없어요. 클린룸 정화나 카드 폐기로 없애세요.';
-  if(S.en<c.c)return '⚡ 기력이 부족해요.';if(c.r&&!S.bays.includes(null))return '비어 있는 장비가 없어요.';
+  if(S.en<c.c)return '⚡ 기력이 부족해요.';if(c.step)return c.step==='any'?'진행 중인 웨이퍼가 없어요.':`지금 '${STEP[c.step].n}' 단계인 웨이퍼가 없어요.`;if(c.r&&!S.bays.includes(null))return '비어 있는 장비가 없어요.';
   if(c.r){const miss=Object.entries(c.r.need).filter(([k,v])=>S.raw[k]<v).map(([k,v])=>`${RAW[k]} ${v-S.raw[k]}`).join(', ');return `원자재가 부족해요: ${miss} 더 필요 (상점에서 낱개 구매 가능)`}return ''}
 function tapCard(i){if(LONG){LONG=false;return}if(SEL===i)return play(i);SEL=i;render()}
 function play(i){
   const id=S.hand[i],c=C[id];if(!canPlay(id)){toast(whyNot(id));return}
   const src=document.querySelectorAll('.hand .card')[i],from=src&&src.getBoundingClientRect(),ghostHTML=src&&src.outerHTML;
   S.en-=c.c;S.hand.splice(i,1);SEL=-1;let target='.pills';
-  if(c.r){for(const k in c.r.need)S.raw[k]-=c.r.need[k];const bi=S.bays.indexOf(null);S.bays[bi]={out:c.r.out,q:c.r.q,left:c.r.days,total:c.r.days,fresh:1};S.disc.push(id);target=bi}
+  if(c.r){for(const k in c.r.need)S.raw[k]-=c.r.need[k];const bi=S.bays.indexOf(null);S.bays[bi]={out:c.r.out,q:c.r.q,st:c.r.st.slice(),at:1,yb:0,fresh:1};S.disc.push(id);target=bi}
+  else if(c.step){const bi=stepTarget(S,c.step),o=S.bays[bi];o.at++;o.yb=(o.yb||0)+.03;o.fresh=1;S.disc.push(id);target=bi;draw(S,1);
+    if(o.at>=o.st.length){collect(S,true)}else toast(`${PROD[o.out].n}: ${STEP[o.st[o.at-1]].n} 완료 → 다음 ${STEP[o.st[o.at]].n}`)}
   else{c.fx(S);if(c.t==='fac'){S.facs.push(c.fac);toast(`${c.n} 설치 완료`);target='.fab'}else{S.disc.push(id);if(c.t==='op')target='.fc'}}
   save();render();
   if(from&&!calm()){const to=(typeof target==='number'?document.querySelectorAll('.fab .bay')[target]:document.querySelector(target));if(to)fly(ghostHTML,from,to)}
@@ -356,8 +372,9 @@ function removeCard(w,i){if(S.removed)return toast('카드 폐기는 하루 한 
   const arr=w==='hand'?S.hand:S.disc,id=arr[i];arr.splice(i,1);S.coin-=4;S.removed=true;SEL=-1;toast(`${C[id].n} 폐기`);save();render();openShop()}
 
 const $=id=>document.getElementById(id);
-function art(c){if(c.r)return `<span class="chip">${PROD[c.r.out].k}</span>`;return c.a}
-function desc(c){if(c.r){const p=PROD[c.r.out];return `${rawTxt(c.r.need)} → ${p.n} ×${c.r.q} · ${c.r.days}일 · 개당 ${p.p}💰${p.rep?' · 신뢰+1':''}`}return c.d}
+function art(c){if(c.r)return `<span class="chip">${PROD[c.r.out].k}</span>`;if(c.step&&c.step!=='any')return `<span style="display:grid;justify-items:center;line-height:1.1">${c.a}<small style="font-size:11px;font-weight:700">${STEP[c.step].n}</small></span>`;return c.a}
+function desc(c){if(c.r){const p=PROD[c.r.out];return `${rawTxt(c.r.need)} → ${p.n} ×${c.r.q} · ${stepTxt(c.r.st)} · 개당 ${p.p}💰${p.rep?' · 신뢰+1':''}`}
+  if(c.step)return c.step==='any'?'진행 중인 웨이퍼 하나를 다음 단계로, 카드 1장 뽑기':`'${STEP[c.step].n}' 단계 웨이퍼를 다음 단계로, 카드 1장 뽑기`;return c.d}
 function cardHTML(id,attrs,extra,cls){const c=C[id];
   return `<button class="card t-${c.t} ${cls||''}" ${attrs||''}>${c.t!=='bad'?`<span class="cost">${c.c}</span>`:''}<span class="art">${art(c)}</span>
     <span class="nm">${c.n}</span><span class="ds">${desc(c)}</span>${extra||''}<span class="ty">${TYPE_N[c.t]}</span></button>`}
@@ -366,16 +383,16 @@ function render(){
   const s=S,wk=Math.ceil(s.day/7),dl=wk*7-s.day,units=s.stock.reduce((a,x)=>a+x.q,0);
   const bays=[];for(let i=0;i<MAX_BAYS;i++){const o=s.bays[i];
     if(i>=s.bays.length)bays.push(`<div class="bay lock"><span class="tag">장비 ${i+1}</span>잠김<br>장비 증설 필요</div>`);
-    else if(!o)bays.push(`<div class="bay empty"><span class="tag">장비 ${i+1}</span>비어 있음<br><span style="font-size:10.5px">공정 카드를 내세요</span></div>`);
+    else if(!o)bays.push(`<div class="bay empty"><span class="tag">장비 ${i+1}</span>비어 있음<br><span style="font-size:10.5px">투입 카드를 내세요</span></div>`);
     else bays.push(`<div class="bay ${o.fresh?'pop':''}"><span class="tag">장비 ${i+1}</span><div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
-      <span class="prog"><u style="width:${Math.round((o.total-o.left)/o.total*100)}%"></u></span><span class="left">${o.left}일 뒤 완성</span></div>`)}
+      <span class="steps">${o.st.map((k,j)=>`<i class="${j<o.at?'done':j===o.at?'now':''}">${STEP[k].s}</i>`).join('')}</span><span class="left">다음: ${STEP[o.st[o.at]]?STEP[o.st[o.at]].n:'완료'}</span></div>`)}
   const n=s.hand.length,mid=(n-1)/2;
   const hand=s.hand.map((id,i)=>cardHTML(id,`onclick="tapCard(${i})" style="transform:rotate(${(i-mid)*4}deg) translateY(${Math.abs(i-mid)*4}px)" ${canPlay(id)?'':'data-off'} aria-label="${C[id].n}"`,'',SEL===i?'up':'')).join('');
   let sel;
   if(SEL>=0&&s.hand[SEL]){const id=s.hand[SEL],c=C[id],ok=canPlay(id);
     sel=`<div class="sel"><div><b>${c.n}</b> <span class="m">⚡${c.t==='bad'?'-':c.c} · ${desc(c)}</span>${ok?'':`<br><span class="why">${whyNot(id)}</span>`}</div>
       <button class="btn sm ${ok?'pri':''}" onclick="play(${SEL})" ${ok?'':'disabled'}>사용</button></div>`}
-  else sel=`<div class="sel"><span class="m">${s.day<=2?'순서: ① 웨이퍼 카드로 원자재 모으기 → ② 공정 카드로 장비 돌리기 → ③ 하루 마감. 카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보기.':'카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보여요.'}</span><span></span></div>`;
+  else sel=`<div class="sel"><span class="m">${s.day<=2?'순서: ① 웨이퍼 카드로 원자재 모으기 → ② 투입 카드로 장비 돌리기 → ③ 하루 마감. 카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보기.':'카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보여요.'}</span><span></span></div>`;
   $('app').innerHTML=`
   <div class="hud">
     <div class="dayb"><b>${s.day}</b><span>/ ${LAST_DAY}일</span></div>
@@ -396,7 +413,7 @@ function render(){
   <div><div class="sec"><span>클린룸 장비</span><span class="num">${s.bays.filter(o=>!o).length}/${s.bays.length} 비어 있음</span></div><div class="fab">${bays.join('')}</div></div>
   <div class="panel"><div class="sec"><span>출하 창고</span><span class="num">${units}개 · 재고 수명 ${s.fresh+1}일</span></div>
     ${units?`<div class="stock">${s.stock.map(x=>`<span class="lot ${x.age?'old':''}"><span class="chip">${PROD[x.p].k}</span>${PROD[x.p].n} <b>×${x.q}</b> <span class="m num">${priceOf(s,x)}💰${x.age?' 구형':''}</span></span>`).join('')}</div>`
-      :'<div class="empty-note">출하할 칩이 없어요. 공정 카드로 장비를 돌리세요.</div>'}
+      :'<div class="empty-note">출하할 칩이 없어요. 투입 카드로 장비를 돌리세요.</div>'}
     ${s.order?`<div class="order"><span>납품 계약: <span class="chip">${PROD[s.order.p].k}</span> ${PROD[s.order.p].n} ×${s.order.q}</span><span class="m">${s.order.due}일차까지 · +${s.order.coin}💰 · 신뢰 +1</span></div>`:''}
     ${s.facs.length?`<div class="facs">${s.facs.map(f=>`<span class="fac">${f}</span>`).join('')}</div>`:''}
   </div>
@@ -422,7 +439,9 @@ function fitHand(){const h=document.querySelector('.hand');if(!h)return;const cs
 window.addEventListener('resize',()=>{if(S)fitHand()});
 function helpHTML(){return `<ol class="rules">
   <li>매일 카드 <b>5장</b>을 뽑고 <b>⚡3</b>으로 카드를 냅니다.</li>
-  <li><b class="g">원자재</b> 카드로 웨이퍼·도펀트·구리를 모으고, <b style="color:var(--copper)">공정</b> 카드를 내서 빈 장비에 웨이퍼를 넣으세요. 정해진 날이 지나면 칩이 출하 창고로 들어옵니다.</li>
+  <li><b class="g">원자재</b> 카드로 웨이퍼·도펀트·구리를 모으고, <b style="color:var(--copper)">투입</b> 카드를 내서 빈 장비에 웨이퍼를 넣으세요.</li>
+  <li>웨이퍼는 칩마다 정해진 <b>공정 단계</b>(산화·노광·식각·배선)를 거쳐요. 넣는 순간 첫 단계가 끝나고, 밤마다 한 단계씩 저절로 진행되며, 모든 단계가 끝나면 출하 창고로 들어옵니다.</li>
+  <li><b style="color:#6fd4d0">공정 단계</b> 카드(⚡0)는 지금 그 단계에 있는 웨이퍼를 바로 다음 단계로 넘기고 카드 1장을 뽑아요. 정밀 작업이라 그 웨이퍼의 수율도 3%p 올라가요. 여러 장을 이어서 내면 그날 바로 완성해서 팔 수도 있어요.</li>
   <li>반도체답게 <b>수율</b>이 있어요. 칩마다 일정 확률로 불량이 나고, 클린룸 업그레이드로 수율을 올릴 수 있어요.</li>
   <li><b>하루 마감</b> 때 바이어가 창고의 칩을 하나씩 사 갑니다. <b>수요 예보</b>에서 오늘과 내일 올 바이어와 원하는 칩을 미리 볼 수 있어요. 원하는 칩을 사면 25% 더 내고, 없으면 절반은 그냥 돌아가요.</li>
   <li>같은 칩은 하루에 3개째부터 값이 10%씩 내려가요(최대 50%). 여러 종류를 만드는 게 유리해요.</li>
@@ -449,7 +468,7 @@ function openShop(){const s=S,t=s.today.cost;
   <div class="buyraw">${['si','dp','cu'].map(k=>`<button class="btn sm" onclick="buyRaw('${k}')" ${s.coin<t[k]?'disabled':''}><span class="dot d-${k}" style="display:inline-block"></span> ${RAW[k]} +1 · ${t[k]}💰</button>`).join('')}</div>
   <div class="lbl2">카드 폐기 · 4💰, 하루 한 번${s.removed?' (오늘은 사용함)':''}</div>
   <div class="grid">${[...s.hand.map((id,i)=>['hand',i,id]),...s.disc.map((id,i)=>['disc',i,id])].map(([w,i,id])=>cardHTML(id,`onclick="removeCard('${w}',${i})" ${s.removed||s.coin<4?'data-off':''}`,`<span class="pr">${w==='hand'?'손패':'버림'} · 폐기</span>`)).join('')||'<span class="empty-note">폐기할 카드가 없어요</span>'}</div>`)}
-function showDeck(){const all=[...S.draw,...S.hand,...S.disc],cnt={};all.forEach(id=>cnt[id]=(cnt[id]||0)+1);const ord=['mat','proc','op','fac','bad'];
+function showDeck(){const all=[...S.draw,...S.hand,...S.disc],cnt={};all.forEach(id=>cnt[id]=(cnt[id]||0)+1);const ord=['mat','proc','step','op','fac','bad'];
   modal(`<div class="x"><h2>전체 덱 ${all.length}장</h2><button class="btn sm" onclick="closeModal()">닫기</button></div>
   <div class="grid">${Object.keys(cnt).sort((a,b)=>ord.indexOf(C[a].t)-ord.indexOf(C[b].t)).map(id=>cardHTML(id,'',`<span class="pr">×${cnt[id]}</span>`)).join('')}</div>`)}
 function showNight(){const s=S;let foot;
