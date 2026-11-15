@@ -45,7 +45,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .sec{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--dim);font-weight:700;letter-spacing:.04em;margin-bottom:6px}
 .sec .num{font-weight:500}
 .fab{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.bay{aspect-ratio:1/1;max-width:100%;border-radius:14px;background:var(--tile);border:1px solid var(--line);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px;overflow:hidden}
+.bay{aspect-ratio:1/1;max-width:100%;border-radius:14px;background:var(--tile);border:1px solid var(--line);position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:20px 6px 6px;overflow:hidden}
 .bay.empty{border:1.5px dashed var(--trace);color:var(--dim);font-size:12px}
 .bay.lock{opacity:.4;font-size:11px;color:var(--dim)}
 .bay .tag{position:absolute;top:6px;left:8px;font-family:var(--mono);font-size:9.5px;color:var(--dim)}
@@ -59,6 +59,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .steps i.done{background:var(--trace);color:var(--ink);border-color:var(--trace)}
 .steps i.now{border-color:var(--copper);color:var(--copper);box-shadow:0 0 6px #e39a5f88}
 .t-step{border-color:#3a8f8f;background:linear-gradient(170deg,#14302f,var(--tile) 60%)} .t-step .ty{color:#6fd4d0}
+.spb{position:absolute;top:5px;right:7px;font-size:9.5px;font-weight:700;color:#6fd4d0}
+.bay.target{border:2px solid var(--gold);box-shadow:0 0 12px #f0c95a66;cursor:pointer;opacity:1}
+.chart{width:100%;max-width:100%;height:auto;display:block}
 .prog{width:80%;height:5px;border-radius:9px;background:var(--line);overflow:hidden}
 .prog u{display:block;height:100%;background:var(--copper)}
 .bay .left{font-size:10.5px;color:var(--dim)}
@@ -187,6 +190,23 @@ const BUYERS={
   dist:{n:'유통상',a:'🛒',want:[],w:3},
 };
 const short=p=>PROD[p].k;
+const DIFF={easy:{n:'쉬움',rent:.75,coin:8,y:0,cust:0},normal:{n:'보통',rent:1,coin:0,y:0,cust:0},hard:{n:'어려움',rent:1.3,coin:0,y:-.03,cust:-1}};
+const UNLOCKS=[{id:'s_any',at:60},{id:'p_cpu',at:150},{id:'f_robot',at:280},{id:'f_partner',at:450}];
+const META_KEY='transistor-fab-meta';
+function loadMeta(){let m=null;try{m=JSON.parse(localStorage.getItem(META_KEY)||'null')}catch(e){}
+  m=m||{};m.best=m.best||{};m.runs=m.runs||0;m.wins=m.wins||0;m.career=m.career||0;if(m.sound===undefined)m.sound=true;return m}
+function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify(META))}catch(e){}}
+let META=loadMeta();
+const locked=id=>UNLOCKS.some(u=>u.id===id&&META.career<u.at);
+const shopRoll=()=>shuffle(SHOP_POOL.filter(id=>!locked(id))).slice(0,6);
+const rentOf=(s,w)=>Math.round(RENT[w-1]*DIFF[s.diff||'normal'].rent);
+let AC=null;
+function sfx(kind){if(!META.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+  const seq={play:[[520,.05]],coin:[[880,.05],[1320,.08]],done:[[523,.07],[659,.07],[784,.12]],bad:[[330,.15],[220,.3]],step:[[660,.04],[990,.05]]}[kind]||[];
+  let t=AC.currentTime;seq.forEach(([f,d])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=kind==='bad'?'sawtooth':'triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.9});
+  if(kind==='coin'||kind==='done')try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}}catch(e){}}
+function toggleSound(){META.sound=!META.sound;saveMeta();if(META.sound)sfx('coin');render()}
 const rawStr=n=>Object.entries(n).map(([k,v])=>`<span class="dot d-${k}" style="display:inline-block;vertical-align:-1px"></span>${RAW[k]}${v}`).join(' ');
 const rawTxt=n=>Object.entries(n).map(([k,v])=>`${RAW[k]} ${v}`).join(', ');
 
@@ -222,7 +242,7 @@ const C={
   rush:{n:'공정 가속',a:'⏩',t:'op',c:1,price:6,d:'모든 웨이퍼가 한 단계씩 진행 (끝나면 바로 입고)',fx:s=>{s.bays.forEach(o=>{if(o)o.at++});collect(s,true)}},
   purge:{n:'클린룸 정화',a:'🌀',t:'op',c:1,price:5,d:'손의 번아웃 카드를 덱에서 제거, 1장 뽑기',fx:s=>{const n=s.hand.filter(x=>x==='burnout').length;s.hand=s.hand.filter(x=>x!=='burnout');if(n)toast(`번아웃 ${n}장 제거`);draw(s,1)}},
 
-  f_tool:{n:'노광 장비 증설',a:'🔬',t:'fac',c:1,price:15,d:'[영구] 장비 칸 +1',fx:s=>{if(s.bays.length<MAX_BAYS)s.bays.push(null);else s.baseCust+=1},fac:'장비 증설'},
+  f_tool:{n:'노광 장비 증설',a:'🔬',t:'fac',c:1,price:15,d:'[영구] 장비 칸 +1',fx:s=>{if(s.bays.length<MAX_BAYS){s.bays.push(null);s.spec.push(['ox','li','et','mt'][rnd(4)])}else s.baseCust+=1},fac:'장비 증설'},
   f_yield:{n:'클린룸 업그레이드',a:'✨',t:'fac',c:1,price:10,d:'[영구] 수율 +4%p',fx:s=>{s.yield=Math.min(.99,s.yield+.04)},fac:'수율 개선'},
   f_store:{n:'항온 창고',a:'🧊',t:'fac',c:1,price:12,d:'[영구] 재고가 하루 더 버팀',fx:s=>{s.fresh+=1},fac:'항온 창고'},
   f_sales:{n:'영업팀 확충',a:'📈',t:'fac',c:1,price:12,d:'[영구] 매일 바이어 +1',fx:s=>{s.baseCust+=1},fac:'영업팀'},
@@ -254,15 +274,16 @@ const pickW=l=>{let r=Math.random()*l.reduce((a,x)=>a+x.w,0);for(const x of l){i
 let S=null, SEL=-1, PREV=null, LONG=false;
 const calm=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const s=localStorage.getItem(KEY);if(!s)return null;const v=JSON.parse(s);v.buyers=v.buyers||[];v.next=v.next||null;v.rerolls=v.rerolls||0;v.sales=v.sales||[];(v.bays||[]).forEach(o=>{if(o&&!o.st){o.st=Array(o.total||1).fill('et');o.at=(o.total||1)-(o.left||1);o.yb=0}});return v}catch(e){return null}}
+function load(){try{const s=localStorage.getItem(KEY);if(!s)return null;const v=JSON.parse(s);v.buyers=v.buyers||[];v.next=v.next||null;v.rerolls=v.rerolls||0;v.sales=v.sales||[];v.diff=v.diff||'normal';v.hist=v.hist||[];v.spec=v.spec||(v.bays||[]).map(()=>null);(v.bays||[]).forEach(o=>{if(o&&!o.st){o.st=Array(o.total||1).fill('et');o.at=(o.total||1)-(o.left||1);o.yb=0}});return v}catch(e){return null}}
 function wipe(){try{localStorage.removeItem(KEY)}catch(e){}}
 let tT;function toast(m){let el=document.querySelector('.toast');if(!el){el=document.createElement('div');el.className='toast';document.body.appendChild(el)}el.textContent=m;el.hidden=false;clearTimeout(tT);tT=setTimeout(()=>el.hidden=true,1700)}
 
-function newGame(){
+function newGame(diff){
+  diff=DIFF[diff]?diff:'normal';const D=DIFF[diff];
   closeModal();SEL=-1;PREV=null;
-  S={day:0,coin:12,rep:0,raw:{si:2,dp:0,cu:0},en:3,maxEn:3,handSize:5,yield:.92,
+  S={diff,day:0,coin:12+D.coin,rep:0,raw:{si:2,dp:0,cu:0},en:3,maxEn:3,handSize:5,yield:.92+D.y,spec:['li','et'],hist:[],
     draw:shuffle(STARTER.slice()),hand:[],disc:[],bays:[null,null],stock:[{p:'diode',q:3,age:0}],buyers:[],next:null,sales:[],rerolls:0,
-    fresh:1,baseCust:4,priceMul:1,facs:[],order:null,shop:[],removed:false,overtime:false,
+    fresh:1,baseCust:4+D.cust,priceMul:1,facs:[],order:null,shop:[],removed:false,overtime:false,
     stats:{sold:0,earned:0,waste:0,orders:0,defect:0},today:{},event:null,over:false,phase:'play',night:''};
   startDay();
 }
@@ -275,7 +296,7 @@ function collect(s,now){
     const bad=o.q-good;s.stats.defect+=bad;if(good)addStock(s,o.out,good);s.bays[i]=null;
     msgs.push(`${PROD[o.out].n} ${good}개${bad?` (불량 ${bad})`:''}`);
   }});
-  if(now&&msgs.length)toast('입고: '+msgs.join(', '));
+  if(now&&msgs.length){toast('입고: '+msgs.join(', '));sfx('done')}
   return msgs;
 }
 // 덱으로 만들 수 있는 칩을 원하는 바이어가 더 자주 오고, 주차가 갈수록 고급 칩 바이어가 늘어난다
@@ -289,13 +310,14 @@ function addStock(s,p,q){const x=s.stock.find(i=>i.p===p&&i.age===0);if(x)x.q+=q
 function startDay(){
   const s=S;s.day++;s.phase='play';SEL=-1;
   s.today={cust:0,mul:1,cost:{si:2,dp:2,cu:2},reviewer:0,x2:[],x15:[]};
-  s.bays.forEach(o=>{if(o)o.at++});const got=collect(s,false);s.morning=got.length?'밤새 완성: '+got.join(', '):'';
+  let sped=0;s.bays.forEach((o,i)=>{if(!o)return;o.at++;if(o.at<o.st.length&&o.st[o.at]===s.spec[i]){o.at++;sped++}});
+  const got=collect(s,false);s.morning=[got.length?'밤새 완성: '+got.join(', '):'',sped?`특화 장비 덕분에 ${sped}개 장비가 한 단계 더 진행`:''].filter(Boolean).join(' · ');
   const ev=s.day===1?EVENTS[0]:pickW(EVENTS);s.event={n:ev.n,d:ev.d};if(ev.fx)ev.fx(s);
   if(!s.order&&s.day%3===2){const outs=new Set([...s.draw,...s.disc,...s.hand].filter(id=>C[id].r).map(id=>C[id].r.out));
     const ok=ORDERS.filter(o=>outs.has(o.p));if(ok.length){const o=ok[rnd(ok.length)];s.order={...o,due:s.day+2}}}
   const base=baseCount(s);s.buyers=(s.next||rollList(s,base)).slice(0,base);while(s.buyers.length<base)s.buyers.push(rollBuyer(s));
   s.next=rollList(s,base);
-  s.shop=shuffle(SHOP_POOL.slice()).slice(0,6);s.rerolls=0;
+  s.shop=shopRoll();s.rerolls=0;
   s.removed=false;s.overtime=false;s.en=s.maxEn;draw(s,s.handSize);save();render();
 }
 function stepTarget(s,k){let best=-1,bl=99;s.bays.forEach((o,i)=>{if(o&&o.at<o.st.length&&(k==='any'||o.st[o.at]===k)){const l=o.st.length-o.at;if(l<bl){bl=l;best=i}}});return best}
@@ -305,15 +327,19 @@ function whyNot(id){const c=C[id];if(c.t==='bad')return '번아웃은 쓸 수 �
   if(S.en<c.c)return '⚡ 기력이 부족해요.';if(c.step)return c.step==='any'?'진행 중인 웨이퍼가 없어요.':`지금 '${STEP[c.step].n}' 단계인 웨이퍼가 없어요.`;if(c.r&&!S.bays.includes(null))return '비어 있는 장비가 없어요.';
   if(c.r){const miss=Object.entries(c.r.need).filter(([k,v])=>S.raw[k]<v).map(([k,v])=>`${RAW[k]} ${v-S.raw[k]}`).join(', ');return `원자재가 부족해요: ${miss} 더 필요 (상점에서 낱개 구매 가능)`}return ''}
 function tapCard(i){if(LONG){LONG=false;return}if(SEL===i)return play(i);SEL=i;render()}
-function play(i){
+function pickBay(s,c){const em=s.bays.map((o,i)=>o?-1:i).filter(i=>i>=0);const good=em.find(i=>s.spec[i]&&c.r.st.slice(1).includes(s.spec[i]));return good!==undefined?good:em[0]}
+function validBay(id,bi){const c=C[id],o=S.bays[bi];if(bi<0||bi>=S.bays.length)return false;if(c.r)return !o;if(c.step)return !!o&&o.at<o.st.length&&(c.step==='any'||o.st[o.at]===c.step);return false}
+function bayTap(bi){if(SEL<0)return;const id=S.hand[SEL];if(!id||!validBay(id,bi))return;play(SEL,bi)}
+function play(i,pick){
   const id=S.hand[i],c=C[id];if(!canPlay(id)){toast(whyNot(id));return}
+  if(pick!==undefined&&!validBay(id,pick))pick=undefined;
   const src=document.querySelectorAll('.hand .card')[i],from=src&&src.getBoundingClientRect(),ghostHTML=src&&src.outerHTML;
   S.en-=c.c;S.hand.splice(i,1);SEL=-1;let target='.pills';
-  if(c.r){for(const k in c.r.need)S.raw[k]-=c.r.need[k];const bi=S.bays.indexOf(null);S.bays[bi]={out:c.r.out,q:c.r.q,st:c.r.st.slice(),at:1,yb:0,fresh:1};S.disc.push(id);target=bi}
-  else if(c.step){const bi=stepTarget(S,c.step),o=S.bays[bi];o.at++;o.yb=(o.yb||0)+.03;o.fresh=1;S.disc.push(id);target=bi;draw(S,1);
+  if(c.r){for(const k in c.r.need)S.raw[k]-=c.r.need[k];const bi=pick!==undefined?pick:pickBay(S,c);S.bays[bi]={out:c.r.out,q:c.r.q,st:c.r.st.slice(),at:1,yb:0,fresh:1};S.disc.push(id);target=bi}
+  else if(c.step){const bi=pick!==undefined?pick:stepTarget(S,c.step),o=S.bays[bi];sfx('step');o.at++;o.yb=(o.yb||0)+.03;o.fresh=1;S.disc.push(id);target=bi;draw(S,1);
     if(o.at>=o.st.length){collect(S,true)}else toast(`${PROD[o.out].n}: ${STEP[o.st[o.at-1]].n} 완료 → 다음 ${STEP[o.st[o.at]].n}`)}
   else{c.fx(S);if(c.t==='fac'){S.facs.push(c.fac);toast(`${c.n} 설치 완료`);target='.fab'}else{S.disc.push(id);if(c.t==='op')target='.fc'}}
-  save();render();
+  if(!c.step)sfx('play');save();render();
   if(from&&!calm()){const to=(typeof target==='number'?document.querySelectorAll('.fab .bay')[target]:document.querySelector(target));if(to)fly(ghostHTML,from,to)}
 }
 function fly(html,from,to){
@@ -355,10 +381,14 @@ function endDay(){
   let waste=0;s.stock.forEach(x=>{x.age++;if(x.age>s.fresh){waste+=x.q;x.q=0}});s.stock=s.stock.filter(x=>x.q>0);
   if(waste){s.stats.waste+=waste;log.push(`<span class="r">단종 처리된 구형 재고 ${waste}개</span>`)}
   s.disc.push(...s.hand);s.hand=[];
-  if(s.day%7===0){const w=s.day/7,rent=RENT[w-1];
+  if(s.day%7===0){const w=s.day/7,rent=rentOf(s,w);
     if(s.coin>=rent){s.coin-=rent;log.push(`<span class="y">${w}주차 팹 운영비 ${rent}💰 납부 완료</span>`)}
     else{s.over='bankrupt';log.push(`<span class="r">${w}주차 팹 운영비 ${rent}💰를 낼 수 없습니다</span>`)}}
   if(!s.over&&s.day>=LAST_DAY)s.over='win';
+  s.hist.push({d:s.day,coin:s.coin,earn:s.earnToday||0,sold:s.sales.filter(x=>!x.miss).length});
+  if(s.over&&!s.recorded){s.recorded=1;const pts=s.over==='win'?score():Math.floor(s.stats.earned/4),before=META.career;
+    META.runs++;if(s.over==='win'){META.wins++;META.best[s.diff]=Math.max(META.best[s.diff]||0,pts)}META.career+=pts;saveMeta();
+    s.pts=pts;s.unlockedNow=UNLOCKS.filter(u=>before<u.at&&META.career>=u.at).map(u=>C[u.id].n)}
   s.night=log.join('<br>');save();showNight();
 }
 function score(){return S.coin+S.rep*5+S.facs.length*5}
@@ -366,7 +396,7 @@ function gradeOf(sc){return sc>=280?'S':sc>=200?'A':sc>=140?'B':sc>=90?'C':'D'}
 
 function buyCard(i){const id=S.shop[i];if(!id)return;const c=C[id];if(S.coin<c.price)return toast('💰가 부족해요');
   S.coin-=c.price;S.disc.push(id);S.shop[i]=null;toast(`${c.n} 구매 → 버린 더미로`);save();render();openShop()}
-function reroll(){const c=2+S.rerolls;if(S.coin<c)return toast('💰가 부족해요');S.coin-=c;S.rerolls++;S.shop=shuffle(SHOP_POOL.slice()).slice(0,6);save();render();openShop()}
+function reroll(){const c=2+S.rerolls;if(S.coin<c)return toast('💰가 부족해요');S.coin-=c;S.rerolls++;S.shop=shopRoll();save();render();openShop()}
 function buyRaw(k){const pr=S.today.cost[k];if(S.coin<pr)return toast('💰가 부족해요');S.coin-=pr;S.raw[k]++;save();render();openShop()}
 function removeCard(w,i){if(S.removed)return toast('카드 폐기는 하루 한 번이에요');if(S.coin<4)return toast('💰가 부족해요');
   const arr=w==='hand'?S.hand:S.disc,id=arr[i];arr.splice(i,1);S.coin-=4;S.removed=true;SEL=-1;toast(`${C[id].n} 폐기`);save();render();openShop()}
@@ -381,22 +411,24 @@ function cardHTML(id,attrs,extra,cls){const c=C[id];
 function render(){
   if(!S)return renderTitle();
   const s=S,wk=Math.ceil(s.day/7),dl=wk*7-s.day,units=s.stock.reduce((a,x)=>a+x.q,0);
-  const bays=[];for(let i=0;i<MAX_BAYS;i++){const o=s.bays[i];
-    if(i>=s.bays.length)bays.push(`<div class="bay lock"><span class="tag">장비 ${i+1}</span>잠김<br>장비 증설 필요</div>`);
-    else if(!o)bays.push(`<div class="bay empty"><span class="tag">장비 ${i+1}</span>비어 있음<br><span style="font-size:10.5px">투입 카드를 내세요</span></div>`);
-    else bays.push(`<div class="bay ${o.fresh?'pop':''}"><span class="tag">장비 ${i+1}</span><div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
+  const selId=SEL>=0?s.hand[SEL]:null,selOk=selId&&canPlay(selId)&&(C[selId].r||C[selId].step);
+  const bays=[];for(let i=0;i<MAX_BAYS;i++){const o=s.bays[i],sp=s.spec[i]?`<span class="spb">${STEP[s.spec[i]].n} 특화</span>`:'',tg=selOk&&i<s.bays.length&&validBay(selId,i);
+    const act=tg?` target" role="button" tabindex="0" onclick="bayTap(${i})" onkeydown="if(event.key==='Enter')bayTap(${i})`:'';
+    if(i>=s.bays.length)bays.push(`<div class="bay lock"><span class="tag">장비 ${i+1}</span>${sp}잠김<br>장비 증설 필요</div>`);
+    else if(!o)bays.push(`<div class="bay empty${act}"><span class="tag">장비 ${i+1}</span>${sp}비어 있음<br><span style="font-size:10.5px">투입 카드를 내세요</span></div>`);
+    else bays.push(`<div class="bay ${o.fresh?'pop':''}${act}"><span class="tag">장비 ${i+1}</span>${sp}<div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
       <span class="steps">${o.st.map((k,j)=>`<i class="${j<o.at?'done':j===o.at?'now':''}">${STEP[k].s}</i>`).join('')}</span><span class="left">다음: ${STEP[o.st[o.at]]?STEP[o.st[o.at]].n:'완료'}</span></div>`)}
   const n=s.hand.length,mid=(n-1)/2;
   const hand=s.hand.map((id,i)=>cardHTML(id,`onclick="tapCard(${i})" style="transform:rotate(${(i-mid)*4}deg) translateY(${Math.abs(i-mid)*4}px)" ${canPlay(id)?'':'data-off'} aria-label="${C[id].n}"`,'',SEL===i?'up':'')).join('');
   let sel;
   if(SEL>=0&&s.hand[SEL]){const id=s.hand[SEL],c=C[id],ok=canPlay(id);
-    sel=`<div class="sel"><div><b>${c.n}</b> <span class="m">⚡${c.t==='bad'?'-':c.c} · ${desc(c)}</span>${ok?'':`<br><span class="why">${whyNot(id)}</span>`}</div>
+    sel=`<div class="sel"><div><b>${c.n}</b> <span class="m">⚡${c.t==='bad'?'-':c.c} · ${desc(c)}</span>${ok?((c.r||c.step)?'<br><span class="y">빛나는 장비를 눌러 고르거나, [사용]으로 자동 배치</span>':''):`<br><span class="why">${whyNot(id)}</span>`}</div>
       <button class="btn sm ${ok?'pri':''}" onclick="play(${SEL})" ${ok?'':'disabled'}>사용</button></div>`}
   else sel=`<div class="sel"><span class="m">${s.day<=2?'순서: ① 웨이퍼 카드로 원자재 모으기 → ② 투입 카드로 장비 돌리기 → ③ 하루 마감. 카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보기.':'카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보여요.'}</span><span></span></div>`;
   $('app').innerHTML=`
   <div class="hud">
     <div class="dayb"><b>${s.day}</b><span>/ ${LAST_DAY}일</span></div>
-    <div class="brand">트랜지스터 팹<small>${wk}주차 · 운영비 ${RENT[wk-1]}💰 ${dl===0?'<span class="r">오늘 밤 납부</span>':`${dl}일 남음`}</small></div>
+    <div class="brand">트랜지스터 팹<small>${wk}주차 · 운영비 ${rentOf(s,wk)}💰 · ${DIFF[s.diff].n} ${dl===0?'<span class="r">오늘 밤 납부</span>':`${dl}일 남음`}</small></div>
     <div class="money"><b id="coin">${PREV?PREV.coin:s.coin}</b><span>💰 자금</span></div>
   </div>
   <div class="pills">
@@ -417,7 +449,7 @@ function render(){
     ${s.order?`<div class="order"><span>납품 계약: <span class="chip">${PROD[s.order.p].k}</span> ${PROD[s.order.p].n} ×${s.order.q}</span><span class="m">${s.order.due}일차까지 · +${s.order.coin}💰 · 신뢰 +1</span></div>`:''}
     ${s.facs.length?`<div class="facs">${s.facs.map(f=>`<span class="fac">${f}</span>`).join('')}</div>`:''}
   </div>
-  <div style="display:flex;gap:8px;justify-content:center"><button class="btn sm" onclick="showDeck()">전체 덱</button><button class="btn sm" onclick="showHelp()">게임 방법</button><button class="btn sm" onclick="confirmReset()">처음부터</button></div>
+  <div style="display:flex;gap:8px;justify-content:center"><button class="btn sm" onclick="showDeck()">전체 덱</button><button class="btn sm" onclick="showHelp()">게임 방법</button><button class="btn sm" onclick="confirmReset()">처음부터</button><button class="btn sm" onclick="toggleSound()" aria-pressed="${META.sound}">소리 ${META.sound?'켜짐':'꺼짐'}</button></div>
   <div class="tray"><div class="in">${sel}
     <div class="handrow"><div class="pile"><b>${s.draw.length}</b>덱</div>
       <div class="hand">${hand||'<span class="empty-note" style="align-self:center;padding:30px 0">손패를 다 썼어요</span>'}</div>
@@ -446,20 +478,28 @@ function helpHTML(){return `<ol class="rules">
   <li><b>하루 마감</b> 때 바이어가 창고의 칩을 하나씩 사 갑니다. <b>수요 예보</b>에서 오늘과 내일 올 바이어와 원하는 칩을 미리 볼 수 있어요. 원하는 칩을 사면 25% 더 내고, 없으면 절반은 그냥 돌아가요.</li>
   <li>같은 칩은 하루에 3개째부터 값이 10%씩 내려가요(최대 50%). 여러 종류를 만드는 게 유리해요.</li>
   <li>팔리지 않은 칩은 다음 날 <b>구형 재고</b>가 되어 40% 싸지고, 그다음 날 단종 처리돼요.</li>
+  <li>카드를 고른 뒤 <b>빛나는 장비</b>를 누르면 원하는 장비에 넣거나 진행할 수 있어요. 장비마다 <b>특화 단계</b>가 있어서, 밤에 진행한 뒤 다음 단계가 특화 단계면 그 단계까지 한 번에 끝나요.</li>
   <li><b>상점</b>에서 카드를 사서 덱을 키우고(산 카드는 버린 더미로), 마음에 안 들면 다시 뽑을 수 있어요. 원자재 낱개 구매와 하루 한 번 4💰 카드 폐기도 돼요.</li>
   <li><b style="color:var(--fac)">설비</b> 카드는 한 번 내면 효과가 계속되고 덱에서 빠집니다.</li>
   <li><b>야근</b>은 하루 한 번 ⚡+2를 주지만 덱에 번아웃 카드가 들어와요.</li>
-  <li>7·14·21·28일 밤에 팹 운영비(${RENT.join('·')}💰)를 냅니다. 못 내면 파산! 28일을 버티면 <b>자금 + 신뢰×5 + 설비×5</b>로 등급을 매겨요.</li></ol>`}
+  <li>7·14·21·28일 밤에 팹 운영비(보통 기준 ${RENT.join('·')}💰)를 냅니다. 못 내면 파산! 28일을 버티면 <b>자금 + 신뢰×5 + 설비×5</b>로 등급을 매겨요.</li></ol>`}
 function renderTitle(){const sv=load(),cont=sv&&!sv.over;
   $('app').innerHTML=`<div class="title"><div class="wafer"></div><h1>트랜지스터 팹</h1><p>웨이퍼를 굽고, 칩을 출하하고, 덱을 키워라.<br>반도체 팹 경영 덱빌딩 카드게임</p></div>
   <div class="panel">${helpHTML()}</div>
-  <div style="display:grid;gap:8px">${cont?`<button class="btn pri" onclick="S=load();render()">이어하기 (${sv.day}일차)</button>`:''}
-  <button class="btn ${cont?'':'pri'}" onclick="newGame()">새 게임</button></div>`}
+  <div style="display:grid;gap:8px;margin-top:10px">${cont?`<button class="btn pri" onclick="S=load();render()">이어하기 (${sv.day}일차)</button>`:''}
+  <div class="lbl2" style="text-align:center;margin-top:6px">새 게임 난이도</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${Object.entries(DIFF).map(([k,d])=>`<button class="btn ${!cont&&k==='normal'?'pri':''}" onclick="newGame('${k}')">${d.n}</button>`).join('')}</div>
+  <div class="m" style="font-size:11.5px;text-align:center">쉬움: 운영비 25%↓, 자금 +8 · 어려움: 운영비 30%↑, 수율 3%p↓, 바이어 -1</div></div>
+  <div class="panel" style="margin-top:10px"><div class="sec"><span>기록</span><span class="num">${META.wins}승 / ${META.runs}판 · 경력 점수 ${META.career}</span></div>
+    <div class="stock">${Object.entries(DIFF).map(([k,d])=>`<span class="lot">${d.n} 최고 <b>${META.best[k]||'-'}</b></span>`).join('')}</div>
+    <div class="sec" style="margin-top:12px"><span>카드 해금 (경력 점수)</span></div>
+    <div class="stock">${UNLOCKS.map(u=>`<span class="lot ${META.career>=u.at?'':'old'}">${META.career>=u.at?'✓':'🔒'} ${C[u.id].n} <b class="num">${u.at}</b></span>`).join('')}</div>
+    <div class="m" style="font-size:11.5px;margin-top:8px">28일을 버티면 최종 점수만큼, 파산해도 총수입의 1/4만큼 경력 점수가 쌓여요.</div></div>`}
 function modal(h){$('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="sheet">${h}</div></div>`}
 function closeModal(){$('modal').innerHTML=''}
 function showHelp(){modal(`<div class="x"><h2>게임 방법</h2><button class="btn sm" onclick="closeModal()">닫기</button></div>${helpHTML()}`)}
 function confirmReset(){modal(`<h2>처음부터 다시 할까요?</h2><p class="m" style="margin:8px 0 14px">지금 진행 중인 게임이 사라집니다.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="wipe();newGame()">새로 시작</button></div>`)}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="wipe();newGame(S&&S.diff)">새로 시작</button></div>`)}
 function openShop(){const s=S,t=s.today.cost;
   modal(`<div class="x"><h2>상점</h2><span style="display:flex;gap:8px;align-items:center"><b class="num y">${s.coin}💰</b><button class="btn sm" onclick="closeModal()">닫기</button></span></div>
   <div class="x" style="margin:0"><span class="lbl2">오늘의 카드 · 산 카드는 버린 더미로 들어가요</span><button class="btn sm" onclick="reroll()" ${s.coin<2+s.rerolls?'disabled':''}>다시 뽑기 ${2+s.rerolls}💰</button></div>
@@ -471,12 +511,26 @@ function openShop(){const s=S,t=s.today.cost;
 function showDeck(){const all=[...S.draw,...S.hand,...S.disc],cnt={};all.forEach(id=>cnt[id]=(cnt[id]||0)+1);const ord=['mat','proc','step','op','fac','bad'];
   modal(`<div class="x"><h2>전체 덱 ${all.length}장</h2><button class="btn sm" onclick="closeModal()">닫기</button></div>
   <div class="grid">${Object.keys(cnt).sort((a,b)=>ord.indexOf(C[a].t)-ord.indexOf(C[b].t)).map(id=>cardHTML(id,'',`<span class="pr">×${cnt[id]}</span>`)).join('')}</div>`)}
+function chartHTML(h){if(!h||!h.length)return '';
+  const W=320,H=150,L=34,B=22,T=10,Rr=8,n=LAST_DAY,mx=Math.max(1,...h.map(x=>Math.max(x.coin,x.earn))),top=Math.ceil(mx/20)*20;
+  const X=d=>L+(d-.5)*(W-L-Rr)/n,Y=v=>T+(H-T-B)*(1-v/top),bw=(W-L-Rr)/n*.62;
+  const bars=h.map(x=>`<rect x="${(X(x.d)-bw/2).toFixed(1)}" y="${Y(x.earn).toFixed(1)}" width="${bw.toFixed(1)}" height="${(Y(0)-Y(x.earn)).toFixed(1)}" rx="1.5" style="fill:var(--copper);opacity:.55"/>`).join('');
+  const line=h.map((x,i)=>`${i?'L':'M'}${X(x.d).toFixed(1)},${Y(Math.max(0,x.coin)).toFixed(1)}`).join(' ');
+  const last=h[h.length-1];
+  const grid=[0,.5,1].map(f=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(top*f)}" y2="${Y(top*f)}" style="stroke:var(--line)" stroke-width="1"/><text x="${L-5}" y="${Y(top*f)+3}" text-anchor="end" style="fill:var(--dim);font-size:9px;font-family:var(--mono)">${Math.round(top*f)}</text>`).join('');
+  const xl=[1,7,14,21,28].map(d=>`<text x="${X(d)}" y="${H-6}" text-anchor="middle" style="fill:var(--dim);font-size:9px;font-family:var(--mono)">${d}일</text>`).join('');
+  return `<div style="margin:6px 0 12px"><div class="lbl2" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px"><span><span style="color:var(--gold)">━</span> 자금</span><span><span style="color:var(--copper)">■</span> 그날 판매 수입</span></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="날짜별 자금과 판매 수입">${grid}${bars}<path d="${line}" style="fill:none;stroke:var(--gold)" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${X(last.d)}" cy="${Y(Math.max(0,last.coin))}" r="3.5" style="fill:var(--gold)"/>${xl}</svg></div>`}
 function showNight(){const s=S;let foot;
-  if(s.over==='bankrupt')foot=`<div class="grade">파산</div><p class="m" style="text-align:center;margin-bottom:12px">${s.day}일 만에 팹 문을 닫았습니다.<br>출하 ${s.stats.sold}개 · 총수입 ${s.stats.earned}💰</p><button class="btn pri" style="width:100%" onclick="wipe();newGame()">다시 도전</button>`;
+  if(s.over==='bankrupt')foot=`<div class="grade">파산</div><p class="m" style="text-align:center;margin-bottom:12px">${s.day}일 만에 팹 문을 닫았습니다.<br>출하 ${s.stats.sold}개 · 총수입 ${s.stats.earned}💰</p><button class="btn pri" style="width:100%" onclick="wipe();newGame(S&&S.diff)">다시 도전</button>`;
   else if(s.over==='win'){const sc=score();foot=`<div class="grade">${gradeOf(sc)}</div><p style="text-align:center;margin-bottom:6px"><b>최종 점수 ${sc}</b></p>
     <p class="m" style="text-align:center;margin-bottom:12px;font-size:12px">자금 ${s.coin} + 신뢰 ${s.rep}×5 + 설비 ${s.facs.length}×5<br>출하 ${s.stats.sold}개 · 납품 계약 ${s.stats.orders}건 · 불량 ${s.stats.defect}개 · 단종 ${s.stats.waste}개</p>
-    <button class="btn pri" style="width:100%" onclick="wipe();newGame()">새 게임</button>`}
+    <button class="btn pri" style="width:100%" onclick="wipe();newGame(S&&S.diff)">새 게임</button>`}
   else foot=`<button class="btn pri" style="width:100%" onclick="closeModal();startDay()">${s.day+1}일차 시작 →</button>`;
+  const okSales=(s.sales||[]).filter(x=>!x.miss).length;for(let k=0;k<Math.min(okSales,10);k++)setTimeout(()=>sfx('coin'),200+k*110);
+  if(s.over==='bankrupt')setTimeout(()=>sfx('bad'),300);else if(s.over==='win')setTimeout(()=>sfx('done'),400);
+  if(s.over)foot=`${chartHTML(s.hist)}<p class="m" style="text-align:center;font-size:12px;margin:-4px 0 10px">경력 점수 +${s.pts||0} (누적 ${META.career})${(s.unlockedNow||[]).length?`<br><b class="y">새 카드 해금: ${s.unlockedNow.join(', ')}</b>`:''}</p>`+foot;
   const sales=(s.sales||[]).map((x,i)=>{const b=BUYERS[x.b],dl=`style="animation-delay:${Math.min(i*90,1800)}ms"`;
     return x.miss?`<div class="sale gone" ${dl}><span>${b.a}</span><span>${b.n} · 원하는 칩이 없어 돌아감</span><span class="m">-</span></div>`
       :`<div class="sale" ${dl}><span>${b.a}</span><span>${b.n} → <span class="chip">${short(x.p)}</span>${x.pref?'<span class="tagp">맞춤 +25%</span>':''}${x.sat?'<span class="tags">물량 과잉</span>':''}${x.old?'<span class="tags">구형</span>':''}</span><span class="pz">+${x.pz}</span></div>`}).join('');
