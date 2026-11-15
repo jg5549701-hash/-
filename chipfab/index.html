@@ -126,7 +126,31 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .title p{color:var(--dim);font-size:14px;line-height:1.6}
 .panel{background:var(--tile);border:1px solid var(--line);border-radius:14px;padding:14px}
 .rules{font-size:13.5px;line-height:1.75;display:grid;gap:4px;padding-left:18px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.fc{background:var(--tile);border:1px solid var(--line);border-radius:12px;padding:9px 11px;display:grid;gap:7px}
+.fc .row{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:start;font-size:12px}
+.fc .row>span:first-child{color:var(--dim);font-weight:700;padding-top:4px}
+.buyers{display:flex;flex-wrap:wrap;gap:5px}
+.buyer{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:11.5px;background:var(--board)}
+.buyer b{font-family:var(--mono)} .buyer small{color:var(--dim);font-size:10.5px}
+.buyer.hit{border-color:var(--ok)} .buyer.miss{border-color:var(--bad);opacity:.75}
+.fc .tip{font-size:11px;color:var(--dim)}
+.sales{display:grid;gap:4px;margin:4px 0 12px;font-size:12.5px}
+.sale{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;background:var(--tile);border:1px solid var(--line);border-radius:9px;padding:5px 9px;animation:in .28s ease-out both}
+.sale.gone{opacity:.55}
+.sale .pz{font-family:var(--mono);font-weight:800;color:var(--ok)}
+.sale .tagp{font-size:10px;color:var(--ok);border:1px solid var(--ok);border-radius:999px;padding:0 5px;margin-left:4px}
+.sale .tags{font-size:10px;color:var(--bad);margin-left:4px}
+.total{font-family:var(--mono);font-size:26px;font-weight:800;color:var(--gold);text-align:center;margin:4px 0 2px}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes flash{0%{box-shadow:0 0 0 2px var(--gold)}100%{box-shadow:0 0 0 0 transparent}}
+.pop{animation:pop .35s ease-out}
+.flash{animation:flash .7s ease-out}
+.ghost{position:fixed;z-index:30;pointer-events:none;margin:0}
+.zoom{position:fixed;inset:0;z-index:25;background:#000a;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.zoom .card{transform:scale(1.7)}
+.hand .card{-webkit-touch-callout:none;user-select:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -135,7 +159,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 <script>
 'use strict';
 const KEY='transistor-fab-v1';
-const RENT=[20,35,60,100];
+const RENT=[20,40,75,120];
 const LAST_DAY=28, MAX_BAYS=6;
 
 const PROD={
@@ -148,6 +172,14 @@ const PROD={
   cpu:{n:'중앙처리장치',k:'처리장치',p:42,rep:1},
 };
 const RAW={si:'웨이퍼',dp:'도펀트',cu:'구리'};
+const BUYERS={
+  home:{n:'가전 회사',a:'📺',want:['diode','led'],w:3},
+  car:{n:'자동차 회사',a:'🚗',want:['mos','bjt'],w:2},
+  phone:{n:'스마트폰 회사',a:'📱',want:['cmos','dram','led'],w:2},
+  server:{n:'서버 회사',a:'🖥️',want:['dram','cpu'],w:1},
+  dist:{n:'유통상',a:'🛒',want:[],w:3},
+};
+const short=p=>PROD[p].k;
 const rawStr=n=>Object.entries(n).map(([k,v])=>`<span class="dot d-${k}" style="display:inline-block;vertical-align:-1px"></span>${RAW[k]}${v}`).join(' ');
 const rawTxt=n=>Object.entries(n).map(([k,v])=>`${RAW[k]} ${v}`).join(', ');
 
@@ -189,7 +221,7 @@ const C={
 const TYPE_N={mat:'원자재',proc:'공정',op:'운영',fac:'설비',bad:'방해'};
 const SHOP_POOL=['wafer2','dopant','copper','supply','p_bjt','p_led','p_mos','p_cmos','p_dram','p_cpu',
   'drink','intern','manual','meeting','expo','sample','discount','cert','rush','purge','f_tool','f_yield','f_store','f_sales','f_partner','f_robot'];
-const STARTER=['wafer','wafer','wafer','wafer','p_diode','p_diode','p_diode','dopant','meeting','drink'];
+const STARTER=['wafer','wafer','wafer','wafer','p_diode','p_diode','p_led','dopant','meeting','drink'];
 const EVENTS=[
   {n:'평범한 하루',d:'특별한 일은 없다.',w:6},
   {n:'공급망 차질',d:'오늘 바이어 -2',w:2,fx:s=>{s.today.cust-=2}},
@@ -206,16 +238,17 @@ const ORDERS=[{p:'diode',q:4,coin:10},{p:'bjt',q:5,coin:12},{p:'led',q:8,coin:14
 const rnd=n=>Math.floor(Math.random()*n);
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
 const pickW=l=>{let r=Math.random()*l.reduce((a,x)=>a+x.w,0);for(const x of l){if((r-=x.w)<0)return x}return l[0]};
-let S=null, SEL=-1;
+let S=null, SEL=-1, PREV=null, LONG=false;
+const calm=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
+function load(){try{const s=localStorage.getItem(KEY);if(!s)return null;const v=JSON.parse(s);v.buyers=v.buyers||[];v.next=v.next||null;v.rerolls=v.rerolls||0;v.sales=v.sales||[];return v}catch(e){return null}}
 function wipe(){try{localStorage.removeItem(KEY)}catch(e){}}
 let tT;function toast(m){let el=document.querySelector('.toast');if(!el){el=document.createElement('div');el.className='toast';document.body.appendChild(el)}el.textContent=m;el.hidden=false;clearTimeout(tT);tT=setTimeout(()=>el.hidden=true,1700)}
 
 function newGame(){
-  closeModal();SEL=-1;
+  closeModal();SEL=-1;PREV=null;
   S={day:0,coin:12,rep:0,raw:{si:2,dp:0,cu:0},en:3,maxEn:3,handSize:5,yield:.92,
-    draw:shuffle(STARTER.slice()),hand:[],disc:[],bays:[null,null],stock:[],
+    draw:shuffle(STARTER.slice()),hand:[],disc:[],bays:[null,null],stock:[{p:'diode',q:3,age:0}],buyers:[],next:null,sales:[],rerolls:0,
     fresh:1,baseCust:4,priceMul:1,facs:[],order:null,shop:[],removed:false,overtime:false,
     stats:{sold:0,earned:0,waste:0,orders:0,defect:0},today:{},event:null,over:false,phase:'play',night:''};
   startDay();
@@ -232,6 +265,13 @@ function collect(s,now){
   if(now&&msgs.length)toast('입고: '+msgs.join(', '));
   return msgs;
 }
+// 덱으로 만들 수 있는 칩을 원하는 바이어가 더 자주 오고, 주차가 갈수록 고급 칩 바이어가 늘어난다
+function rollBuyer(s){const outs=new Set([...s.draw,...s.disc,...s.hand].filter(id=>C[id].r).map(id=>C[id].r.out));
+  const l=Object.entries(BUYERS).map(([k,b])=>({k,w:b.w+(b.want.some(p=>outs.has(p))?3:0)+(k==='server'||k==='phone'?Math.floor(s.day/7):0)}));return pickW(l).k}
+function baseCount(s){return s.baseCust+Math.floor(s.rep/2)}
+function rollList(s,n){return Array.from({length:Math.max(0,n)},()=>rollBuyer(s))}
+function todayList(s){const l=s.buyers.slice();if(s.today.cust>0)for(let i=0;i<s.today.cust;i++)l.push('dist');else l.splice(Math.max(0,l.length+s.today.cust));return l}
+function groupBuyers(l){const g={};l.forEach(k=>g[k]=(g[k]||0)+1);return Object.entries(g).sort((a,b)=>b[1]-a[1])}
 function addStock(s,p,q){const x=s.stock.find(i=>i.p===p&&i.age===0);if(x)x.q+=q;else s.stock.push({p,q,age:0})}
 function startDay(){
   const s=S;s.day++;s.phase='play';SEL=-1;
@@ -240,7 +280,9 @@ function startDay(){
   const ev=s.day===1?EVENTS[0]:pickW(EVENTS);s.event={n:ev.n,d:ev.d};if(ev.fx)ev.fx(s);
   if(!s.order&&s.day%3===2){const outs=new Set([...s.draw,...s.disc,...s.hand].filter(id=>C[id].r).map(id=>C[id].r.out));
     const ok=ORDERS.filter(o=>outs.has(o.p));if(ok.length){const o=ok[rnd(ok.length)];s.order={...o,due:s.day+2}}}
-  s.shop=shuffle(SHOP_POOL.slice()).slice(0,6);
+  const base=baseCount(s);s.buyers=(s.next||rollList(s,base)).slice(0,base);while(s.buyers.length<base)s.buyers.push(rollBuyer(s));
+  s.next=rollList(s,base);
+  s.shop=shuffle(SHOP_POOL.slice()).slice(0,6);s.rerolls=0;
   s.removed=false;s.overtime=false;s.en=s.maxEn;draw(s,s.handSize);save();render();
 }
 function canPlay(id){const c=C[id];if(c.t==='bad'||S.en<c.c)return false;
@@ -248,18 +290,29 @@ function canPlay(id){const c=C[id];if(c.t==='bad'||S.en<c.c)return false;
 function whyNot(id){const c=C[id];if(c.t==='bad')return '번아웃은 쓸 수 없어요. 클린룸 정화나 카드 폐기로 없애세요.';
   if(S.en<c.c)return '⚡ 기력이 부족해요.';if(c.r&&!S.bays.includes(null))return '비어 있는 장비가 없어요.';
   if(c.r){const miss=Object.entries(c.r.need).filter(([k,v])=>S.raw[k]<v).map(([k,v])=>`${RAW[k]} ${v-S.raw[k]}`).join(', ');return `원자재가 부족해요: ${miss} 더 필요 (상점에서 낱개 구매 가능)`}return ''}
-function tapCard(i){if(SEL===i)return play(i);SEL=i;render()}
+function tapCard(i){if(LONG){LONG=false;return}if(SEL===i)return play(i);SEL=i;render()}
 function play(i){
   const id=S.hand[i],c=C[id];if(!canPlay(id)){toast(whyNot(id));return}
-  S.en-=c.c;S.hand.splice(i,1);SEL=-1;
-  if(c.r){for(const k in c.r.need)S.raw[k]-=c.r.need[k];S.bays[S.bays.indexOf(null)]={out:c.r.out,q:c.r.q,left:c.r.days,total:c.r.days};S.disc.push(id)}
-  else{c.fx(S);if(c.t==='fac'){S.facs.push(c.fac);toast(`${c.n} 설치 완료`)}else S.disc.push(id)}
+  const src=document.querySelectorAll('.hand .card')[i],from=src&&src.getBoundingClientRect(),ghostHTML=src&&src.outerHTML;
+  S.en-=c.c;S.hand.splice(i,1);SEL=-1;let target='.pills';
+  if(c.r){for(const k in c.r.need)S.raw[k]-=c.r.need[k];const bi=S.bays.indexOf(null);S.bays[bi]={out:c.r.out,q:c.r.q,left:c.r.days,total:c.r.days,fresh:1};S.disc.push(id);target=bi}
+  else{c.fx(S);if(c.t==='fac'){S.facs.push(c.fac);toast(`${c.n} 설치 완료`);target='.fab'}else{S.disc.push(id);if(c.t==='op')target='.fc'}}
   save();render();
+  if(from&&!calm()){const to=(typeof target==='number'?document.querySelectorAll('.fab .bay')[target]:document.querySelector(target));if(to)fly(ghostHTML,from,to)}
 }
+function fly(html,from,to){
+  const g=document.createElement('div');g.className='ghost';g.innerHTML=html;const el=g.firstElementChild;el.classList.remove('up');el.style.transform='none';el.style.marginLeft='0';
+  g.style.left=from.left+'px';g.style.top=from.top+'px';document.body.appendChild(g);
+  const t=to.getBoundingClientRect(),dx=t.left+t.width/2-(from.left+from.width/2),dy=t.top+t.height/2-(from.top+from.height/2);
+  const a=g.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(.35)`,opacity:.2}],{duration:420,easing:'cubic-bezier(.4,.1,.3,1)'});
+  a.onfinish=()=>{g.remove();to.classList.remove('pop');void to.offsetWidth;to.classList.add('pop')}}
+function tick(el,from,to){if(!el||from===to||calm()){if(el)el.textContent=to;return}const t0=performance.now(),d=500;
+  (function f(t){const k=Math.min(1,(t-t0)/d);el.textContent=Math.round(from+(to-from)*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(f)})(t0);
+  el.parentElement.classList.remove('flash');void el.offsetWidth;el.parentElement.classList.add('flash')}
 function overtime(){if(S.overtime)return;S.overtime=true;S.en+=2;S.disc.push('burnout');toast('야근: ⚡+2, 버린 더미에 번아웃 1장');save();render()}
 function priceOf(s,it){let p=PROD[it.p].p*s.priceMul*s.today.mul;if(s.rep>=10)p*=1.1;if(s.rep>=20)p*=1.1;
   if(s.today.x2.includes(it.p))p*=2;if(s.today.x15.includes(it.p))p*=1.5;if(it.age>0)p*=.6;return Math.max(1,Math.round(p))}
-function custCount(s){return Math.max(0,s.baseCust+Math.floor(s.rep/2)+s.today.cust)}
+function custCount(s){return todayList(s).length}
 function endDay(){
   const s=S,log=[];s.phase='night';SEL=-1;
   if(s.order){const have=s.stock.filter(x=>x.p===s.order.p).reduce((a,x)=>a+x.q,0),pr=PROD[s.order.p];
@@ -267,16 +320,21 @@ function endDay(){
       s.stock=s.stock.filter(x=>x.q>0);s.coin+=s.order.coin;s.rep+=1;s.stats.orders++;s.stats.earned+=s.order.coin;
       log.push(`<span class="y">계약 납품 완료: ${pr.n} ×${s.order.q} → +${s.order.coin}💰, 신뢰 +1</span>`);s.order=null}
     else if(s.day>=s.order.due){log.push(`<span class="r">계약 납기 실패: ${pr.n} ×${s.order.q} → 신뢰 -1</span>`);s.rep=Math.max(0,s.rep-1);s.order=null}}
-  const n=custCount(s);let sold=0,earn=0,repG=0;const by={};
-  for(let i=0;i<n;i++){if(!s.stock.reduce((a,x)=>a+x.q,0))break;
-    const w=s.stock.map(x=>x.q*(x.age===0?3:1));let r=Math.random()*w.reduce((a,b)=>a+b,0),k=0;for(;k<w.length;k++){if((r-=w[k])<0)break}k=Math.min(k,s.stock.length-1);
-    const it=s.stock[k],p=priceOf(s,it);earn+=p;sold++;it.q--;by[it.p]=(by[it.p]||0)+1;
+  const list=shuffle(todayList(s)),n=list.length;let sold=0,earn=0,repG=0;const by={};s.sales=[];
+  // 바이어마다 선호 칩을 먼저 찾고, 없으면 유통상이 아닌 바이어는 절반 확률로 그냥 돌아간다
+  for(const t of list){const b=BUYERS[t];
+    let cand=s.stock.filter(x=>b.want.includes(x.p)),pref=cand.length>0;
+    if(!pref){if(t!=='dist'&&Math.random()<.5){s.sales.push({b:t,miss:1});continue}cand=s.stock}
+    if(!cand.length){s.sales.push({b:t,miss:1});continue}
+    const w=cand.map(x=>x.q*(x.age===0?3:1));let r=Math.random()*w.reduce((a,c)=>a+c,0),k=0;for(;k<w.length;k++){if((r-=w[k])<0)break}k=Math.min(k,cand.length-1);
+    const it=cand[k],cnt=by[it.p]||0,sat=Math.max(.5,1-.1*Math.max(0,cnt-2));
+    const p=Math.max(1,Math.round(priceOf(s,it)*(pref&&t!=='dist'?1.25:1)*sat));
+    earn+=p;sold++;it.q--;by[it.p]=cnt+1;
+    s.sales.push({b:t,p:it.p,pz:p,pref:pref&&t!=='dist'?1:0,sat:sat<1?1:0,old:it.age>0?1:0});
     if(PROD[it.p].rep)repG+=PROD[it.p].rep;if(s.today.reviewer>0&&p>=9){s.today.reviewer--;repG++}
     s.stock=s.stock.filter(x=>x.q>0)}
-  s.coin+=earn;s.rep+=repG;s.stats.sold+=sold;s.stats.earned+=earn;
-  log.push(`바이어 ${n}명 방문, ${sold}개 출하 → <span class="g">+${earn}💰</span>`);
-  const sb=Object.entries(by).map(([p,q])=>`${PROD[p].n} ×${q}`).join(' · ');if(sb)log.push(`<span class="m">${sb}</span>`);
-  if(n>sold)log.push(`<span class="m">재고가 없어 빈손으로 간 바이어 ${n-sold}명</span>`);
+  s.coin+=earn;s.rep+=repG;s.stats.sold+=sold;s.stats.earned+=earn;s.earnToday=earn;
+  log.push(`바이어 ${n}명 중 ${sold}명 구매 → <span class="g">+${earn}💰</span>`);
   if(repG)log.push(`<span class="y">신뢰 +${repG}</span>`);
   let waste=0;s.stock.forEach(x=>{x.age++;if(x.age>s.fresh){waste+=x.q;x.q=0}});s.stock=s.stock.filter(x=>x.q>0);
   if(waste){s.stats.waste+=waste;log.push(`<span class="r">단종 처리된 구형 재고 ${waste}개</span>`)}
@@ -292,6 +350,7 @@ function gradeOf(sc){return sc>=280?'S':sc>=200?'A':sc>=140?'B':sc>=90?'C':'D'}
 
 function buyCard(i){const id=S.shop[i];if(!id)return;const c=C[id];if(S.coin<c.price)return toast('💰가 부족해요');
   S.coin-=c.price;S.disc.push(id);S.shop[i]=null;toast(`${c.n} 구매 → 버린 더미로`);save();render();openShop()}
+function reroll(){const c=2+S.rerolls;if(S.coin<c)return toast('💰가 부족해요');S.coin-=c;S.rerolls++;S.shop=shuffle(SHOP_POOL.slice()).slice(0,6);save();render();openShop()}
 function buyRaw(k){const pr=S.today.cost[k];if(S.coin<pr)return toast('💰가 부족해요');S.coin-=pr;S.raw[k]++;save();render();openShop()}
 function removeCard(w,i){if(S.removed)return toast('카드 폐기는 하루 한 번이에요');if(S.coin<4)return toast('💰가 부족해요');
   const arr=w==='hand'?S.hand:S.disc,id=arr[i];arr.splice(i,1);S.coin-=4;S.removed=true;SEL=-1;toast(`${C[id].n} 폐기`);save();render();openShop()}
@@ -308,7 +367,7 @@ function render(){
   const bays=[];for(let i=0;i<MAX_BAYS;i++){const o=s.bays[i];
     if(i>=s.bays.length)bays.push(`<div class="bay lock"><span class="tag">장비 ${i+1}</span>잠김<br>장비 증설 필요</div>`);
     else if(!o)bays.push(`<div class="bay empty"><span class="tag">장비 ${i+1}</span>비어 있음<br><span style="font-size:10.5px">공정 카드를 내세요</span></div>`);
-    else bays.push(`<div class="bay"><span class="tag">장비 ${i+1}</span><div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
+    else bays.push(`<div class="bay ${o.fresh?'pop':''}"><span class="tag">장비 ${i+1}</span><div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
       <span class="prog"><u style="width:${Math.round((o.total-o.left)/o.total*100)}%"></u></span><span class="left">${o.left}일 뒤 완성</span></div>`)}
   const n=s.hand.length,mid=(n-1)/2;
   const hand=s.hand.map((id,i)=>cardHTML(id,`onclick="tapCard(${i})" style="transform:rotate(${(i-mid)*4}deg) translateY(${Math.abs(i-mid)*4}px)" ${canPlay(id)?'':'data-off'} aria-label="${C[id].n}"`,'',SEL===i?'up':'')).join('');
@@ -316,22 +375,24 @@ function render(){
   if(SEL>=0&&s.hand[SEL]){const id=s.hand[SEL],c=C[id],ok=canPlay(id);
     sel=`<div class="sel"><div><b>${c.n}</b> <span class="m">⚡${c.t==='bad'?'-':c.c} · ${desc(c)}</span>${ok?'':`<br><span class="why">${whyNot(id)}</span>`}</div>
       <button class="btn sm ${ok?'pri':''}" onclick="play(${SEL})" ${ok?'':'disabled'}>사용</button></div>`}
-  else sel=`<div class="sel"><span class="m">카드를 누르면 설명이 보이고, 한 번 더 누르면 사용해요.</span><span></span></div>`;
+  else sel=`<div class="sel"><span class="m">${s.day<=2?'순서: ① 웨이퍼 카드로 원자재 모으기 → ② 공정 카드로 장비 돌리기 → ③ 하루 마감. 카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보기.':'카드를 누르면 설명, 한 번 더 누르면 사용, 길게 누르면 크게 보여요.'}</span><span></span></div>`;
   $('app').innerHTML=`
   <div class="hud">
     <div class="dayb"><b>${s.day}</b><span>/ ${LAST_DAY}일</span></div>
     <div class="brand">트랜지스터 팹<small>${wk}주차 · 운영비 ${RENT[wk-1]}💰 ${dl===0?'<span class="r">오늘 밤 납부</span>':`${dl}일 남음`}</small></div>
-    <div class="money">${s.coin}<span>💰 자금</span></div>
+    <div class="money"><b id="coin">${PREV?PREV.coin:s.coin}</b><span>💰 자금</span></div>
   </div>
   <div class="pills">
     <span class="pill">⚡ <span class="pips">${Array.from({length:Math.max(s.en,s.maxEn)},(_,i)=>`<i class="${i<s.en?'on':''}"></i>`).join('')}</span></span>
-    <span class="pill"><span class="dot d-si"></span>웨이퍼 <b>${s.raw.si}</b></span>
-    <span class="pill"><span class="dot d-dp"></span>도펀트 <b>${s.raw.dp}</b></span>
-    <span class="pill"><span class="dot d-cu"></span>구리 <b>${s.raw.cu}</b></span>
-    <span class="pill">신뢰 <b>${s.rep}</b></span>
+    ${['si','dp','cu'].map(k=>`<span class="pill ${PREV&&PREV.raw[k]!==s.raw[k]?'flash':''}"><span class="dot d-${k}"></span>${RAW[k]} <b>${s.raw[k]}</b></span>`).join('')}
+    <span class="pill ${PREV&&PREV.rep!==s.rep?'flash':''}">신뢰 <b>${s.rep}</b></span>
     <span class="pill">수율 <b>${Math.round(s.yield*100)}%</b></span>
   </div>
-  <div class="event"><b>${s.event.n}</b> · ${s.event.d}<div class="sub">예상 바이어 ${custCount(s)}명${s.morning?' · '+s.morning:''}</div></div>
+  <div class="event"><b>${s.event.n}</b> · ${s.event.d}${s.morning?`<div class="sub">${s.morning}</div>`:''}</div>
+  <div class="fc"><div class="sec" style="margin:0"><span>수요 예보</span><span class="num">오늘 ${custCount(s)}명</span></div>
+    <div class="row"><span>오늘</span><div class="buyers">${buyersHTML(s,todayList(s),true)}</div></div>
+    <div class="row"><span>내일</span><div class="buyers">${buyersHTML(s,s.next||[],false)}</div></div>
+    <div class="tip">선호 칩을 사면 25% 더 내고, 없으면 절반은 그냥 돌아가요. 유통상은 아무 칩이나 사요. 같은 칩은 3개째부터 값이 10%씩 내려가요.</div></div>
   <div><div class="sec"><span>클린룸 장비</span><span class="num">${s.bays.filter(o=>!o).length}/${s.bays.length} 비어 있음</span></div><div class="fab">${bays.join('')}</div></div>
   <div class="panel"><div class="sec"><span>출하 창고</span><span class="num">${units}개 · 재고 수명 ${s.fresh+1}일</span></div>
     ${units?`<div class="stock">${s.stock.map(x=>`<span class="lot ${x.age?'old':''}"><span class="chip">${PROD[x.p].k}</span>${PROD[x.p].n} <b>×${x.q}</b> <span class="m num">${priceOf(s,x)}💰${x.age?' 구형':''}</span></span>`).join('')}</div>`
@@ -347,7 +408,14 @@ function render(){
     <div class="acts"><button class="btn" onclick="openShop()">상점</button><button class="btn" onclick="overtime()" ${s.overtime?'disabled':''}>야근 ⚡+2</button><button class="btn pri" onclick="endDay()">하루 마감 →</button></div>
   </div></div>`;
   fitHand();
+  s.bays.forEach(o=>{if(o)delete o.fresh});
+  const ce=$('coin');if(ce)tick(ce,PREV?PREV.coin:s.coin,s.coin);
+  PREV={coin:s.coin,raw:{...s.raw},rep:s.rep};
 }
+function buyersHTML(s,l,today){if(!l.length)return '<span class="m">없음</span>';
+  const have=new Set(s.stock.map(x=>x.p));
+  return groupBuyers(l).map(([k,n])=>{const b=BUYERS[k],ok=!b.want.length||b.want.some(p=>have.has(p));
+    return `<span class="buyer ${today?(ok?'hit':'miss'):''}">${b.a} ${b.n} <b>×${n}</b>${b.want.length?` <small>${b.want.map(short).join('·')}</small>`:''}</span>`}).join('')}
 function fitHand(){const h=document.querySelector('.hand');if(!h)return;const cs=[...h.querySelectorAll('.card')];if(cs.length<2)return;
   const W=h.clientWidth-12,cw=96,ov=Math.min(-6,Math.max(-62,(W-cs.length*cw)/(cs.length-1)));
   cs.forEach((c,i)=>{c.style.marginLeft=i?ov+'px':'0'});if(SEL>=0&&cs[SEL])cs[SEL].scrollIntoView({block:'nearest',inline:'nearest'})}
@@ -356,9 +424,10 @@ function helpHTML(){return `<ol class="rules">
   <li>매일 카드 <b>5장</b>을 뽑고 <b>⚡3</b>으로 카드를 냅니다.</li>
   <li><b class="g">원자재</b> 카드로 웨이퍼·도펀트·구리를 모으고, <b style="color:var(--copper)">공정</b> 카드를 내서 빈 장비에 웨이퍼를 넣으세요. 정해진 날이 지나면 칩이 출하 창고로 들어옵니다.</li>
   <li>반도체답게 <b>수율</b>이 있어요. 칩마다 일정 확률로 불량이 나고, 클린룸 업그레이드로 수율을 올릴 수 있어요.</li>
-  <li><b>하루 마감</b> 때 바이어가 창고의 칩을 하나씩 사 갑니다. 바이어 수 = 기본 4 + 신뢰÷2 + 영업 효과.</li>
+  <li><b>하루 마감</b> 때 바이어가 창고의 칩을 하나씩 사 갑니다. <b>수요 예보</b>에서 오늘과 내일 올 바이어와 원하는 칩을 미리 볼 수 있어요. 원하는 칩을 사면 25% 더 내고, 없으면 절반은 그냥 돌아가요.</li>
+  <li>같은 칩은 하루에 3개째부터 값이 10%씩 내려가요(최대 50%). 여러 종류를 만드는 게 유리해요.</li>
   <li>팔리지 않은 칩은 다음 날 <b>구형 재고</b>가 되어 40% 싸지고, 그다음 날 단종 처리돼요.</li>
-  <li><b>상점</b>에서 카드를 사서 덱을 키우고(산 카드는 버린 더미로), 원자재를 낱개로 사거나 하루 한 번 4💰로 카드를 폐기할 수 있어요.</li>
+  <li><b>상점</b>에서 카드를 사서 덱을 키우고(산 카드는 버린 더미로), 마음에 안 들면 다시 뽑을 수 있어요. 원자재 낱개 구매와 하루 한 번 4💰 카드 폐기도 돼요.</li>
   <li><b style="color:var(--fac)">설비</b> 카드는 한 번 내면 효과가 계속되고 덱에서 빠집니다.</li>
   <li><b>야근</b>은 하루 한 번 ⚡+2를 주지만 덱에 번아웃 카드가 들어와요.</li>
   <li>7·14·21·28일 밤에 팹 운영비(${RENT.join('·')}💰)를 냅니다. 못 내면 파산! 28일을 버티면 <b>자금 + 신뢰×5 + 설비×5</b>로 등급을 매겨요.</li></ol>`}
@@ -374,7 +443,7 @@ function confirmReset(){modal(`<h2>처음부터 다시 할까요?</h2><p class="
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="wipe();newGame()">새로 시작</button></div>`)}
 function openShop(){const s=S,t=s.today.cost;
   modal(`<div class="x"><h2>상점</h2><span style="display:flex;gap:8px;align-items:center"><b class="num y">${s.coin}💰</b><button class="btn sm" onclick="closeModal()">닫기</button></span></div>
-  <div class="lbl2">오늘의 카드 · 매일 바뀌고, 산 카드는 버린 더미로 들어가요</div>
+  <div class="x" style="margin:0"><span class="lbl2">오늘의 카드 · 산 카드는 버린 더미로 들어가요</span><button class="btn sm" onclick="reroll()" ${s.coin<2+s.rerolls?'disabled':''}>다시 뽑기 ${2+s.rerolls}💰</button></div>
   <div class="grid">${s.shop.map((id,i)=>id?cardHTML(id,`onclick="buyCard(${i})" ${s.coin<C[id].price?'data-off':''}`,`<span class="pr">${C[id].price}💰</span>`,'big'):`<div class="card big" style="opacity:.3;align-items:center;justify-content:center">매진</div>`).join('')}</div>
   <div class="lbl2">원자재 낱개 구매</div>
   <div class="buyraw">${['si','dp','cu'].map(k=>`<button class="btn sm" onclick="buyRaw('${k}')" ${s.coin<t[k]?'disabled':''}><span class="dot d-${k}" style="display:inline-block"></span> ${RAW[k]} +1 · ${t[k]}💰</button>`).join('')}</div>
@@ -389,7 +458,18 @@ function showNight(){const s=S;let foot;
     <p class="m" style="text-align:center;margin-bottom:12px;font-size:12px">자금 ${s.coin} + 신뢰 ${s.rep}×5 + 설비 ${s.facs.length}×5<br>출하 ${s.stats.sold}개 · 납품 계약 ${s.stats.orders}건 · 불량 ${s.stats.defect}개 · 단종 ${s.stats.waste}개</p>
     <button class="btn pri" style="width:100%" onclick="wipe();newGame()">새 게임</button>`}
   else foot=`<button class="btn pri" style="width:100%" onclick="closeModal();startDay()">${s.day+1}일차 시작 →</button>`;
-  $('modal').innerHTML=`<div class="modal"><div class="sheet"><h2>${s.day}일차 마감</h2><div class="log" style="margin:10px 0 16px">${s.night}</div>${foot}</div></div>`;render()}
+  const sales=(s.sales||[]).map((x,i)=>{const b=BUYERS[x.b],dl=`style="animation-delay:${Math.min(i*90,1800)}ms"`;
+    return x.miss?`<div class="sale gone" ${dl}><span>${b.a}</span><span>${b.n} · 원하는 칩이 없어 돌아감</span><span class="m">-</span></div>`
+      :`<div class="sale" ${dl}><span>${b.a}</span><span>${b.n} → <span class="chip">${short(x.p)}</span>${x.pref?'<span class="tagp">맞춤 +25%</span>':''}${x.sat?'<span class="tags">물량 과잉</span>':''}${x.old?'<span class="tags">구형</span>':''}</span><span class="pz">+${x.pz}</span></div>`}).join('');
+  $('modal').innerHTML=`<div class="modal"><div class="sheet"><h2>${s.day}일차 마감</h2>
+    ${sales?`<div class="total">+<span id="earn">0</span>💰</div><div class="sales">${sales}</div>`:''}
+    <div class="log" style="margin:6px 0 16px">${s.night}</div>${foot}</div></div>`;render();
+  const e=$('earn');if(e){e.textContent=0;setTimeout(()=>tick(e,0,s.earnToday||0),150)}}
+let lpT=null;
+document.addEventListener('pointerdown',e=>{const c=e.target.closest('.hand .card');if(!c)return;LONG=false;clearTimeout(lpT);
+  lpT=setTimeout(()=>{LONG=true;const z=document.createElement('div');z.className='zoom';z.innerHTML=c.outerHTML;const k=z.firstElementChild;k.removeAttribute('style');k.classList.remove('up');k.classList.add('big');document.body.appendChild(z)},380)});
+['pointerup','pointercancel','pointerleave'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lpT);document.querySelectorAll('.zoom').forEach(z=>z.remove())},true));
+document.addEventListener('contextmenu',e=>{if(e.target.closest('.hand .card'))e.preventDefault()});
 window.addEventListener('beforeunload',()=>{if(S)save()});
 (function boot(){const sv=load();if(sv&&sv.phase==='night'){S=sv;if(sv.over){render();showNight()}else startDay()}else{S=null;render()}})();
 </script>
