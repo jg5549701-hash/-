@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>새벽 4시 빵집</title>
+<meta name="description" content="반죽하고, 굽고, 팔고, 덱을 키우는 골목 빵집 경영 덱빌딩 카드게임">
+<meta name="theme-color" content="#1a120b">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1a120b;--panel:#261b12;--panel2:#33251a;--line:#4a3726;--ink:#f6ece0;--dim:#b49e88;
+  --org:#ff9f43;--gold:#ffd166;--green:#7bd389;--red:#ff6b6b;--blue:#6cb4ff;--purple:#c39bff;--gray:#8a7f75}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh}
+button{font-family:inherit;cursor:pointer;color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 110px)}
+.disp{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-weight:400}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.panel h3{font-size:13px;color:var(--dim);font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;font-weight:700}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:linear-gradient(135deg,#ff9f43,#ffc36b);border-color:transparent;color:#2a1500}
+.btn.sm{padding:7px 10px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.muted{color:var(--dim)} .small{font-size:12px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.brand{font-family:'Black Han Sans';font-size:21px;color:var(--org)}
+.day{font-size:13px;color:var(--dim);text-align:right}
+.res{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px}
+.res div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 2px;text-align:center}
+.res b{display:block;font-size:17px;font-weight:900}
+.res span{font-size:10px;color:var(--dim)}
+.event{border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:13px;background:var(--panel2);border:1px dashed var(--line)}
+.event b{color:var(--gold)}
+.rent{font-size:12px;color:var(--dim);margin-top:4px}
+.ovens{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.oven{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;min-height:74px;font-size:12px}
+.oven .e{font-size:24px}
+.oven.empty{color:var(--dim);border-style:dashed;display:flex;align-items:center;justify-content:center}
+.oven.ready{border-color:var(--gold)}
+.shelf{display:flex;flex-wrap:wrap;gap:6px}
+.item{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:13px}
+.item.stale{opacity:.6;border-style:dashed}
+.order{font-size:13px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.card{position:relative;border-radius:14px;padding:10px 10px 9px;border:2px solid var(--line);background:var(--panel2);text-align:left;min-height:128px;display:flex;flex-direction:column;gap:4px;width:100%}
+.card:active{transform:scale(.97)}
+.card[data-off]{opacity:.45}
+.card .cost{position:absolute;top:8px;right:8px;background:#000a;border-radius:999px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;padding:0 6px}
+.card .em{font-size:26px;line-height:1}
+.card .nm{font-weight:900;font-size:14px}
+.card .ty{font-size:10px;font-weight:700;letter-spacing:.05em;opacity:.8}
+.card .ds{font-size:11.5px;color:var(--ink);opacity:.85;line-height:1.4}
+.t-ing{border-color:#5f9e6a;background:linear-gradient(160deg,#25351f,#33251a)} .t-ing .ty{color:var(--green)}
+.t-dough{border-color:#c47a2c;background:linear-gradient(160deg,#4a2d12,#33251a)} .t-dough .ty{color:var(--org)}
+.t-act{border-color:#4a7fb8;background:linear-gradient(160deg,#1e2c3d,#33251a)} .t-act .ty{color:var(--blue)}
+.t-fac{border-color:#8a64c4;background:linear-gradient(160deg,#2e2340,#33251a)} .t-fac .ty{color:var(--purple)}
+.t-bad{border-color:#5a524b;background:#2a2420} .t-bad .ty{color:var(--gray)}
+.piles{display:flex;gap:10px;font-size:12px;color:var(--dim);flex-wrap:wrap}
+.bar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(transparent,var(--bg) 30%);padding:18px 16px calc(env(safe-area-inset-bottom) + 12px)}
+.bar .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px}
+.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:760px;max-height:88vh;overflow:auto;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px)}
+.sheet h2{font-family:'Black Han Sans';font-weight:400;font-size:22px;margin-bottom:6px;color:var(--org)}
+.sheet .x{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.buy{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin:8px 0 14px}
+.price{font-size:12px;font-weight:900;color:var(--gold);margin-top:auto}
+.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 14px}
+.log{font-size:13px;line-height:1.7}
+.log .g{color:var(--green)} .log .r{color:var(--red)} .log .y{color:var(--gold)}
+.facs{display:flex;flex-wrap:wrap;gap:6px}
+.fac{font-size:12px;background:#2e2340;border:1px solid #8a64c4;border-radius:999px;padding:4px 9px}
+.toast{position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:50%;transform:translateX(-50%);background:#000d;border:1px solid var(--line);padding:9px 14px;border-radius:12px;font-size:13px;z-index:20;pointer-events:none;max-width:90vw;text-align:center}
+.title{text-align:center;padding:30px 0 10px}
+.title .big{font-family:'Black Han Sans';font-size:44px;color:var(--org);line-height:1.1}
+.rules{font-size:13.5px;line-height:1.75;color:var(--ink)}
+.rules li{margin-left:18px}
+.grade{font-family:'Black Han Sans';font-size:64px;color:var(--gold);text-align:center}
+@media (max-width:420px){.hand,.buy{grid-template-columns:repeat(2,1fr)} .res b{font-size:15px}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="modal"></div>
+<script>
+'use strict';
+const KEY = 'dawn-bakery-v1';
+const RENT = [20, 40, 70, 110];   // 주차별 월세(7·14·21·28일 마감 때 납부)
+const LAST_DAY = 28;
+
+// ---------- 완성품 ----------
+const PROD = {
+  toast:{n:'식빵',e:'🍞',p:4},
+  bagel:{n:'베이글',e:'🥯',p:4},
+  cookie:{n:'쿠키',e:'🍪',p:3},
+  baguette:{n:'바게트',e:'🥖',p:7},
+  croissant:{n:'크루아상',e:'🥐',p:9},
+  tart:{n:'딸기 타르트',e:'🥧',p:13},
+  cake:{n:'생크림 케이크',e:'🎂',p:42,rep:1},
+};
+const ING = {f:'🌾',b:'🧈',s:'🍓'};
+const ING_N = {f:'밀가루',b:'버터',s:'딸기'};
+
+// ---------- 카드 ----------
+// type: ing 재료 / dough 반죽 / act 행동 / fac 시설 / bad 방해
+const C = {
+  flour:{n:'밀가루 포대',e:'🌾',t:'ing',c:0,price:2,d:'🌾+2',fx:s=>gain(s,{f:2})},
+  flour2:{n:'유기농 밀가루',e:'🌾',t:'ing',c:0,price:5,d:'🌾+4',fx:s=>gain(s,{f:4})},
+  butter:{n:'버터 블록',e:'🧈',t:'ing',c:0,price:4,d:'🧈+2',fx:s=>gain(s,{b:2})},
+  berry:{n:'제철 딸기',e:'🍓',t:'ing',c:0,price:4,d:'🍓+2',fx:s=>gain(s,{s:2})},
+  market:{n:'새벽 도매시장',e:'🚚',t:'ing',c:1,price:6,d:'🌾+3 🧈+1 🍓+1',fx:s=>gain(s,{f:3,b:1,s:1})},
+
+  d_toast:{n:'식빵 반죽',e:'🍞',t:'dough',c:1,price:3,r:{need:{f:2},out:'toast',q:2,days:1}},
+  d_bagel:{n:'베이글 반죽',e:'🥯',t:'dough',c:1,price:5,r:{need:{f:2},out:'bagel',q:3,days:1}},
+  d_cookie:{n:'쿠키 반죽',e:'🍪',t:'dough',c:1,price:4,r:{need:{f:1,b:1},out:'cookie',q:5,days:1}},
+  d_baguette:{n:'바게트 반죽',e:'🥖',t:'dough',c:1,price:6,r:{need:{f:3},out:'baguette',q:2,days:1}},
+  d_crois:{n:'크루아상 반죽',e:'🥐',t:'dough',c:1,price:8,r:{need:{f:2,b:2},out:'croissant',q:3,days:2}},
+  d_tart:{n:'타르트 반죽',e:'🥧',t:'dough',c:1,price:9,r:{need:{f:1,b:1,s:2},out:'tart',q:2,days:2}},
+  d_cake:{n:'케이크 시트',e:'🎂',t:'dough',c:2,price:12,r:{need:{f:2,b:2,s:3},out:'cake',q:1,days:3}},
+
+  coffee:{n:'진한 커피',e:'☕',t:'act',c:0,price:4,d:'⚡+2',fx:s=>{s.en+=2}},
+  parttime:{n:'아르바이트생',e:'🧑‍🍳',t:'act',c:0,price:6,d:'카드 1장 뽑기, ⚡+1',fx:s=>{draw(s,1);s.en+=1}},
+  notes:{n:'레시피 노트',e:'📒',t:'act',c:1,price:5,d:'카드 3장 뽑기',fx:s=>draw(s,3)},
+  flyer:{n:'전단지 돌리기',e:'📄',t:'act',c:1,price:3,d:'오늘 손님 +3',fx:s=>{s.today.cust+=3}},
+  sns:{n:'SNS 홍보',e:'📱',t:'act',c:1,price:7,d:'오늘 손님 +2, ⭐+1',fx:s=>{s.today.cust+=2;s.rep+=1}},
+  tasting:{n:'시식 코너',e:'🍽️',t:'act',c:1,price:4,d:'⭐+1, 오늘 손님 +1',fx:s=>{s.rep+=1;s.today.cust+=1}},
+  sale:{n:'마감 떨이',e:'🏷️',t:'act',c:0,price:3,d:'오늘 손님 +3, 오늘 가격 -20%',fx:s=>{s.today.cust+=3;s.today.mul*=0.8}},
+  wrap:{n:'프리미엄 포장',e:'🎁',t:'act',c:1,price:7,d:'오늘 가격 +30%',fx:s=>{s.today.mul*=1.3}},
+  preheat:{n:'오븐 예열',e:'🔥',t:'act',c:1,price:6,d:'모든 오븐 1일 단축 (완성되면 바로 진열)',fx:s=>{s.ovens.forEach(o=>{if(o)o.left--});collectOvens(s,true)}},
+  clean:{n:'대청소',e:'🧹',t:'act',c:1,price:5,d:'손에 있는 피로 카드를 모두 덱에서 제거, 카드 1장 뽑기',fx:s=>{const n=s.hand.filter(x=>x==='tired').length;s.hand=s.hand.filter(x=>x!=='tired');if(n)toast(`피로 ${n}장 제거!`);draw(s,1)}},
+
+  f_oven:{n:'오븐 증설',e:'♨️',t:'fac',c:1,price:15,d:'[영구] 오븐 칸 +1',fx:s=>{s.ovens.push(null)},fac:'오븐 +1'},
+  f_fridge:{n:'냉장 쇼케이스',e:'🧊',t:'fac',c:1,price:12,d:'[영구] 빵이 하루 더 신선하게 남음',fx:s=>{s.fresh+=1},fac:'냉장 쇼케이스'},
+  f_sign:{n:'네온 간판',e:'💡',t:'fac',c:1,price:12,d:'[영구] 매일 손님 +1',fx:s=>{s.baseCust+=1},fac:'네온 간판'},
+  f_terrace:{n:'테라스 좌석',e:'🪑',t:'fac',c:1,price:20,d:'[영구] 매일 손님 +1, 가격 +10%',fx:s=>{s.baseCust+=1;s.priceMul+=0.1},fac:'테라스 좌석'},
+  f_mixer:{n:'반죽기',e:'🌀',t:'fac',c:1,price:14,d:'[영구] 매일 ⚡+1',fx:s=>{s.maxEn+=1},fac:'반죽기'},
+
+  tired:{n:'피로',e:'😵',t:'bad',c:99,price:0,d:'사용 불가. 손만 차지한다.'},
+};
+const TYPE_N = {ing:'재료',dough:'반죽',act:'행동',fac:'시설',bad:'방해'};
+const SHOP_POOL = ['flour2','butter','berry','market','d_bagel','d_cookie','d_baguette','d_crois','d_tart','d_cake',
+  'coffee','parttime','notes','flyer','sns','tasting','sale','wrap','preheat','clean','f_oven','f_fridge','f_sign','f_terrace','f_mixer'];
+const STARTER = ['flour','flour','flour','flour','d_toast','d_toast','d_toast','butter','flyer','coffee'];
+
+const EVENTS = [
+  {n:'평범한 하루',d:'특별한 일은 없다.',w:6},
+  {n:'비 오는 날 ☔',d:'오늘 손님 -2',w:2,fx:s=>{s.today.cust-=2}},
+  {n:'동네 축제 🎉',d:'오늘 손님 +4',w:2,fx:s=>{s.today.cust+=4}},
+  {n:'밀가루 할인 🌾',d:'상점 밀가루 가격 1💰',w:2,fx:s=>{s.today.fPrice=1}},
+  {n:'버터 품귀 🧈',d:'상점 버터 가격 4💰',w:1,fx:s=>{s.today.bPrice=4}},
+  {n:'맛집 블로거 방문 📸',d:'오늘 9💰 이상 빵이 팔릴 때마다 ⭐+1 (최대 2)',w:2,fx:s=>{s.today.blogger=2}},
+  {n:'출근길 러시 🏃',d:'오늘 손님 +2, 가격 -10%',w:2,fx:s=>{s.today.cust+=2;s.today.mul*=0.9}},
+  {n:'건강 열풍 🥗',d:'오늘 바게트·베이글 가격 2배',w:1,fx:s=>{s.today.boost=['baguette','bagel']}},
+  {n:'기념일 시즌 💝',d:'오늘 케이크·타르트 가격 +50%',w:1,fx:s=>{s.today.boostHalf=['cake','tart']}},
+];
+const ORDERS = [
+  {p:'toast',q:4,coin:10},{p:'bagel',q:5,coin:12},{p:'cookie',q:8,coin:14},{p:'baguette',q:3,coin:14},
+  {p:'croissant',q:4,coin:22},{p:'tart',q:3,coin:26},{p:'cake',q:1,coin:30},
+];
+
+// ---------- 유틸 ----------
+const rnd = n => Math.floor(Math.random()*n);
+const shuffle = a => {for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const pickW = list => {let t=list.reduce((a,x)=>a+x.w,0),r=Math.random()*t;for(const x of list){if((r-=x.w)<0)return x}return list[0]};
+let S = null;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
+function wipe(){try{localStorage.removeItem(KEY)}catch(e){}}
+let toastT;
+function toast(m){let el=document.querySelector('.toast');if(!el){el=document.createElement('div');el.className='toast';document.body.appendChild(el)}el.textContent=m;el.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',1700)}
+
+// ---------- 게임 로직 ----------
+function newGame(){
+  closeModal();
+  S = {day:0,coin:12,rep:0,ing:{f:2,b:0,s:0},en:3,maxEn:3,handSize:5,
+    draw:shuffle(STARTER.slice()),hand:[],disc:[],ovens:[null,null],shelf:[],
+    fresh:1,baseCust:4,priceMul:1,facs:[],order:null,shop:[],removed:false,overtime:false,
+    stats:{sold:0,earned:0,waste:0,orders:0},today:{},event:null,over:false,phase:'play'};
+  startDay();
+}
+function gain(s,o){for(const k in o)s.ing[k]+=o[k]}
+function draw(s,n){
+  for(let i=0;i<n;i++){
+    if(!s.draw.length){if(!s.disc.length)return;s.draw=shuffle(s.disc);s.disc=[]}
+    s.hand.push(s.draw.pop());
+  }
+}
+function collectOvens(s,now){
+  s.ovens.forEach((o,i)=>{
+    if(o&&o.left<=0){addShelf(s,o.out,o.q);s.ovens[i]=null;if(now)toast(`${PROD[o.out].e} ${PROD[o.out].n} ${o.q}개 진열!`)}
+  });
+}
+function addShelf(s,p,q){const x=s.shelf.find(i=>i.p===p&&i.age===0);if(x)x.q+=q;else s.shelf.push({p,q,age:0})}
+function startDay(){
+  const s=S;s.day++;s.phase='play';
+  s.today={cust:0,mul:1,fPrice:2,bPrice:2,sPrice:2,blogger:0,boost:[],boostHalf:[]};
+  s.ovens.forEach(o=>{if(o)o.left--});collectOvens(s,false);
+  const ev=s.day===1?EVENTS[0]:pickW(EVENTS);s.event={n:ev.n,d:ev.d};if(ev.fx)ev.fx(s);
+  if(!s.order&&(s.day%3===2)){
+    const outs=new Set([...s.draw,...s.disc,...s.hand].filter(id=>C[id].r).map(id=>C[id].r.out));
+    const ok=ORDERS.filter(o=>outs.has(o.p));if(ok.length){const o=ok[rnd(ok.length)];s.order={...o,due:s.day+2}}}
+  s.shop=[];const pool=shuffle(SHOP_POOL.slice());s.shop=pool.slice(0,6);
+  s.removed=false;s.overtime=false;s.en=s.maxEn;
+  draw(s,s.handSize);save();render();
+}
+function canPlay(id){
+  const c=C[id];if(c.t==='bad')return false;if(S.en<c.c)return false;
+  if(c.r){if(!S.ovens.includes(null))return false;for(const k in c.r.need)if(S.ing[k]<c.r.need[k])return false}
+  return true;
+}
+function play(i){
+  const id=S.hand[i],c=C[id];if(!canPlay(id))return whyNot(id);
+  S.en-=c.c;S.hand.splice(i,1);
+  if(c.r){for(const k in c.r.need)S.ing[k]-=c.r.need[k];S.ovens[S.ovens.indexOf(null)]={out:c.r.out,q:c.r.q,left:c.r.days,total:c.r.days};S.disc.push(id)}
+  else{c.fx(S);if(c.t==='fac'){S.facs.push(c.fac);toast(`${c.e} ${c.n} 설치 완료!`)}else S.disc.push(id)}
+  save();render();
+}
+function whyNot(id){
+  const c=C[id];if(c.t==='bad')return toast('피로 카드는 쓸 수 없어요. 대청소나 카드 폐기로 없애세요.');
+  if(S.en<c.c)return toast('⚡ 기력이 부족해요');
+  if(c.r&&!S.ovens.includes(null))return toast('빈 오븐이 없어요');
+  if(c.r)return toast('재료가 부족해요: '+needStr(c.r.need));
+}
+function overtime(){
+  if(S.overtime)return;S.overtime=true;S.en+=2;S.disc.push('tired');toast('야근! ⚡+2, 버린 더미에 😵 피로 추가');save();render();
+}
+function priceOf(s,item){
+  let p=PROD[item.p].p*s.priceMul*s.today.mul;
+  if(s.rep>=10)p*=1.1;if(s.rep>=20)p*=1.1;
+  if(s.today.boost.includes(item.p))p*=2;if(s.today.boostHalf.includes(item.p))p*=1.5;
+  if(item.age>0)p*=0.6;
+  return Math.max(1,Math.round(p));
+}
+function custCount(s){return Math.max(0,s.baseCust+Math.floor(s.rep/2)+s.today.cust)}
+function endDay(){
+  const s=S,log=[];s.phase='night';
+  // 1. 예약 주문
+  if(s.order){
+    const have=s.shelf.filter(x=>x.p===s.order.p).reduce((a,x)=>a+x.q,0);
+    const pr=PROD[s.order.p];
+    if(have>=s.order.q){
+      let need=s.order.q;s.shelf.sort((a,b)=>b.age-a.age);
+      for(const x of s.shelf){if(x.p!==s.order.p)continue;const t=Math.min(need,x.q);x.q-=t;need-=t}
+      s.shelf=s.shelf.filter(x=>x.q>0);s.coin+=s.order.coin;s.rep+=1;s.stats.orders++;s.stats.earned+=s.order.coin;
+      log.push(`<span class="y">📦 예약 주문 완료! ${pr.e}${pr.n} ×${s.order.q} → +${s.order.coin}💰 ⭐+1</span>`);s.order=null;
+    }else if(s.day>=s.order.due){log.push(`<span class="r">📦 예약 주문 실패 (${pr.n} ×${s.order.q}) → ⭐-1</span>`);s.rep=Math.max(0,s.rep-1);s.order=null}
+  }
+  // 2. 손님
+  const n=custCount(s);let sold=0,earn=0,repG=0;const soldBy={};
+  for(let i=0;i<n;i++){
+    const units=s.shelf.reduce((a,x)=>a+x.q,0);if(!units)break;
+    // 손님은 신선한 빵을 선호
+    const w=s.shelf.map(x=>x.q*(x.age===0?3:1));let r=Math.random()*w.reduce((a,b)=>a+b,0),k=0;
+    for(;k<w.length;k++){if((r-=w[k])<0)break}k=Math.min(k,s.shelf.length-1);
+    const it=s.shelf[k],p=priceOf(s,it);earn+=p;sold++;it.q--;
+    soldBy[it.p]=(soldBy[it.p]||0)+1;
+    if(PROD[it.p].rep)repG+=PROD[it.p].rep;
+    if(s.today.blogger>0&&p>=9){s.today.blogger--;repG++}
+    s.shelf=s.shelf.filter(x=>x.q>0);
+  }
+  s.coin+=earn;s.rep+=repG;s.stats.sold+=sold;s.stats.earned+=earn;
+  log.push(`🚶 손님 ${n}명 방문 · 판매 ${sold}개 → <span class="g">+${earn}💰</span>`);
+  const sb=Object.entries(soldBy).map(([p,q])=>`${PROD[p].e}×${q}`).join(' ');if(sb)log.push(`<span class="muted">${sb}</span>`);
+  if(n>sold)log.push(`<span class="muted">빵이 없어 그냥 돌아간 손님 ${n-sold}명</span>`);
+  if(repG)log.push(`<span class="y">⭐ 평판 +${repG}</span>`);
+  // 3. 숙성/폐기
+  let waste=0;s.shelf.forEach(x=>{x.age++;if(x.age>s.fresh){waste+=x.q;x.q=0}});s.shelf=s.shelf.filter(x=>x.q>0);
+  if(waste){s.stats.waste+=waste;log.push(`<span class="r">🗑️ 오래된 빵 ${waste}개 폐기</span>`)}
+  // 4. 손패 정리
+  s.disc.push(...s.hand);s.hand=[];
+  // 5. 월세
+  let rentMsg=null;
+  if(s.day%7===0){
+    const w=s.day/7,rent=RENT[w-1];
+    if(s.coin>=rent){s.coin-=rent;rentMsg=`<span class="y">🏠 ${w}주차 월세 ${rent}💰 납부 완료</span>`}
+    else{s.over='bankrupt';rentMsg=`<span class="r">🏠 ${w}주차 월세 ${rent}💰를 낼 수 없다…</span>`}
+    log.push(rentMsg);
+  }
+  if(!s.over&&s.day>=LAST_DAY)s.over='win';
+  save();
+  showNight(log);
+}
+function score(){return S.coin+S.rep*5+S.facs.length*5}
+function gradeOf(sc){return sc>=280?'S':sc>=200?'A':sc>=140?'B':sc>=90?'C':'D'}
+
+// ---------- 상점 ----------
+function buyCard(i){
+  const id=S.shop[i];if(!id)return;const c=C[id];
+  if(S.coin<c.price)return toast('💰가 부족해요');
+  S.coin-=c.price;S.disc.push(id);S.shop[i]=null;toast(`${c.e} ${c.n} 구매 → 버린 더미로`);save();render();openShop();
+}
+function buyIng(k){
+  const pr={f:S.today.fPrice,b:S.today.bPrice,s:S.today.sPrice}[k];
+  if(S.coin<pr)return toast('💰가 부족해요');S.coin-=pr;S.ing[k]+=1;save();render();openShop();
+}
+function removeCard(where,i){
+  if(S.removed)return toast('카드 폐기는 하루 한 번');if(S.coin<4)return toast('💰가 부족해요');
+  const arr=where==='hand'?S.hand:S.disc;const id=arr[i];arr.splice(i,1);S.coin-=4;S.removed=true;
+  toast(`${C[id].e} ${C[id].n} 폐기`);save();render();openShop();
+}
+
+// ---------- 렌더 ----------
+const $=id=>document.getElementById(id);
+function needStr(n){return Object.entries(n).map(([k,v])=>ING[k]+v).join(' ')}
+function cardDesc(c){
+  if(c.r){const p=PROD[c.r.out];return `${needStr(c.r.need)} → ${p.e}×${c.r.q}<br>${c.r.days}일 굽기 · 개당 ${p.p}💰${p.rep?' · 판매 시 ⭐+1':''}`}
+  return c.d;
+}
+function cardHTML(id,attrs,extra){
+  const c=C[id];
+  return `<button class="card t-${c.t}" ${attrs||''}>${c.t!=='bad'?`<span class="cost">⚡${c.c}</span>`:''}
+    <span class="em">${c.e}</span><span class="nm">${c.n}</span><span class="ty">${TYPE_N[c.t]}</span>
+    <span class="ds">${cardDesc(c)}</span>${extra||''}</button>`;
+}
+function render(){
+  const s=S,app=$('app');
+  if(!s){return renderTitle()}
+  const wk=Math.ceil(s.day/7),rent=RENT[wk-1],dl=wk*7-s.day;
+  const units=s.shelf.reduce((a,x)=>a+x.q,0);
+  app.innerHTML=`
+  <div class="top"><div class="brand">🥐 새벽 4시 빵집</div>
+    <div class="day"><b style="color:var(--ink);font-size:15px">${s.day}일차</b> / ${LAST_DAY}일<br>${wk}주차</div></div>
+  <div class="res">
+    <div><b style="color:var(--gold)">${s.coin}</b><span>💰 돈</span></div>
+    <div><b>${s.rep}</b><span>⭐ 평판</span></div>
+    <div><b style="color:var(--blue)">${s.en}</b><span>⚡ 기력</span></div>
+    <div><b>${s.ing.f}</b><span>🌾 밀가루</span></div>
+    <div><b>${s.ing.b}</b><span>🧈 버터</span></div>
+    <div><b>${s.ing.s}</b><span>🍓 딸기</span></div>
+  </div>
+  <div class="event"><b>오늘: ${s.event.n}</b> — ${s.event.d}
+    <div class="rent">🏠 ${wk}주차 월세 <b style="color:var(--ink)">${rent}💰</b> · ${dl===0?'<b style="color:var(--red)">오늘 영업 종료 후 납부!</b>':`${dl}일 남음`} · 예상 손님 ${custCount(s)}명</div></div>
+  <div class="panel"><h3>♨️ 오븐 <span class="small">${s.ovens.filter(o=>!o).length}칸 비어 있음</span></h3>
+    <div class="ovens">${s.ovens.map(o=>o?`<div class="oven"><div class="e">${PROD[o.out].e}</div>${PROD[o.out].n} ×${o.q}<br><span class="muted">${o.left}일 뒤 완성</span></div>`:`<div class="oven empty">비어 있음</div>`).join('')}</div></div>
+  <div class="panel"><h3>🧺 진열대 <span class="small">${units}개 · 신선도 ${s.fresh+1}일</span></h3>
+    ${units?`<div class="shelf">${s.shelf.map(x=>`<span class="item ${x.age?'stale':''}">${PROD[x.p].e} ${PROD[x.p].n} ×${x.q} · ${priceOf(s,x)}💰${x.age?' (어제 빵)':''}</span>`).join('')}</div>`:'<div class="muted small">진열된 빵이 없어요. 반죽 카드를 오븐에 넣으세요.</div>'}
+    ${s.order?`<div class="order" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span>📦 예약 주문: ${PROD[s.order.p].e}${PROD[s.order.p].n} ×${s.order.q}</span><span class="muted">${s.order.due}일차까지 · +${s.order.coin}💰 ⭐+1</span></div>`:''}
+    ${s.facs.length?`<div class="facs" style="margin-top:10px">${s.facs.map(f=>`<span class="fac">${f}</span>`).join('')}</div>`:''}
+  </div>
+  <div class="panel"><h3>🃏 손패 <span class="piles"><span>덱 ${s.draw.length}</span><span>버린 더미 ${s.disc.length}</span><button class="btn sm" onclick="showDeck()">전체 덱</button></span></h3>
+    ${s.hand.length?`<div class="hand">${s.hand.map((id,i)=>cardHTML(id,`onclick="play(${i})" ${canPlay(id)?'':'data-off'}`)).join('')}</div>`:'<div class="muted small">손패를 모두 사용했어요.</div>'}
+  </div>
+  <div class="muted small" style="text-align:center;margin-top:6px"><button class="btn sm" onclick="showHelp()">게임 방법</button> <button class="btn sm" onclick="confirmReset()">처음부터</button></div>
+  <div class="bar"><div class="in">
+    <button class="btn" onclick="openShop()">🛒 상점</button>
+    <button class="btn" onclick="overtime()" ${s.overtime?'disabled':''}>🌙 야근 ⚡+2</button>
+    <button class="btn pri" onclick="endDay()">영업 종료 →</button>
+  </div></div>`;
+}
+function renderTitle(){
+  const saved=load();
+  $('app').innerHTML=`<div class="title"><div style="font-size:64px">🥐</div><div class="big">새벽 4시 빵집</div>
+    <p class="muted" style="margin-top:8px">반죽하고, 굽고, 팔고, 덱을 키워라.<br>골목 빵집 경영 덱빌딩 카드게임</p></div>
+    <div class="panel">${helpHTML()}</div>
+    <div style="display:grid;gap:8px">
+      ${saved&&!saved.over?`<button class="btn pri" onclick="S=load();render()">이어하기 (${saved.day}일차)</button>`:''}
+      <button class="btn ${saved&&!saved.over?'':'pri'}" onclick="newGame()">새 게임</button></div>`;
+}
+function helpHTML(){return `<ol class="rules">
+  <li>매일 아침 카드 <b>5장</b>을 뽑고 <b>⚡3</b>으로 카드를 냅니다.</li>
+  <li><b style="color:var(--green)">재료</b> 카드로 🌾🧈🍓를 모으고, <b style="color:var(--org)">반죽</b> 카드를 재료와 함께 <b>오븐</b>에 넣으세요. 정해진 날이 지나면 빵이 진열대로 나옵니다.</li>
+  <li><b>영업 종료</b> 시 손님이 진열대 빵을 하나씩 사 갑니다. 손님 수 = 기본 4 + 평판÷2 + 홍보 효과.</li>
+  <li>팔리지 않은 빵은 다음 날 <b>40% 할인</b>되고, 그다음 날 폐기됩니다. 너무 많이 굽지도, 적게 굽지도 마세요.</li>
+  <li><b>상점</b>에서 새 카드를 사서 덱을 강화하고(산 카드는 버린 더미로), 하루 한 번 4💰로 약한 카드를 폐기할 수 있어요. 재료도 낱개로 살 수 있습니다.</li>
+  <li><b style="color:var(--purple)">시설</b> 카드는 한 번 내면 영구 효과가 생기고 덱에서 빠집니다.</li>
+  <li><b>야근</b>은 하루 한 번 ⚡+2를 주지만 덱에 😵피로 카드가 들어옵니다.</li>
+  <li>7·14·21·28일 밤에 월세(${RENT.join('·')}💰)를 냅니다. 못 내면 폐업! 28일을 버티면 <b>돈 + 평판×5 + 시설×5</b>로 점수를 매깁니다.</li>
+  <li>평판 10 이상이면 가격 +10%, 20 이상이면 또 +10%.</li></ol>`}
+function showHelp(){modal(`<div class="x"><h2>게임 방법</h2><button class="btn sm" onclick="closeModal()">닫기</button></div>${helpHTML()}`)}
+function confirmReset(){modal(`<h2>처음부터 다시?</h2><p class="muted" style="margin:8px 0 14px">현재 진행 상황이 사라집니다.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" onclick="closeModal()">취소</button><button class="btn pri" onclick="closeModal();wipe();S=null;render()">새로 시작</button></div>`)}
+function modal(h){$('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="sheet">${h}</div></div>`}
+function closeModal(){$('modal').innerHTML=''}
+function openShop(){
+  const s=S,t=s.today;
+  modal(`<div class="x"><h2>🛒 상점</h2><span><b style="color:var(--gold)">${s.coin}💰</b> <button class="btn sm" onclick="closeModal()">닫기</button></span></div>
+  <div class="muted small">오늘의 카드 (매일 바뀜) · 산 카드는 버린 더미로 들어갑니다</div>
+  <div class="buy">${s.shop.map((id,i)=>id?cardHTML(id,`onclick="buyCard(${i})" ${s.coin<C[id].price?'data-off':''}`,`<span class="price">${C[id].price}💰</span>`):`<div class="card" style="opacity:.3;align-items:center;justify-content:center">매진</div>`).join('')}</div>
+  <div class="muted small">재료 낱개 구매</div>
+  <div class="stock">
+    <button class="btn sm" onclick="buyIng('f')" ${s.coin<t.fPrice?'disabled':''}>🌾+1 · ${t.fPrice}💰</button>
+    <button class="btn sm" onclick="buyIng('b')" ${s.coin<t.bPrice?'disabled':''}>🧈+1 · ${t.bPrice}💰</button>
+    <button class="btn sm" onclick="buyIng('s')" ${s.coin<t.sPrice?'disabled':''}>🍓+1 · ${t.sPrice}💰</button></div>
+  <div class="muted small">카드 폐기 (4💰, 하루 1회${s.removed?' — 오늘은 사용함':''}) · 손패와 버린 더미에서 고를 수 있어요</div>
+  <div class="buy">${[...s.hand.map((id,i)=>['hand',i,id]),...s.disc.map((id,i)=>['disc',i,id])].map(([w,i,id])=>
+    cardHTML(id,`onclick="removeCard('${w}',${i})" ${s.removed||s.coin<4?'data-off':''}`,`<span class="price">${w==='hand'?'손패':'버린 더미'} · 폐기 4💰</span>`)).join('')||'<div class="muted small">폐기할 카드가 없어요</div>'}</div>`);
+}
+function showDeck(){
+  const all=[...S.draw,...S.hand,...S.disc],cnt={};all.forEach(id=>cnt[id]=(cnt[id]||0)+1);
+  const order=['ing','dough','act','fac','bad'];
+  const ids=Object.keys(cnt).sort((a,b)=>order.indexOf(C[a].t)-order.indexOf(C[b].t));
+  modal(`<div class="x"><h2>전체 덱 (${all.length}장)</h2><button class="btn sm" onclick="closeModal()">닫기</button></div>
+    <div class="buy">${ids.map(id=>cardHTML(id,'',`<span class="price">×${cnt[id]}</span>`)).join('')}</div>`);
+}
+function showNight(log){
+  const s=S;let foot;
+  if(s.over==='bankrupt'){
+    foot=`<div class="grade">폐업</div><p class="muted" style="text-align:center;margin-bottom:12px">${s.day}일 만에 가게 문을 닫았습니다.<br>판매 ${s.stats.sold}개 · 총수입 ${s.stats.earned}💰</p>
+      <button class="btn pri" style="width:100%" onclick="closeModal();wipe();newGame()">다시 도전</button>`;
+  }else if(s.over==='win'){
+    const sc=score();
+    foot=`<div class="grade">${gradeOf(sc)}</div><p style="text-align:center;margin-bottom:6px"><b>최종 점수 ${sc}</b></p>
+      <p class="muted small" style="text-align:center;margin-bottom:12px">돈 ${s.coin} + 평판 ${s.rep}×5 + 시설 ${s.facs.length}×5<br>판매 ${s.stats.sold}개 · 예약 주문 ${s.stats.orders}건 · 폐기 ${s.stats.waste}개 · 총수입 ${s.stats.earned}💰</p>
+      <button class="btn pri" style="width:100%" onclick="closeModal();wipe();newGame()">새 게임</button>`;
+  }else foot=`<button class="btn pri" style="width:100%" onclick="closeModal();startDay()">🌅 ${s.day+1}일차 새벽 4시 →</button>`;
+  $('modal').innerHTML=`<div class="modal"><div class="sheet"><h2>🌙 ${s.day}일차 영업 종료</h2><div class="log" style="margin:10px 0 16px">${log.join('<br>')}</div>${foot}</div></div>`;
+  render();
+}
+window.addEventListener('beforeunload',()=>{if(S)save()});
+const saved=load();
+if(saved&&saved.phase==='night'&&!saved.over){S=saved;startDay()}else{S=null;render()}
+</script>
+</body>
+</html>
