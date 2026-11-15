@@ -53,7 +53,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   background:repeating-linear-gradient(0deg,transparent 0 7px,#0004 7px 8px),repeating-linear-gradient(90deg,transparent 0 7px,#0004 7px 8px),radial-gradient(circle at 35% 30%,#e6e9ff,var(--si) 55%,#5b67b8);
   box-shadow:0 0 0 2px #0006 inset}
 .wafer::after{content:"";position:absolute;bottom:-1px;left:50%;width:18%;height:6%;background:var(--tile);transform:translateX(-50%)}
-.bay .lbl{font-family:var(--mono);font-size:11px;font-weight:800}
+.bay .lbl{font-size:11px;font-weight:700;text-align:center}
 .prog{width:80%;height:5px;border-radius:9px;background:var(--line);overflow:hidden}
 .prog u{display:block;height:100%;background:var(--copper)}
 .bay .left{font-size:10.5px;color:var(--dim)}
@@ -139,13 +139,13 @@ const RENT=[20,35,60,100];
 const LAST_DAY=28, MAX_BAYS=6;
 
 const PROD={
-  diode:{n:'다이오드',k:'D1',p:4},
-  bjt:{n:'BJT',k:'BJT',p:4},
-  led:{n:'LED',k:'LED',p:3},
-  mos:{n:'파워 MOSFET',k:'MOS',p:7},
-  cmos:{n:'CMOS 로직',k:'CMOS',p:9},
-  dram:{n:'DRAM',k:'DRAM',p:13},
-  cpu:{n:'CPU',k:'CPU',p:42,rep:1},
+  diode:{n:'다이오드',k:'다이오드',p:4},
+  bjt:{n:'쌍극 트랜지스터',k:'쌍극',p:4},
+  led:{n:'발광 다이오드',k:'발광',p:3},
+  mos:{n:'전력 트랜지스터',k:'전력',p:7},
+  cmos:{n:'논리 회로 칩',k:'논리',p:9},
+  dram:{n:'메모리 칩',k:'메모리',p:13},
+  cpu:{n:'중앙처리장치',k:'처리장치',p:42,rep:1},
 };
 const RAW={si:'웨이퍼',dp:'도펀트',cu:'구리'};
 const rawStr=n=>Object.entries(n).map(([k,v])=>`<span class="dot d-${k}" style="display:inline-block;vertical-align:-1px"></span>${RAW[k]}${v}`).join(' ');
@@ -153,18 +153,18 @@ const rawTxt=n=>Object.entries(n).map(([k,v])=>`${RAW[k]} ${v}`).join(', ');
 
 const C={
   wafer:{n:'웨이퍼 박스',a:'💿',t:'mat',c:0,price:2,d:'웨이퍼 +2',fx:s=>gain(s,{si:2})},
-  wafer2:{n:'300mm 웨이퍼',a:'💿',t:'mat',c:0,price:5,d:'웨이퍼 +4',fx:s=>gain(s,{si:4})},
+  wafer2:{n:'30cm 대형 웨이퍼',a:'💿',t:'mat',c:0,price:5,d:'웨이퍼 +4',fx:s=>gain(s,{si:4})},
   dopant:{n:'도펀트 가스',a:'⚗️',t:'mat',c:0,price:4,d:'도펀트 +2',fx:s=>gain(s,{dp:2})},
   copper:{n:'구리 타깃',a:'🟠',t:'mat',c:0,price:4,d:'구리 +2',fx:s=>gain(s,{cu:2})},
   supply:{n:'공급망 계약',a:'🚢',t:'mat',c:1,price:6,d:'웨이퍼 +3, 도펀트 +1, 구리 +1',fx:s=>gain(s,{si:3,dp:1,cu:1})},
 
   p_diode:{n:'다이오드 공정',t:'proc',c:1,price:3,r:{need:{si:2},out:'diode',q:2,days:1}},
-  p_bjt:{n:'BJT 공정',t:'proc',c:1,price:5,r:{need:{si:2},out:'bjt',q:3,days:1}},
-  p_led:{n:'LED 공정',t:'proc',c:1,price:4,r:{need:{si:1,dp:1},out:'led',q:5,days:1}},
-  p_mos:{n:'MOSFET 공정',t:'proc',c:1,price:6,r:{need:{si:3},out:'mos',q:2,days:1}},
-  p_cmos:{n:'CMOS 공정',t:'proc',c:1,price:8,r:{need:{si:2,dp:2},out:'cmos',q:3,days:2}},
-  p_dram:{n:'DRAM 공정',t:'proc',c:1,price:9,r:{need:{si:1,dp:1,cu:2},out:'dram',q:2,days:2}},
-  p_cpu:{n:'CPU 공정',t:'proc',c:2,price:12,r:{need:{si:2,dp:2,cu:3},out:'cpu',q:1,days:3}},
+  p_bjt:{n:'쌍극 트랜지스터 공정',t:'proc',c:1,price:5,r:{need:{si:2},out:'bjt',q:3,days:1}},
+  p_led:{n:'발광 다이오드 공정',t:'proc',c:1,price:4,r:{need:{si:1,dp:1},out:'led',q:5,days:1}},
+  p_mos:{n:'전력 트랜지스터 공정',t:'proc',c:1,price:6,r:{need:{si:3},out:'mos',q:2,days:1}},
+  p_cmos:{n:'논리 회로 공정',t:'proc',c:1,price:8,r:{need:{si:2,dp:2},out:'cmos',q:3,days:2}},
+  p_dram:{n:'메모리 공정',t:'proc',c:1,price:9,r:{need:{si:1,dp:1,cu:2},out:'dram',q:2,days:2}},
+  p_cpu:{n:'처리장치 공정',t:'proc',c:2,price:12,r:{need:{si:2,dp:2,cu:3},out:'cpu',q:1,days:3}},
 
   drink:{n:'에너지 드링크',a:'🥤',t:'op',c:0,price:4,d:'⚡+2',fx:s=>{s.en+=2}},
   intern:{n:'인턴 엔지니어',a:'🧑‍🔬',t:'op',c:0,price:6,d:'카드 1장 뽑기, ⚡+1',fx:s=>{draw(s,1);s.en+=1}},
@@ -198,8 +198,8 @@ const EVENTS=[
   {n:'도펀트 품귀',d:'상점 도펀트 4💰',w:1,fx:s=>{s.today.cost.dp=4}},
   {n:'테크 리뷰어 방문',d:'9💰 이상 칩이 팔릴 때마다 신뢰 +1 (최대 2)',w:2,fx:s=>{s.today.reviewer=2}},
   {n:'분기말 구매 러시',d:'오늘 바이어 +2, 가격 -10%',w:2,fx:s=>{s.today.cust+=2;s.today.mul*=.9}},
-  {n:'전기차 수요 폭증',d:'오늘 MOSFET·BJT 가격 2배',w:1,fx:s=>{s.today.x2=['mos','bjt']}},
-  {n:'AI 붐',d:'오늘 CPU·DRAM 가격 +50%',w:1,fx:s=>{s.today.x15=['cpu','dram']}},
+  {n:'전기차 수요 폭증',d:'오늘 전력·쌍극 트랜지스터 가격 2배',w:1,fx:s=>{s.today.x2=['mos','bjt']}},
+  {n:'인공지능 붐',d:'오늘 처리장치·메모리 칩 가격 +50%',w:1,fx:s=>{s.today.x15=['cpu','dram']}},
 ];
 const ORDERS=[{p:'diode',q:4,coin:10},{p:'bjt',q:5,coin:12},{p:'led',q:8,coin:14},{p:'mos',q:3,coin:14},{p:'cmos',q:4,coin:22},{p:'dram',q:3,coin:26},{p:'cpu',q:1,coin:30}];
 
@@ -306,9 +306,9 @@ function render(){
   if(!S)return renderTitle();
   const s=S,wk=Math.ceil(s.day/7),dl=wk*7-s.day,units=s.stock.reduce((a,x)=>a+x.q,0);
   const bays=[];for(let i=0;i<MAX_BAYS;i++){const o=s.bays[i];
-    if(i>=s.bays.length)bays.push(`<div class="bay lock"><span class="tag">BAY ${i+1}</span>잠김<br>장비 증설 필요</div>`);
-    else if(!o)bays.push(`<div class="bay empty"><span class="tag">BAY ${i+1}</span>비어 있음<br><span style="font-size:10.5px">공정 카드를 내세요</span></div>`);
-    else bays.push(`<div class="bay"><span class="tag">BAY ${i+1}</span><div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
+    if(i>=s.bays.length)bays.push(`<div class="bay lock"><span class="tag">장비 ${i+1}</span>잠김<br>장비 증설 필요</div>`);
+    else if(!o)bays.push(`<div class="bay empty"><span class="tag">장비 ${i+1}</span>비어 있음<br><span style="font-size:10.5px">공정 카드를 내세요</span></div>`);
+    else bays.push(`<div class="bay"><span class="tag">장비 ${i+1}</span><div class="wafer"></div><span class="lbl">${PROD[o.out].k} ×${o.q}</span>
       <span class="prog"><u style="width:${Math.round((o.total-o.left)/o.total*100)}%"></u></span><span class="left">${o.left}일 뒤 완성</span></div>`)}
   const n=s.hand.length,mid=(n-1)/2;
   const hand=s.hand.map((id,i)=>cardHTML(id,`onclick="tapCard(${i})" style="transform:rotate(${(i-mid)*4}deg) translateY(${Math.abs(i-mid)*4}px)" ${canPlay(id)?'':'data-off'} aria-label="${C[id].n}"`,'',SEL===i?'up':'')).join('');
